@@ -6,7 +6,8 @@ A mystery game for learning Korean. Live at https://kopus123.github.io/tal/
 
 | Part | File | What you change there |
 |---|---|---|
-| Story | `story/*.story` | Plot, dialogue, places, clues, case questions, hints, word list. Plain text. **Spoilers.** |
+| World | `story/world.story` | Chapter list, characters, every word and its picture, the village map. No plot. |
+| Chapters | `story/prologue.story` etc. | Each chapter's plot, places, clues, case questions, hints. Plain text. **Spoilers.** |
 | Engine | `js/engine.js` | How the game works: screens, notebook, case board, voice, saving |
 | Scene art | `js/art.js` | Drawings for each place |
 | Word pictures | `js/icons.js` | The picture for each word, and the past/future/not badges |

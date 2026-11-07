@@ -184,6 +184,40 @@ function photoArt(){
   return DEFS+s;
 }
 
+/* Village map, 400 x 520, painted on hanji. Pin positions live in story/world.story (=== map). */
+function artMap(){
+  let s=`<rect width="400" height="520" fill="#efe5cc"/>`;
+  for(let i=0;i<70;i++){const x=(i*137)%400,y=(i*89)%520,l=6+(i%5)*3;s+=`<path d="M${x},${y} q${l/2},${(i%3)-1} ${l},0" stroke="#d8c9a6" stroke-width=".8" fill="none" opacity=".7"/>`}
+  // mountains (ink wash, layered)
+  const peaks=[[-20,175,90,40,'#8fa494'],[40,160,170,60,'#7d958a'],[120,150,250,30,'#94a89a'],[220,140,330,50,'#8a9f92'],[310,150,430,70,'#9aae9f'],[-10,190,140,105,'#6f897c'],[150,185,300,110,'#7b9487']];
+  peaks.forEach(([x1,y,x2,top,c])=>{const mx=(x1+x2)/2;s+=`<path d="M${x1},${y} Q${mx-30},${top+20} ${mx},${top} Q${mx+30},${top+20} ${x2},${y}Z" fill="${c}" opacity=".55"/>`});
+  for(let i=0;i<26;i++){const x=10+(i*53)%380,y=150+((i*31)%60);s+=`<path d="M${x},${y} l4,-11 l4,11Z" fill="#3f5a4b" opacity=".75"/>`}
+  // rice paddies
+  for(let r=0;r<3;r++)for(let c=0;c<4;c++)s+=`<rect x="${20+c*34}" y="${420+r*26}" width="30" height="22" rx="3" fill="#b9c98f" opacity=".7" stroke="#8fa36a" stroke-width=".8"/>`;
+  // river
+  s+=`<path d="M262,-10 C248,80 304,120 292,195 S326,300 410,336" stroke="#9cbfcf" stroke-width="30" fill="none" stroke-linecap="round"/>`;
+  s+=`<path d="M262,-10 C248,80 304,120 292,195 S326,300 410,336" stroke="#c5dce5" stroke-width="10" fill="none" stroke-linecap="round" opacity=".8"/>`;
+  for(let i=0;i<8;i++)s+=`<path d="M${270+i*14},${40+i*40} q5,-3 10,0" stroke="#e8f2f5" stroke-width="1.4" fill="none"/>`;
+  // roads
+  const road=(d,dash)=>`<path d="${d}" stroke="#b08b5e" stroke-width="3" fill="none" stroke-linecap="round" ${dash?`stroke-dasharray="${dash}"`:''}/>`;
+  s+=road('M160,262 Q150,290 136,312')+road('M160,262 Q182,240 200,231')+road('M136,312 Q100,280 96,230 Q90,180 64,142','2 6')+road('M136,312 Q170,340 204,364')+road('M204,364 Q224,378 244,386');
+  s+=road('M244,386 C300,370 306,280 298,214 S330,172 344,160','8 6');
+  // bridge
+  s+=`<g transform="translate(298,214) rotate(-12)"><rect x="-24" y="-6" width="48" height="12" rx="2" fill="#8a5a34" stroke="#5a3b24" stroke-width="1.5"/><path d="M-20,-6 v12 M-10,-6 v12 M0,-6 v12 M10,-6 v12 M20,-6 v12" stroke="#5a3b24" stroke-width="1"/></g>`;
+  // houses
+  const house=(x,y,w=22,c='#3b4048')=>`<rect x="${x-w/2+3}" y="${y-2}" width="${w-6}" height="9" fill="#f4eedf" stroke="#6b4528" stroke-width="1"/><path d="M${x-w/2-3},${y} Q${x},${y-5} ${x+w/2+3},${y} L${x+w/2-2},${y-8} L${x-w/2+2},${y-8}Z" fill="${c}"/>`;
+  [[118,240],[128,272],[100,300],[176,300],[150,340],[182,332],[118,350],[228,268],[214,300],[238,330],[90,262],[168,385]].forEach(([x,y])=>s+=house(x,y,18,'#5a6068'));
+  s+=house(160,256,34)+house(200,226,24,'#4a4f57');
+  s+=house(204,360,22,'#6b4528')+`<rect x="236" y="378" width="16" height="10" fill="#4f6ea8" rx="2"/>`;
+  s+=`<rect x="328" y="146" width="34" height="18" fill="#dfe3e6" stroke="#6a6f7d" stroke-width="1.5"/><path d="M324,147 L345,136 L366,147Z" fill="#c9ced3" stroke="#6a6f7d" stroke-width="1.5"/>`;
+  // stone wall around the guesthouse
+  s+=`<rect x="138" y="240" width="76" height="34" rx="6" fill="none" stroke="#8d877b" stroke-width="2" stroke-dasharray="3 2"/>`;
+  // compass + title seal
+  s+=`<g transform="translate(360,470)"><circle r="20" fill="#f6f0e0" stroke="#2a231d" stroke-width="1.5"/><path d="M0,-16 L5,0 L0,16 L-5,0Z" fill="#b5412d"/><path d="M0,0 L5,0 L0,16 L-5,0Z" fill="#2a231d"/><text y="-23" text-anchor="middle" font-family="Gowun Batang,serif" font-size="12" fill="#2a231d">북</text></g>`;
+  s+=`<g transform="translate(20,20) rotate(-3)"><rect width="108" height="40" rx="3" fill="#b5412d"/><rect x="3" y="3" width="102" height="34" rx="2" fill="none" stroke="#f6e7d2" stroke-width="1"/><text x="54" y="29" text-anchor="middle" font-family="Nanum Brush Script,serif" font-size="28" fill="#fff4e6">청솔마을</text></g>`;
+  return s;
+}
+
 const ART={
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true),
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,

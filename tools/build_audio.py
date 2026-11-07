@@ -24,7 +24,8 @@ def collect():
         t = normalize(text)
         if t:
             keys.append(f"{who}|{t}")
-    for f in sorted((ROOT / "story").glob("*.story")):
+    files = sorted((ROOT / "story").glob("*.story"), key=lambda p: (p.name != "world.story", p.name))  # cast first
+    for f in files:
         sec = None
         for raw in f.read_text(encoding="utf-8").splitlines():
             line = raw.strip()

@@ -1,13 +1,14 @@
 /* ============ ENGINE ============
    Reads story/*.story and runs it. Nothing about the plot lives in this file. */
 
-const STORY_FILES=['story/prologue.story'];
-let ST=null;          // parsed story
-let W={};             // words -> {p: picture spec, g: grammar}
+let WORLD=null;       // story/world.story: cast, words, chapters, map
+let CH={};            // chapter id -> parsed chapter file
+let ST=null;          // the current chapter, merged with the world
+let W={};             // every word in every chapter -> {p: picture spec, g: grammar}
 
 /* ---------- story parser ---------- */
 function parseStory(src,st){
-  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{}};
+  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[]};
   let sec=null,cur=null,scene=null,last=null,count=0;
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;
     if(last&&!last.next&&!last.ch&&!last.ans)last.next=id;
@@ -28,6 +29,8 @@ function parseStory(src,st){
     switch(sec){
       case 'meta':{const i=line.indexOf(' ');st.meta[line.slice(0,i)]=line.slice(i+1).trim();break}
       case 'cast':{const [k,n,c,v,look]=line.split('|').map(s=>s.trim());st.cast[k]={n,c,voice:!!v,look:look||''};break}
+      case 'chapters':{const [id,t,sub,file]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file});break}
+      case 'map':{m=line.match(/^pin\s+(\S+)\s+([\d.]+)\s+([\d.]+)/);if(m)st.map.push({p:m[1],x:+m[2],y:+m[3]});break}
       case 'words':{m=line.match(/^(.+?)\s*=\s*(.+)$/);if(m)st.words[m[1]]=m[2]==='(grammar)'?{g:1}:{p:m[2]};break}
       case 'hints':{m=line.match(/^if\s+(\S+):\s*(.+)$/);st.hints.push(m?{c:m[1],t:m[2]}:{t:line});break}
       case 'case':{m=line.match(/^(\w+)\s+(\S+)(\s+final)?\s+if\s+(\S+)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
@@ -35,7 +38,7 @@ function parseStory(src,st){
       case 'pattern':{if(m=line.match(/^title\s+(.+)/))cur.title=m[1];else if(m=line.match(/^note\s+(.+)/))cur.note=m[1];
         else if(m=line.match(/^need\s+(\d+)/))cur.need=+m[1];else if(m=line.match(/^(.+?)\s*>\s*(.+)$/))cur.pairs.push([m[1],m[2]]);break}
       case 'place':{
-        if(m=line.match(/^(name|sub|art|first|always|ambient)\s+(.+)$/))cur[m[1]]=m[2];
+        if(m=line.match(/^(name|sub|art|first|always|ambient|travel)\s+(.+)$/))cur[m[1]]=m[2];
         else if(m=line.match(/^desc\s+(?:if\s+(\S+):\s*)?(.+)$/))cur.desc.push({c:m[1],t:m[2]});
         else if(m=line.match(/^spot\s+"([^"]+)"\s+([\d.]+)\s+([\d.]+)\s+(->|=>)\s+(.+?)(?:\s+if\s+(\S+))?$/))
           cur.spots.push({l:m[1],x:+m[2],y:+m[3],kind:m[4],t:m[5],c:m[6]});
@@ -74,7 +77,10 @@ function parseStory(src,st){
 
 /* ---------- state ---------- */
 const KEY='tal-save-v2';
-const fresh=()=>({loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1},visited:{}});
+// Per-chapter progress lives in loc/node/F/cs/visited (swapped in and out of S.prog by chapter).
+// Everything else (notebook, map, settings, finished chapters) is shared.
+const fresh=()=>({ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1},visited:{}});
+const CH_FIELDS=['loc','node','F','cs','visited'];
 let S=fresh();
 function load(){try{const r=localStorage.getItem(KEY);if(r){S=Object.assign(fresh(),JSON.parse(r));S.set=Object.assign(fresh().set,S.set);return true}}catch(e){}return false}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -206,7 +212,8 @@ function ambientHTML(type){
 function render(){
   const l=ST.places[S.loc]||Object.values(ST.places)[0];const nd=S.node?ST.nodes[S.node]:null;
   document.documentElement.dataset.size=S.set.size;
-  $('#locKo').textContent=l.name||'';$('#locKo').dataset.w=W[l.name]?l.name:'';$('#locSub').textContent=l.sub||'';
+  $('#locKo').textContent=l.name||'';$('#locSub').textContent=l.sub||'';
+  if(S.loc)S.known[S.loc]=1;
   // art (only redrawn when it changes, so ambience and fades stay smooth)
   const ak=l.art+(l.art==='bus'?'|'+(S.F.led||''):'');
   if(ak!==artKey){const w=$('#art');w.innerHTML=(ART[l.art]||ART.madang)();w.classList.remove('in');void w.offsetWidth;w.classList.add('in');artKey=ak}
@@ -226,7 +233,8 @@ function render(){
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
   if(!nd){
     const d=l.desc.find(x=>cond(x.c));body=`<div class="narr">${esc(d?d.t:'')}</div>`;
-    foot=`<div class="acts">${l.spots.map((x,i)=>cond(x.c)?`<button class="btn act" data-hs="${i}">${esc(x.l)}</button>`:'').join('')}</div>`;
+    const mapBtn=canTravel()&&ST.map.filter(p=>S.known[p.p]&&ST.places[p.p]).length>1?`<button class="btn act map" id="bMap">Village map</button>`:'';
+    foot=`<div class="acts">${l.spots.map((x,i)=>cond(x.c)?`<button class="btn act" data-hs="${i}">${esc(x.l)}</button>`:'').join('')}${mapBtn}</div>`;
   }else if(nd.type==='build'){
     const tl=nd.tiles;
     body=`<div class="en">${esc(nd.en)}</div><div class="built">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):'<span class="ph">Tap words to build a sentence</span>'}</div>
@@ -262,6 +270,7 @@ function render(){
   const bn=$('#bNext');if(bn)bn.onclick=next;
   const bs=sb.querySelector('[data-say]');if(bs)bs.onclick=()=>{sfx('tap');speak(nd.ko,nd.who)};
   sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{sfx('tap');bseq.push(+b.dataset.t);speak(nd.tiles[+b.dataset.t],'you');render()});
+  if($('#bMap'))$('#bMap').onclick=openMap;
   if($('#bClr'))$('#bClr').onclick=()=>{bseq=[];render()};
   if($('#bLeave'))$('#bLeave').onclick=()=>{S.node=null;save();render()};
   if($('#bSay'))$('#bSay').onclick=()=>say(nd);
@@ -421,39 +430,122 @@ function settings(){
       <button class="btn-ink" id="rs" style="color:#e59a87">${confirmReset?'Tap again to erase all progress':'Start over'}</button>`;
     o.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.set[b.dataset.k]=+b.dataset.v;save();sfx('tap');draw();document.documentElement.dataset.size=S.set.size});
     o.querySelector('#tv').onclick=()=>speak('{안녕하세요}!','sujin');
-    o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{S=fresh();S.loc=ST.meta['start-place'];save();o.remove();title()}};
+    o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{const set=S.set;S=fresh();S.set=set;save();o.remove();title()}};
   };draw();
 }
 
+/* ---------- chapters ---------- */
+function useChapter(id){
+  const c=CH[id]||CH[WORLD.chapters[0].id];
+  ST={cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:c.nodes,cases:c.cases,phones:c.phones,hints:c.hints,
+    patterns:WORLD.patterns.concat(c.patterns),meta:Object.assign({},WORLD.meta,c.meta),map:WORLD.map,chapters:WORLD.chapters};
+}
+const chIndex=id=>WORLD.chapters.findIndex(c=>c.id===id);
+const chInfo=id=>WORLD.chapters.find(c=>c.id===id)||{};
+const chReady=id=>!!CH[id];
+const chUnlocked=id=>{const i=chIndex(id);return i===0||!!S.done[WORLD.chapters[i-1].id]};
+const chStarted=id=>id===S.ch?!!S.F.started:!!(S.prog[id]&&S.prog[id].F&&S.prog[id].F.started);
+function stash(){if(S.ch)S.prog[S.ch]=JSON.parse(JSON.stringify(Object.fromEntries(CH_FIELDS.map(k=>[k,S[k]]))))}
+function startChapter(id,restart){
+  stash();const p=!restart&&S.prog[id];
+  S.ch=id;useChapter(id);artKey=null;ambKey=null;lastLoc=null;
+  if(p&&p.F&&p.F.started){
+    CH_FIELDS.forEach(k=>S[k]=p[k]);
+    if(!ST.places[S.loc])S.loc=ST.meta['start-place'];if(S.node&&!ST.nodes[S.node])S.node=null;
+    revealFor=S.node;save();render();return;
+  }
+  S.F={started:1};S.cs={};S.visited={};S.node=null;S.loc=ST.meta['start-place'];
+  stash();go(ST.meta.start);
+}
+const nextChapter=()=>WORLD.chapters[chIndex(S.ch)+1]||null;
+
 function finale(){
+  S.done[S.ch]=1;stash();save();
   const vocab=Object.keys(S.w).filter(id=>W[id]&&!W[id].g);const got=vocab.filter(id=>status(id)==='learned');
+  const nx=nextChapter();
+  const nextBit=!nx?'':chReady(nx.id)?`<button class="btn primary" id="nextch">Start ${esc(nx.t)}</button>`:`<div class="en" style="text-align:center">${esc(nx.t)} is coming soon.</div>`;
   const o=overlay(`<div class="panel paper">${head(esc(ST.meta['end-title']||''))}<div class="ph-body">
     <div class="narr">${esc(ST.meta['end-text']||'')}</div>
     <div><div class="stat"><span>Words figured out</span><b>${got.length}</b></div><div class="stat"><span>Words still a mystery</span><b>${vocab.length-got.length}</b></div></div>
-    <button class="btn primary" id="fin">Keep exploring</button></div></div>`,'center');
+    ${nextBit}<button class="btn" id="fin" style="justify-content:center">Keep exploring</button></div></div>`,'center');
   o.querySelector('.x').onclick=()=>close(o);o.querySelector('#fin').onclick=()=>close(o);
+  const nb=o.querySelector('#nextch');if(nb)nb.onclick=()=>{o.remove();startChapter(nx.id,true)};
+}
+
+function chapterList(){
+  const o=overlay(`<div class="panel">${head('목차')}<div class="ph-body" id="clb"></div></div>`);
+  o.querySelector('.x').onclick=()=>close(o);
+  let confirmId=null;
+  const pick=(id,restart)=>{o.remove();const t=document.querySelector('.title');if(t)t.remove();startChapter(id,restart)};
+  const draw=()=>{
+    o.querySelector('#clb').innerHTML=WORLD.chapters.map(c=>{
+      const ready=chReady(c.id),open=ready&&chUnlocked(c.id),done=!!S.done[c.id],started=chStarted(c.id);
+      const state=!ready?'Coming soon':!open?'Locked':done?'Finished':started?'In progress':'New';
+      let b='';
+      if(open){
+        if(started&&!done)b+=`<button class="btn-ink" data-go="${c.id}">Continue</button>`;
+        if(!started&&!done)b+=`<button class="btn-ink" data-new="${c.id}">Start</button>`;
+        if(started||done)b+=confirmId===c.id?`<button class="btn-ink" data-new="${c.id}" style="color:#e59a87">Tap again to start over</button>`:`<button class="btn-ink" data-ask="${c.id}">${done?'Replay':'Start over'}</button>`;
+      }
+      return `<div class="chrow ${open?'':'locked'} ${c.id===S.ch?'cur':''}"><div class="chn"><b>${esc(c.t)}</b><span>${esc(open||done?c.sub:'?')}</span></div><div class="chs">${state}</div><div class="chb">${b}</div></div>`;
+    }).join('')+`<div class="empty">Your notebook and map carry over between chapters. Replaying a chapter starts it from the beginning.</div>`;
+    o.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>pick(x.dataset.go,false));
+    o.querySelectorAll('[data-new]').forEach(x=>x.onclick=()=>pick(x.dataset.new,true));
+    o.querySelectorAll('[data-ask]').forEach(x=>x.onclick=()=>{confirmId=x.dataset.ask;draw()});
+  };
+  draw();
+}
+
+/* ---------- village map ---------- */
+const canTravel=()=>{const l=ST.places[S.loc];return !S.node&&!!l&&l.travel!=='no'};
+function openMap(){
+  const ok=canTravel();
+  const o=overlay(`<div class="panel paper">${head('지도')}<div class="ph-body" style="padding:10px 12px 16px"><div class="map" id="mapv"></div><div class="en" style="text-align:center">${
+    ok?'Tap a place you have been to go there.':S.node?'Finish what you are doing first, then you can travel.':'You can\'t walk anywhere from here.'}</div></div></div>`);
+  o.querySelector('.x').onclick=()=>close(o);
+  let h=`<svg viewBox="0 0 400 520" class="mapart" aria-hidden="true">${artMap()}</svg>`;
+  ST.map.filter(p=>ST.places[p.p]).forEach(p=>{
+    const pl=ST.places[p.p],here=S.loc===p.p;
+    if(!S.known[p.p]){h+=`<div class="pin unk" style="left:${p.x}%;top:${p.y}%"><i></i><b>?</b></div>`;return}
+    h+=`<button class="pin ${here?'here':''}" data-pin="${p.p}" style="left:${p.x}%;top:${p.y}%"><i></i><b>${esc(pl.name)}</b>${here?'<span class="seal w" data-w="여기">여기</span>':''}</button>`;
+  });
+  o.querySelector('#mapv').innerHTML=h;
+  o.querySelectorAll('[data-pin]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.pin;if(id===S.loc){close(o);return}
+    if(!ok){sfx('wrong');toast(S.node?'Finish what you are doing first.':'You can\'t walk there from here.');return}
+    if(ST.places[id].travel==='no'){sfx('wrong');toast('You can\'t walk there. You\'ll need another way.');return}
+    o.remove();sfx('page');enter(id);
+  });
 }
 
 function toast(h,ms=2600){const t=document.createElement('div');t.className='toast';t.innerHTML=h;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),ms)}
 
 function title(){
-  const has=!!S.F.started,m=ST.meta;
+  const m=ST.meta,has=!!S.F.started||Object.keys(S.prog).length>0;
   const o=document.createElement('div');o.className='title';
   o.innerHTML=`<div class="art"><svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">${artGateInner(false)}</svg><div class="amb">${ambientHTML('motes')}</div></div>
     <h1>${esc(m.title||'')}</h1><div class="vil">${esc(m.village||'')}</div><p>${esc(m.blurb||'')}</p>
-    <div class="acts">${has?'<button class="btn primary" id="tc">Continue</button>':''}<button class="btn ${has?'':'primary'}" id="tn">${has?'New game':'Start the prologue'}</button></div>
+    <div class="acts">${has?`<button class="btn primary" id="tc">Continue · ${esc(chInfo(S.ch).t||'')}</button><button class="btn" id="tl">Chapters</button>`:''}<button class="btn ${has?'':'primary'}" id="tn">${has?'New game':'Start'}</button></div>
     <div class="fine">Turn your sound on.</div>`;
   document.body.appendChild(o);
-  if(has)o.querySelector('#tc').onclick=()=>{sfx('page');o.remove();lastLoc=null;render()};
-  o.querySelector('#tn').onclick=()=>{sfx('page');S=fresh();S.F.started=1;S.loc=m['start-place'];lastLoc=S.loc;o.remove();go(m.start)};
+  if(has){
+    o.querySelector('#tc').onclick=()=>{sfx('page');o.remove();if(!S.F.started)startChapter(S.ch,true);else{lastLoc=null;render()}};
+    o.querySelector('#tl').onclick=()=>chapterList();
+  }
+  let sure=!has;const tn=o.querySelector('#tn');
+  tn.onclick=()=>{
+    if(!sure){sure=true;tn.textContent='Tap again to erase all progress';tn.style.color='#e59a87';return}
+    sfx('page');const set=S.set;S=fresh();S.set=set;o.remove();startChapter(WORLD.chapters[0].id,true);
+  };
 }
 
 /* ---------- boot ---------- */
 async function boot(){
   try{
-    let st=null;
-    for(const f of STORY_FILES){const r=await fetch(f,{cache:'no-cache'});if(!r.ok)throw new Error(f+' returned '+r.status);st=parseStory(await r.text(),st)}
-    ST=st;W=ST.words;
+    const get=async f=>{const r=await fetch('story/'+f,{cache:'no-cache'});if(!r.ok)throw new Error(f+' returned '+r.status);return r.text()};
+    WORLD=parseStory(await get('world.story'));CH={};
+    for(const c of WORLD.chapters)if(c.file)CH[c.id]=parseStory(await get(c.file));
+    W=Object.assign({},WORLD.words,...Object.values(CH).map(c=>c.words));
     try{sessionStorage.removeItem('tal-repair')}catch(_){}
   }catch(e){
     // First failure: throw away the offline copy (an old one can mix with new files) and reload once.
@@ -470,11 +562,18 @@ async function boot(){
     return;
   }
   load();
+  if(!S.ch){ // saves from before chapters existed: they were all prologue
+    S.ch=WORLD.chapters[0].id;if(S.F.solved_q5)S.done[S.ch]=1;
+    Object.keys(S.visited||{}).forEach(p=>S.known[p]=1);if(S.loc)S.known[S.loc]=1;
+  }
+  if(!CH[S.ch])S.ch=WORLD.chapters[0].id;
+  useChapter(S.ch);
   if(!S.loc||!ST.places[S.loc])S.loc=ST.meta['start-place'];
   if(S.node&&!ST.nodes[S.node])S.node=null;
   revealFor=S.node;lastLoc=S.loc;
   $('#boot').remove();
   $('#bNote').onclick=notebook;$('#bCase').onclick=caseBoard;$('#bLog').onclick=showLog;$('#bHint').onclick=hint;$('#bSet').onclick=settings;
+  $('#locKo').onclick=openMap;$('#locSub').onclick=openMap;
   render();title();
 }
 boot();

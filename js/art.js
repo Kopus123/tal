@@ -30,15 +30,25 @@ function hanok(x,y,w,h,eve){
   for(let k=x;k<x+w;k+=14)s+=`<circle cx="${k}" cy="${y-2}" r="1.7" fill="#e8c35a"/>`;
   return s+roof(x,y-7,w);
 }
+// A standing figure. (x,y) = feet. Options: top, bot, skin, hair (colors), hanbok, apron, bun, long, s (scale)
 function person(x,y,o={}){
   const s=o.s||1,top=o.top||'#7fa89a',bot=o.bot||'#3b4a5a',skin=o.skin||'#e3c09a',hair=o.hair||'#1f1a18';
+  const ln='stroke="#2a231d" stroke-width="1" stroke-linejoin="round"';
   let g=`<g transform="translate(${x},${y}) scale(${s})">`;
-  g+=o.hanbok?`<path d="M-15,0 L-6,-30 L6,-30 L15,0 Z" fill="${bot}"/><path d="M-9,-31 L9,-31 L11,-44 L-11,-44 Z" fill="${top}"/>`
-    :`<rect x="-7" y="-24" width="5" height="24" fill="${bot}"/><rect x="2" y="-24" width="5" height="24" fill="${bot}"/><path d="M-9,-22 L9,-22 L10,-44 L-10,-44 Z" fill="${top}"/>`;
-  if(o.apron)g+=`<rect x="-7" y="-38" width="14" height="22" fill="#f4f1ea"/>`;
-  g+=`<circle cx="0" cy="-51" r="7.5" fill="${skin}"/><path d="M-7.5,-52 A7.5,7.5 0 0 1 7.5,-52 L7.5,-55 A7.5,6 0 0 0 -7.5,-55 Z" fill="${hair}"/>`;
-  if(o.bun)g+=`<circle cx="0" cy="-60" r="4" fill="${hair}"/>`;
-  if(o.long)g+=`<path d="M-7.5,-54 L-8,-42 L-4,-44 L-4,-54 Z M7.5,-54 L8,-42 L4,-44 L4,-54 Z" fill="${hair}"/>`;
+  g+=`<ellipse cx="0" cy="0" rx="13" ry="2.6" fill="rgba(0,0,0,.18)"/>`;
+  if(o.long)g+=`<path d="M-8,-58 Q-10,-46 -8,-40 L8,-40 Q10,-46 8,-58Z" fill="${hair}" ${ln}/>`;
+  if(o.hanbok)g+=`<path d="M-14,-1 Q-12,-18 -7,-31 L7,-31 Q12,-18 14,-1 Q0,1 -14,-1Z" fill="${bot}" ${ln}/>`;
+  else g+=`<path d="M-7,-23 L-7,-2 L-2,-2 L-1,-16 L1,-16 L2,-2 L7,-2 L7,-23Z" fill="${bot}" ${ln}/><path d="M-8,-2 h6 v2 h-7Z M2,-2 h6 l1,2 h-7Z" fill="#2a231d"/>`;
+  g+=`<path d="M-9,-43 Q-11,-32 -8,-${o.hanbok?30:22} L8,-${o.hanbok?30:22} Q11,-32 9,-43 Q0,-46 -9,-43Z" fill="${top}" ${ln}/>`;
+  if(o.hanbok)g+=`<path d="M-3,-43 L0,-37 L3,-43" fill="#f6f0e0" ${ln}/><path d="M0,-37 l-2,6 M0,-37 l2,5" stroke="#b5412d" stroke-width="1.6" stroke-linecap="round"/>`;
+  if(o.apron)g+=`<path d="M-6,-38 L6,-38 L7,-20 L-7,-20Z" fill="#f4f1ea" ${ln}/>`;
+  g+=`<path d="M-9,-42 Q-14,-34 -12,-25" stroke="${top}" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M9,-42 Q14,-34 12,-25" stroke="${top}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
+  g+=`<circle cx="-12" cy="-24" r="2.2" fill="${skin}"/><circle cx="12" cy="-24" r="2.2" fill="${skin}"/>`;
+  g+=`<rect x="-2.2" y="-47" width="4.4" height="4" fill="${skin}"/>`;
+  g+=`<ellipse cx="0" cy="-52" rx="7" ry="7.8" fill="${skin}" ${ln}/>`;
+  g+=`<path d="M-7.3,-52 Q-8,-61 0,-61 Q8,-61 7.3,-52 Q4,-57 0,-56.5 Q-4,-57 -7.3,-52Z" fill="${hair}" ${ln}/>`;
+  if(o.bun)g+=`<circle cx="0" cy="-62" r="3.6" fill="${hair}" ${ln}/>`;
+  g+=`<circle cx="-2.6" cy="-51.5" r=".9" fill="#2a231d"/><circle cx="2.6" cy="-51.5" r=".9" fill="#2a231d"/>`;
   return g+'</g>';
 }
 function mask(cx,cy,s,o={}){

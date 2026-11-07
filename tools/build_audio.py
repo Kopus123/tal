@@ -34,7 +34,7 @@ def collect():
             if h:
                 sec = h.group(1); continue
             if sec == "cast":
-                k, _n, _c, v = [p.strip() for p in line.split("|")]
+                k, _n, _c, v = [p.strip() for p in line.split("|")][:4]
                 if v:
                     name, rate, pitch = v.split()
                     cast[k] = (VOICE_NAMES[name], rate, pitch)
@@ -51,7 +51,7 @@ def collect():
                     for t in m.group(1).split("|"): add("you", t)
                 elif m := re.match(r"^answer:\s*(.+?)\s+->", line):
                     add("you", " ".join(t.strip() for t in m.group(1).split("|")))
-                elif m := re.match(r"^([a-z_]+):\s*(.+)", line):
+                elif m := re.match(r"^([a-z_]+)(?:\[\w+\])?:\s*(.+)", line):
                     who = m.group(1)
                     add(who if who in cast else "sign", m.group(2))
     add("sujin", "{안녕하세요}!")  # settings voice test

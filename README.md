@@ -10,6 +10,7 @@ A mystery game for learning Korean. Live at https://kopus123.github.io/tal/
 | Engine | `js/engine.js` | How the game works: screens, notebook, case board, voice, saving |
 | Scene art | `js/art.js` | Drawings for each place |
 | Word pictures | `js/icons.js` | The picture for each word, and the past/future/not badges |
+| Characters | `js/people.js` | Portrait faces and the five expressions (each character's look is set in the story's cast list) |
 | Look | `index.html` | Colors, fonts, layout (the CSS at the top) |
 | Voices | `audio/` | Recorded automatically. Don't edit by hand |
 

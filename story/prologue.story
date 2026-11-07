@@ -4,6 +4,9 @@
 #  Quick reference
 #    === scene NAME        a block of lines; each line is one beat
 #    who: 한국어            someone speaks (who = a key from the cast)
+#    who[worried]: 한국어   ...with a face: neutral happy worried surprised sad
+#    @card 제목 | 부제       full-screen title card (chapter openings)
+#    ambient leaves         in a place: leaves petals motes dust snow rain
 #    (English)             what you SEE them do, attached to the line above
 #    ~ English             narration beat
 #    ! effect; effect      runs when the beat above starts
@@ -28,13 +31,13 @@ end-title 프롤로그 끝
 end-text 할머니 is out there somewhere, and she doesn't want to be found. Someone else wants her mask. Chapter 1 picks up the next morning.
 
 === cast
-# key      | name          | color    | voice  rate  pitch
-sujin      | 수진          | #3f8b77  | SunHi  +0%   +0Hz
-halmeoni   | 할머니        | #8a6a9a  | SunHi  -14%  -28Hz
-yuna       | 유나          | #c26a86  | SunHi  +8%   +25Hz
-minsu      | 민수          | #4f6ea8  | InJoon +0%   +0Hz
-ajeossi    | 식당 아저씨   | #8a5a34  | InJoon -6%   -18Hz
-staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz
+# key      | name          | color    | voice  rate  pitch | look (see js/people.js)
+sujin      | 수진          | #3f8b77  | SunHi  +0%   +0Hz  | hair=bun hc=#2a1d18 top=#c7d3cf wear=cardigan
+halmeoni   | 할머니        | #8a6a9a  | SunHi  -14%  -28Hz | hair=grandma hc=#d8d4ce top=#8a6a9a wear=hanbok extra=wrinkles skin=#e2bf9c
+yuna       | 유나          | #c26a86  | SunHi  +8%   +25Hz | hair=long hc=#3a2418 top=#e9a3b4 wear=hanbok extra=flower
+minsu      | 민수          | #4f6ea8  | InJoon +0%   +0Hz  | hair=short hc=#1f1a18 top=#9fb7d9 wear=hanbok
+ajeossi    | 식당 아저씨   | #8a5a34  | InJoon -6%   -18Hz | hair=short hc=#6f6a66 top=#7d8a96 wear=apron extra=stubble skin=#dcb08a
+staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz | hair=long hc=#1f1a18 top=#2d3f66 wear=blazer extra=glasses
 bus        | 안내 방송     | #2a2a2a  | Hyunsu -5%   +0Hz
 you        |               |          | Hyunsu -8%   +0Hz
 word       |               |          | SunHi  -15%  +0Hz
@@ -165,6 +168,7 @@ q5 엄마 final if ending | Who is 할머니 to 수진? | Not just the village �
 name 마당
 sub The courtyard, last night
 art madang_eve
+ambient motes
 glow 마당 50 86 20
 glow 방 45 52 12
 glow 할머니 75 70 9
@@ -174,6 +178,7 @@ glow 탈 75 62 7
 name 마당
 sub The courtyard
 art madang
+ambient leaves
 desc The courtyard. Morning sun on the roof tiles. 수진 is pacing by the jars, calling neighbors on her own phone.
 spot "Talk to 수진" 30 66 -> msj
 spot "할머니's phone" 52 71 => phone
@@ -188,6 +193,7 @@ glow 마당 50 88 20
 name 공방
 sub 할머니's workshop
 art gongbang
+ambient dust
 first g1
 desc Masks on every wall, all grinning. One empty hook.
 spot "Empty hook" 50 40 -> gh1
@@ -202,6 +208,7 @@ glow 오늘 87 30 9
 name 골목
 sub The alley
 art golmok
+ambient leaves
 first o1
 desc The alley outside the gate. Lanterns overhead. The path splits left and right.
 spot "The couple" 50 62 -> oc1 if couple
@@ -216,6 +223,7 @@ glow 사진 50 62 9
 name 산길
 sub A mountain path
 art san
+ambient leaves
 always s1
 desc A quiet path up the mountain. Pine needles underfoot. Nobody here.
 spot "Go back down" 50 88 => place golmok
@@ -225,6 +233,7 @@ glow 산 50 30 22
 name 식당
 sub The little restaurant
 art sikdang
+ambient dust
 first k1
 desc A tiny restaurant that smells like sesame oil. The bus stop is right outside the window.
 spot "Talk to the owner" 50 52 -> ktalk
@@ -243,6 +252,7 @@ glow 물 77 60 5
 name 버스 정류장
 sub The bus stop
 art jeong
+ambient leaves
 desc A small bus stop at the edge of the village, right next to the restaurant.
 spot "Route map" 28 45 -> jmap
 spot "Wait for the bus" 72 72 -> b0
@@ -262,6 +272,7 @@ glow 지하철역 50 11 16
 name 박물관
 sub The museum
 art museum
+ambient dust
 desc if museumDone&allSolved: Your case notes are done. Time to go back to the village.
 desc if museumDone: Cool, quiet, masks behind glass. Your case board is waiting.
 desc Cool, quiet, full of masks behind glass.
@@ -274,6 +285,7 @@ glow 탈 24 42 16
 name 대문
 sub The front gate, evening
 art gate
+ambient motes
 desc The front gate, lit by lanterns. The mask hangs there, grinning.
 spot "The note" 70 72 -> enote
 spot "수진" 22 66 -> esj
@@ -309,15 +321,16 @@ note No name. Twice, just before midnight. She never answered.
 
 # ------------------------------------------------------------ last night
 === scene evening
+@card 프롤로그 | 탈
 ~ Cheongsol Village. Tiled roofs, stone walls, and a river that bends around the hills. People have lived here for six hundred years. These days, so do a lot of tourists.
 ~ The last bus drops you at the edge of the village after dark. You find the guesthouse by its lanterns.
-sujin: {안녕하세요}! {저}{는|은/는} 수진{이에요}.
+sujin[happy]: {안녕하세요}! {저}{는|은/는} 수진{이에요}.
 (A woman about your mom's age bows and takes your bag. She talks slowly, like she can tell you're still learning.)
 sujin: {여기}{는|은/는} {마당}{이에요}. {마당}.
 (She sweeps her arm across the courtyard.)
 sujin: {여기}{는|은/는} {방}{이에요}. {방}!
 (She slides open a paper door. Inside: a folded blanket, a low table, a lamp.)
-halmeoni: {안녕하세요}~
+halmeoni[happy]: {안녕하세요}~
 (An old woman comes out of the workshop, brushing wood dust off her hands. She smiles with her whole face.)
 sujin: {할머니}{예요|이에요}.
 halmeoni: {이거} {탈}{이에요}. {탈}!
@@ -326,9 +339,9 @@ halmeoni: {이거} {탈}{이에요}. {탈}!
 * [Laugh with her] -> evening2
 
 === scene evening2
-halmeoni: {탈}... {예뻐요}! 하하.
+halmeoni[happy]: {탈}... {예뻐요}! 하하.
 (She carries the mask back into the workshop and hangs it in the middle of the wall, very carefully, like it matters more than the others.)
-sujin: {잘 자요}!
+sujin[happy]: {잘 자요}!
 (She points you to your room.)
 ~ You sleep well.
 ~ In the morning, someone is shouting in the courtyard.
@@ -336,29 +349,29 @@ sujin: {잘 자요}!
 
 # ------------------------------------------------------------ morning
 === scene m1
-sujin: {할머니}! {할머니}!
+sujin[worried]: {할머니}! {할머니}!
 (수진 runs across the courtyard, sliding doors open one after another.)
 ! place madang
-sujin: {할머니} {봤어요}?
+sujin[worried]: {할머니} {봤어요}?
 (She stops in front of you, points at her own eyes, then sweeps her hand across the empty courtyard.)
 * {네} -> m_yes
 * {아니요} -> m3 ! learn 봤어요, 아니요
 * [Shrug, confused] -> m_shrug
 
 === scene m_yes
-sujin: {정말}요? {어디}{에서}요?
+sujin[surprised]: {정말}요? {어디}{에서}요?
 (Her face lights up and she waits for you to go on. But you haven't seen anyone this morning.)
 -> m1.2
 
 === scene m_shrug
-sujin: {할머니}... {봤어요}?
+sujin[worried]: {할머니}... {봤어요}?
 (She points at her eyes again, slower this time, then at the empty courtyard.)
 -> m1.2
 
 === scene m3
-sujin: {아니요}... {할머니}{가|이/가} {없어요}. {방}{에} {없어요}. {마당}{에}{도} {없어요}.
+sujin[sad]: {아니요}... {할머니}{가|이/가} {없어요}. {방}{에} {없어요}. {마당}{에}{도} {없어요}.
 (She looks into 할머니's room again, then all around the courtyard. Her voice is shaking.)
-sujin: {이상해요}... {할머니} {핸드폰}{이|이/가} {여기} {있어요}.
+sujin[worried]: {이상해요}... {할머니} {핸드폰}{이|이/가} {여기} {있어요}.
 (She holds up a phone in a cracked, flower-patterned case and frowns at it.)
 sujin: {우리} {같이} {찾아요}!
 (She starts peering behind the big clay jars, then looks back at you and waves you over.)
@@ -366,7 +379,7 @@ sujin: {우리} {같이} {찾아요}!
 * [Sit down on the step and wait] -> m5b
 
 === scene m5b
-sujin: {아니요}, {아니요}! {같이} {찾아요}!
+sujin[worried]: {아니요}, {아니요}! {같이} {찾아요}!
 (She pulls you back up by the sleeve and points: the phone, the workshop door, the front gate.)
 -> m3.3
 
@@ -375,7 +388,7 @@ sujin: {아니요}, {아니요}! {같이} {찾아요}!
 ! set intro
 
 === scene msj
-sujin: {할머니}... {어디}{예요|이에요}?
+sujin[sad]: {할머니}... {어디}{예요|이에요}?
 (She's calling neighbors on her own phone now, talking more to herself than to you.)
 
 === scene jars
@@ -386,7 +399,7 @@ sujin: {할머니}... {어디}{예요|이에요}?
 ~ The workshop smells like cut wood. Dozens of wooden masks hang on the wall, all grinning at you.
 sujin: {여기}{는|은/는} {할머니}{의} {공방}{이에요}.
 (She brushes wood shavings off the workbench. Tiny carving knives sit in a neat row.)
-sujin: {탈}... {탈}... 어? {탈}{이|이/가} {없어요}!
+sujin[surprised]: {탈}... {탈}... 어? {탈}{이|이/가} {없어요}!
 (She runs her finger along the masks and stops at an empty hook in the middle of the wall. The hook 할머니 hung her mask on last night.)
 ! set maskMissing; learn 탈
 
@@ -405,9 +418,9 @@ sign: {엄마} ♡
 # ------------------------------------------------------------ alley
 === scene o1
 ~ Outside the front gate, a narrow alley runs between old stone walls. Paper lanterns are strung overhead for the festival. A little way down, the path splits left and right.
-yuna: {저기요}! {저기요}!
+yuna[happy]: {저기요}! {저기요}!
 (A young couple in rented hanbok is waving at you. She's holding out her phone.)
-yuna: {사진} {찍어 주세요}!
+yuna[happy]: {사진} {찍어 주세요}!
 * [Take the phone and line up a photo] -> ocam
 * [Point at yourself, confused] -> o3b
 * [Keep walking] -> o3c
@@ -424,9 +437,9 @@ yuna: {사진}! {사진} {찍어 주세요}!
 === scene ocam
 @camera Get them both in the frame and tap the shutter.
 ! learn 사진, 찍어 주세요
-yuna: 와! {정말} {예뻐요}! {고마워요}!
+yuna[happy]: 와! {정말} {예뻐요}! {고마워요}!
 (She zooms in on the photo and shows her boyfriend.)
-minsu: {정말} {고마워요}.
+minsu[happy]: {정말} {고마워요}.
 (He gives you a small, polite bow. They seem friendly. Maybe they saw something.)
 ~ What do you ask them?
 * {배고파요}? -> o6b
@@ -434,17 +447,17 @@ minsu: {정말} {고마워요}.
 * {김치} {있어요}? -> o6c
 
 === scene o6b
-yuna: {배고파요}? {아니요}! 하하.
+yuna[happy]: {배고파요}? {아니요}! 하하.
 (She laughs. Not what you meant to ask.)
 -> ocam.4
 
 === scene o6c
-minsu: {김치}...? {식당}{에} {있어요}...?
+minsu[surprised]: {김치}...? {식당}{에} {있어요}...?
 (He looks puzzled and points vaguely down the alley.)
 -> ocam.4
 
 === scene o7
-yuna: {할머니}요? 음... 아! {네}! {아침}{에} {봤어요}!
+yuna[surprised]: {할머니}요? 음... 아! {네}! {아침}{에} {봤어요}!
 (She taps her boyfriend's arm.)
 yuna: {오빠}, {사진}! {그} {사진}!
 (He scrolls back through their camera roll.)
@@ -462,7 +475,7 @@ minsu: {오른쪽}{으로} {가요}. {오른쪽}!
 -> o12
 
 === scene o12
-yuna: {빨리} {가요}!
+yuna[happy]: {빨리} {가요}!
 (She shoos you off, grinning.)
 ! set couple
 
@@ -480,7 +493,7 @@ sign: ↑ {산} 1.2km
 === scene k1
 ~ Down the right-hand path, a tiny restaurant is tucked into an old hanok. A handwritten menu hangs on the wall. A man in a white apron is wiping the counter.
 ! learn 오른쪽 if heardDir
-ajeossi: {어서 오세요}!
+ajeossi[happy]: {어서 오세요}!
 (He waves you in with the cloth, smiling.)
 
 === scene ktalk
@@ -492,7 +505,7 @@ answer: {안녕하세요} -> khi
 miss -> khuh
 
 === scene khi
-ajeossi: {네}, {안녕하세요}! 하하.
+ajeossi[happy]: {네}, {안녕하세요}! 하하.
 (He bows back, amused.)
 
 === scene khuh
@@ -500,18 +513,18 @@ ajeossi: {네}?
 (He tilts his head and waits for you to try again.)
 
 === scene k3
-ajeossi: 순자 {할머니}요? {네}, {아침}{에} {여기} {있었어요}.
+ajeossi[surprised]: 순자 {할머니}요? {네}, {아침}{에} {여기} {있었어요}.
 (He nods at a stool by the window.)
 ajeossi: {김밥} {두 개} {샀어요}.
 (He holds up two fingers. Then, after a moment, holds them up again, like that part matters.)
-ajeossi: {버스} {탔어요}.
+ajeossi[worried]: {버스} {탔어요}.
 (He points through the window at the bus stop right next door.)
 ! set talked
 ~
 * {고마워요}! -> k7 ! learn 고마워요
 
 === scene k7
-ajeossi: {네}~ {할머니} {빨리} {찾아요}!
+ajeossi[worried]: {네}~ {할머니} {빨리} {찾아요}!
 (He goes back to wiping the counter, but he keeps glancing at the window.)
 
 === scene k3r
@@ -558,17 +571,17 @@ ajeossi: {물}? {네}, {여기} {있어요}.
 ! learn 물
 
 === scene kspicy
-ajeossi: 하하! {매워요}? {물}! {물} {있어요}!
+ajeossi[happy]: 하하! {매워요}? {물}! {물} {있어요}!
 (He laughs and slides a cup of water across the counter.)
 ! learn 매워요
 
 === scene kgood
-ajeossi: {고마워요}!
+ajeossi[happy]: {고마워요}!
 (He looks very pleased with himself.)
 ! learn 맛있어요
 
 === scene ksalty
-ajeossi: {짜요}? {아니요}... {맛있어요}!
+ajeossi[sad]: {짜요}? {아니요}... {맛있어요}!
 (He looks wounded and insists, very firmly.)
 
 # ------------------------------------------------------------ bus
@@ -627,7 +640,7 @@ bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
 === scene mu1
 ~ Inside, it's cool and quiet. Glass cases full of old masks line the walls. A woman at the front desk looks up.
 ! place museum
-staff: {안녕하세요}! 청솔 {박물관}{이에요}.
+staff[happy]: {안녕하세요}! 청솔 {박물관}{이에요}.
 -> mu3
 
 === scene mu3
@@ -647,15 +660,15 @@ staff: {네}?
 -> mu3
 
 === scene mu4
-staff: 김순자 {선생님}이요? {아니요}... {안} {왔어요}.
+staff[surprised]: 김순자 {선생님}이요? {아니요}... {안} {왔어요}.
 (She checks her watch and frowns, then turns her monitor toward you: a calendar entry at 9:00, with 할머니's name on it.)
-staff: {이상해요}...
+staff[worried]: {이상해요}...
 (She dials a number and holds the phone to her ear. Far away, on a wooden step in a courtyard, a phone is ringing.)
 ! set museumDone
 ~ There's nothing more to learn here. Time to put the morning together on your case board.
 
 === scene mur
-staff: {선생님}{이|이/가} {안} {왔어요}... {이상해요}.
+staff[worried]: {선생님}{이|이/가} {안} {왔어요}... {이상해요}.
 (She's still holding the phone, still frowning.)
 
 === scene mc1
@@ -673,7 +686,7 @@ sign: {탈} · 1650
 ~ Hanging on the gate is a mask. Long eyebrows. A huge grin. The one from the empty hook. Tucked into its strap is a folded note.
 sign: {찾지 마세요}.
 (Shaky handwriting.)
-sujin: {엄마}...
+sujin[sad]: {엄마}...
 (She presses the note to her chest. She isn't talking to you.)
 ~ One question left on your case board.
 
@@ -682,5 +695,5 @@ sign: {찾지 마세요}.
 (You look at the note again. You know that first part from this morning.)
 
 === scene esj
-sujin: {엄마}... {어디}{예요|이에요}...
+sujin[sad]: {엄마}... {어디}{예요|이에요}...
 (She hasn't moved from the gate.)

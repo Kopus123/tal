@@ -1,6 +1,6 @@
 // Offline support: cache the game shell up front, cache audio clips the first time they play.
 // Bump VERSION whenever index.html or the clips change so phones pick up the update.
-const VERSION = 'tal-v2';
+const VERSION = 'tal-v3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './audio/clips.js', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {

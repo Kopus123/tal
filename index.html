@@ -272,13 +272,18 @@ if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pick
 const normT=s=>plain(s).replace(/[📸🏮^♡✖📞]/gu,'').replace(/\//g,', ').replace(/\s+/g,' ').trim();
 const vg=who=>['sujin','yuna','minsu','ajeossi','staff','bus','you','word'].includes(who)?who:'sign';
 let AUD=null;
+// Resolves when the line finishes (or after 7s at most), so callers can wait for it.
 function speak(text,who){
-  const t=normT(text);if(!t)return;
-  const f=window.AUDIO&&window.AUDIO[vg(who)+'|'+t];
-  if(AUD){AUD.pause();AUD=null}
-  if('speechSynthesis' in window)speechSynthesis.cancel();
-  if(f){AUD=new Audio(f);AUD.playbackRate=S.set.slow?.75:1;AUD.preservesPitch=true;AUD.play().catch(()=>tts(t,who));return}
-  tts(t,who);
+  return new Promise(done=>{
+    const t=normT(text);if(!t)return done();
+    const f=window.AUDIO&&window.AUDIO[vg(who)+'|'+t];
+    if(AUD){AUD.pause();AUD=null}
+    if('speechSynthesis' in window)speechSynthesis.cancel();
+    const cap=setTimeout(done,7000),fin=()=>{clearTimeout(cap);done()};
+    if(f){const a=AUD=new Audio(f);a.playbackRate=S.set.slow?.75:1;a.preservesPitch=true;a.onended=fin;
+      a.play().catch(()=>tts(t,who,fin));return}
+    tts(t,who,fin);
+  });
 }
 function allLines(){
   const out=new Set(),add=(w,s)=>{s=normT(s);if(s)out.add(w+'|'+s)};
@@ -288,9 +293,10 @@ function allLines(){
   T.forEach(t=>t.m.forEach(m=>m.ko&&!m.sys&&add('sign',m.ko)));
   add('sujin','안녕하세요');return[...out];
 }
-function tts(t,who){
-  if(!('speechSynthesis' in window))return;
+function tts(t,who,fin){
+  if(!('speechSynthesis' in window)){fin&&fin();return}
   const u=new SpeechSynthesisUtterance(t);u.lang='ko-KR';if(VOICE)u.voice=VOICE;
+  if(fin){u.onend=fin;u.onerror=fin}
   const c=C[who]||{};u.pitch=c.p||1;u.rate=(c.r||1)*(S.set.slow?.62:.88);speechSynthesis.speak(u);
 }
 
@@ -477,10 +483,12 @@ function next(){
   const nd=N[S.node];
   if(nd&&nd.next)go(nd.next);else{S.node=null;save();render();if(F.pendingFinale){F.pendingFinale=0;finale()}}
 }
-function choose(c){
-  if(c.ko){ko(c.ko);speak(c.ko,'you')}
+let busy=false;
+async function choose(c){
+  if(busy)return;busy=true;$('#sf').style.opacity=.55;
   (c.learn||[]).forEach(x=>learn(x));
-  setTimeout(()=>go(c.go),c.ko?450:0);
+  if(c.ko){ko(c.ko);await speak(c.ko,'you');await new Promise(r=>setTimeout(r,250))}
+  busy=false;$('#sf').style.opacity='';go(c.go);
 }
 
 function render(){
@@ -534,11 +542,14 @@ function render(){
   if($('#bShut'))$('#bShut').onclick=()=>{const f=$('#flash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');setTimeout(()=>{if(nd.shot)nd.shot();go(nd.next)},500)};
   dots();save();
 }
-function say(nd){
-  const words=bseq.map(i=>nd.tiles[i]);const line=words.join(' ');speak(line,'you');ko(line);
+async function say(nd){
+  if(busy)return;busy=true;$('#sf').style.opacity=.55;
+  const words=bseq.map(i=>nd.tiles[i]);const line=words.join(' ');ko(line);
   const hit=nd.ans.find(a=>a[0].length===words.length&&a[0].every((w,i)=>w===words[i]));
   if(hit)idsIn(line).forEach(x=>learn(x));
-  setTimeout(()=>{if(hit){const t=typeof hit[1]==='function'?hit[1]():hit[1];go(t)}else go(nd.miss)},600);
+  await speak(line,'you');await new Promise(r=>setTimeout(r,250));
+  busy=false;$('#sf').style.opacity='';
+  if(hit){const t=typeof hit[1]==='function'?hit[1]():hit[1];go(t)}else go(nd.miss);
 }
 function hot(i){const x=L[S.loc].hs[i];if(!x)return;if(x.go)go(typeof x.go==='function'?x.go():x.go);else x.act()}
 function dots(){

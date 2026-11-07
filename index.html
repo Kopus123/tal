@@ -20,9 +20,9 @@
   --paper-2:#ded3ba;
   --paper-ink:#2a231d;  /* text on paper */
   --paper-mute:#7b705f;
-  --celadon:#3f8b77;    /* dancheong green: learned */
+  --celadon:#3f8b77;    /* dancheong green: figured out */
   --celadon-lt:#7cc3ae;
-  --ochre:#c98f2c;      /* dancheong ochre: unknown words */
+  --ochre:#c98f2c;      /* dancheong ochre: new words, hints */
   --cinnabar:#b5412d;   /* sparing: alerts */
   --f-brush:"Nanum Brush Script","Gowun Batang",serif;
   --f-ko:"Gowun Batang","Noto Serif KR",serif;
@@ -53,6 +53,10 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--celadon-lt);
 .hs i{width:14px;height:14px;transform:rotate(45deg);border:2px solid #fff;background:rgba(201,143,44,.85);box-shadow:0 0 0 4px rgba(255,255,255,.18);animation:pulse 2.4s ease-in-out infinite}
 .hs span{font-size:.7rem;background:rgba(21,26,36,.82);color:#f3ecdc;padding:2px 7px;border-radius:99px;white-space:nowrap}
 @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(255,255,255,0)}}
+.glow{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;border-radius:50%;pointer-events:none;
+  border:3px solid rgba(255,214,120,.95);box-shadow:0 0 18px 6px rgba(255,200,90,.55),inset 0 0 14px rgba(255,214,120,.5);
+  animation:glow 1.1s ease-in-out 3 both}
+@keyframes glow{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}}
 .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 .flash.go{animation:flash .45s ease-out}
 @keyframes flash{0%{opacity:.95}100%{opacity:0}}
@@ -60,31 +64,31 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--celadon-lt);
 .vf::after{content:"";position:absolute;left:50%;top:50%;width:46px;height:46px;transform:translate(-50%,-50%);border:2px solid #ffd35a;border-radius:4px}
 .drift{animation:drift 9s linear infinite}
 @keyframes drift{from{transform:translateX(0)}to{transform:translateX(-400px)}}
-@media (prefers-reduced-motion:reduce){.drift,.hs i{animation:none}}
+@media (prefers-reduced-motion:reduce){.drift,.hs i{animation:none}.glow{animation-iteration-count:1}}
 
 /* paper sheet */
 .sheet{flex:1;min-height:0;background:var(--paper);color:var(--paper-ink);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;
   background-image:radial-gradient(rgba(120,100,70,.08) 1px,transparent 1.4px),radial-gradient(rgba(120,100,70,.06) 1px,transparent 1.2px);background-size:7px 7px,11px 13px}
 .sheet-body{flex:1;min-height:0;overflow-y:auto;padding:16px 18px 8px;display:flex;flex-direction:column;gap:12px}
-.sheet-foot{padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.sheet-foot{padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px;transition:opacity .2s}
 .who{display:flex;align-items:center;gap:10px}
 .chip{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-ko);font-weight:700;color:#fff;flex:0 0 auto}
 .who b{font-family:var(--f-ko);font-size:1rem}
-.who .say{margin-left:auto;border:1px solid var(--paper-2);background:transparent;border-radius:99px;padding:4px 10px;font-size:.8rem;color:var(--paper-mute)}
+.say{margin-left:auto;border:1px solid var(--paper-2);background:transparent;border-radius:99px;padding:4px 10px;font-size:.8rem;color:var(--paper-mute)}
 .koline{font-family:var(--f-ko);font-size:1.5rem;line-height:1.7;word-break:keep-all;text-wrap:pretty}
-.koline.sign{background:#f6f0e0;border:1px solid #cbbf9f;box-shadow:2px 3px 0 rgba(60,45,25,.12);padding:12px 16px;border-radius:4px;transform:rotate(-.6deg);white-space:pre-line;font-size:1.4rem}
+.koline.sign{background:#f6f0e0;border:1px solid #cbbf9f;box-shadow:2px 3px 0 rgba(60,45,25,.12);padding:12px 16px;border-radius:4px;transform:rotate(-.6deg);font-size:1.4rem}
 .koline.led{font-family:ui-monospace,monospace;background:#120e0a;color:#ffb347;padding:10px 14px;border-radius:6px;font-size:1.25rem}
 .en{font-size:.98rem;line-height:1.55;color:var(--paper-mute);max-width:62ch}
 .narr{font-size:1.06rem;line-height:1.6;color:var(--paper-ink)}
 .w{background:none;border:0;padding:0 1px;margin:0;font:inherit;color:inherit;border-bottom:2px dotted var(--ochre);border-radius:2px}
-.w.hunch{border-bottom:2px solid var(--ochre)}
 .w.learned{color:var(--celadon);border-bottom:2px solid rgba(63,139,119,.35)}
 .w.gram{border-bottom:1px solid rgba(123,112,95,.4);color:#5b5246}
 .w:active{background:rgba(201,143,44,.2)}
 .led .w{border-bottom-color:#7a5520}
+.led .w.gram{color:#c98f4a}
 .btn{border:1.5px solid var(--paper-ink);background:transparent;border-radius:12px;padding:12px 14px;text-align:left;font-size:1rem;display:flex;align-items:center;gap:10px;min-height:48px}
 .btn.ko{font-family:var(--f-ko);font-size:1.25rem}
-.btn.act{font-style:normal;color:var(--paper-ink)}
+.btn.act{color:var(--paper-ink)}
 .btn.act::before{content:"";width:8px;height:8px;transform:rotate(45deg);background:var(--ochre);flex:0 0 auto}
 .btn.primary{background:var(--paper-ink);color:var(--paper);justify-content:center;font-weight:600}
 .btn:active{transform:translateY(1px)}
@@ -114,28 +118,27 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--celadon-lt);
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .card{border:1px solid var(--ink-3);background:var(--ink);border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:74px;justify-content:center}
 .card .k{font-family:var(--f-ko);font-size:1.15rem;word-break:keep-all;text-align:center}
-.card .ic{font-size:1.2rem;min-height:1.3em}
+.card .ic{width:40px;height:40px;display:grid;place-items:center;color:var(--mist);font-size:1.2rem}
+.card .ic svg{width:40px;height:40px;background:var(--paper);border-radius:8px}
 .card .tag{font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mist)}
 .card.learned{border-color:rgba(124,195,174,.5)}
 .card.learned .k{color:var(--celadon-lt)}
-.card.hunch .tag{color:var(--ochre)}
 .card.new .tag{color:var(--ochre)}
 .empty{color:var(--mist);font-size:.92rem;line-height:1.5}
 .label{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--mist)}
 .paper .label{color:var(--paper-mute)}
-.bigword{font-family:var(--f-ko);font-size:2.6rem;line-height:1.1}
+.wordhead{display:flex;align-items:center;gap:16px}
+.bigicon{width:112px;height:112px;flex:0 0 auto;background:#f6f0e0;border:1px solid #cbbf9f;border-radius:16px;box-shadow:2px 3px 0 rgba(60,45,25,.1)}
+.bigword{font-family:var(--f-ko);font-size:2.4rem;line-height:1.1;word-break:keep-all}
 .badge{display:inline-block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:99px;border:1px solid currentColor}
 .ctx{font-family:var(--f-ko);font-size:1.05rem;line-height:1.55;padding:8px 10px;border-left:3px solid var(--paper-2);background:rgba(255,255,255,.35)}
 .ctx mark{background:rgba(201,143,44,.28);color:inherit;padding:0 2px;border-radius:2px}
-.guess{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.guess button{font-size:1.6rem;border:1.5px solid var(--paper-2);background:#f6f0e0;border-radius:12px;padding:12px 0}
-.guess.shake{animation:shake .35s}
-@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;border:1px solid var(--paper-2);background:#f6f0e0;color:var(--paper-ink);font:inherit;padding:10px;resize:vertical}
 .q{border:1px solid var(--ink-3);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--ink)}
 .q.solved{border-color:rgba(124,195,174,.45)}
 .q .qt{font-size:1.02rem;line-height:1.45}
-.q .ans{font-family:var(--f-ko);font-size:1.4rem;color:var(--celadon-lt)}
+.q .ans{font-family:var(--f-ko);font-size:1.4rem;color:var(--celadon-lt);display:flex;align-items:center;gap:10px}
+.q .ans svg{width:40px;height:40px;background:var(--paper);border-radius:8px}
 .q .why{color:var(--mist);font-size:.9rem;line-height:1.5}
 .pick{display:flex;flex-wrap:wrap;gap:6px}
 .pick button{font-family:var(--f-ko);font-size:1.05rem;border:1px solid var(--ink-3);background:var(--ink-2);border-radius:10px;padding:6px 10px}
@@ -143,8 +146,9 @@ textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;bor
 .miss{color:#e59a87;font-size:.9rem}
 .btn-ink{border:1px solid var(--ink-3);background:var(--ink);color:var(--paper);border-radius:12px;padding:12px 14px;font-size:1rem}
 .toasts{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:40;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;padding:0 16px}
-.toast{background:var(--paper);color:var(--paper-ink);border-radius:99px;padding:8px 16px;font-size:.92rem;box-shadow:0 6px 20px rgba(0,0,0,.35);animation:tin .3s ease-out}
+.toast{background:var(--paper);color:var(--paper-ink);border-radius:99px;padding:8px 16px;font-size:.92rem;box-shadow:0 6px 20px rgba(0,0,0,.35);animation:tin .3s ease-out;display:flex;align-items:center;gap:8px}
 .toast b{font-family:var(--f-ko);color:var(--celadon)}
+.toast svg{width:26px;height:26px}
 @keyframes tin{from{transform:translateY(-10px);opacity:0}}
 
 /* phone */
@@ -190,6 +194,7 @@ textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;bor
 .set-row .seg button.on{background:var(--paper);color:var(--paper-ink)}
 .stat{display:flex;justify-content:space-between;font-size:1rem;padding:8px 0;border-bottom:1px solid var(--paper-2)}
 .stat b{font-variant-numeric:tabular-nums}
+.boot{position:fixed;inset:0;display:grid;place-items:center;color:var(--mist);font-family:var(--f-brush);font-size:3rem}
 </style>
 
 <div id="app">
@@ -203,704 +208,12 @@ textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;bor
   <div class="scene" id="scene"></div>
   <div class="sheet"><div class="sheet-body" id="sb"></div><div class="sheet-foot" id="sf"></div></div>
 </div>
+<div class="boot" id="boot">탈</div>
 <div class="toasts" id="toasts"></div>
 <div id="ovs"></div>
 
+<!-- story/*.story = the plot.  js/art.js = scene drawings.  js/icons.js = word pictures.  js/engine.js = how the game works. -->
 <script src="audio/clips.js"></script>
-<script>
-/* ============ WORDS ============ */
-// i: icon (revealed when learned), k: on the player's own vocab list, g: grammar piece (no guessing)
-const W={
- '할머니':{i:'👵',k:1},'봤어요':{i:'👀'},'네':{i:'⭕',k:1},'아니요':{i:'❌',k:1},'정말':{i:'❗',k:1},
- '어디':{i:'🗺️',k:1},'이에요':{i:'🟰',k:1,g:1},'에서':{i:'',k:1,g:1},'이/가':{i:'',k:1,g:1},'은/는':{i:'',k:1,g:1},
- '에':{i:'',k:1,g:1},'도':{i:'',k:1,g:1},'의':{i:'',k:1,g:1},'으로':{i:'',k:1,g:1},
- '없어요':{i:'🕳️',k:1},'방':{i:'🛏️'},'마당':{i:'🏡'},'이상해요':{i:'🤨'},'핸드폰':{i:'📱',k:1},'여기':{i:'👇',k:1},
- '있어요':{i:'✅',k:1},'우리':{i:'👥',k:1},'같이':{i:'🧑‍🤝‍🧑'},'찾아요':{i:'🔍'},'공방':{i:'🪚'},'이거':{i:'👆'},
- '탈':{i:'🎭'},'예뻐요':{i:'🌸',k:1},'고마워요':{i:'🙇',k:1},'축제':{i:'🏮'},'오늘':{i:'☀️'},'어제':{i:'⏮️'},'내일':{i:'⏭️'},
- '엄마':{i:'👩',k:1},'저기요':{i:'🙋'},'사진':{i:'📷',k:1},'찍어 주세요':{i:'📸',k:1},'배고파요':{i:'🤤',k:1},
- '김치':{i:'🥬',k:1},'식당':{i:'🍽️',k:1},'아침':{i:'🌅',k:1},'오빠':{i:'👨',k:1},'그':{i:'☝️',k:1},
- '버스 정류장':{i:'🚏',k:1},'옆에':{i:'↔️',k:1},'오른쪽':{i:'👉',k:1},'왼쪽':{i:'👈',k:1},'가요':{i:'🚶',k:1},
- '아니에요':{i:'🙅',k:1},'산':{i:'⛰️',k:1},'어서 오세요':{i:'🚪'},'안녕하세요':{i:'👋',k:1},'있었어요':{i:'⏪'},
- '김밥':{i:'🍙',k:1},'떡볶이':{i:'🍢',k:1},'라면':{i:'🍜',k:1},'비빔밥':{i:'🍚',k:1},'주세요':{i:'🤲',k:1},
- '두 개':{i:'✌️'},'샀어요':{i:'🛍️'},'그리고':{i:'➕'},'버스':{i:'🚌',k:1},'탔어요':{i:'🎫'},'빨리':{i:'⚡',k:1},
- '맛있어요':{i:'😋',k:1},'매워요':{i:'🥵',k:1},'짜요':{i:'🧂',k:1},'물':{i:'💧',k:1},
- '시장':{i:'🥕',k:1},'영화관':{i:'🎬',k:1},'박물관':{i:'🏛️',k:1},'지하철역':{i:'🚇',k:1},
- '이번':{i:'⏱️'},'정류장':{i:'🛑'},'입니다':{i:'🎩',g:1},'내려요':{i:'⬇️',k:1},'선생님':{i:'🧑‍🏫',k:1},
- '시':{i:'🕘'},'만나요':{i:'🤝'},'가져오세요':{i:'🎒'},'안':{i:'🚫'},'왔어요':{i:'🏃'},'찾지 마세요':{i:'🙈'}
-};
-const PAST=[['있어요','있었어요'],['사요','샀어요'],['타요','탔어요'],['와요','왔어요'],['보다','봤어요']];
-
-/* ============ CHARACTERS ============ */
-const C={
- sujin:{n:'수진',c:'#3f8b77',p:1.15,r:1},
- yuna:{n:'유나',c:'#c26a86',p:1.35,r:1.05},
- minsu:{n:'민수',c:'#4f6ea8',p:.85,r:1},
- ajeossi:{n:'식당 아저씨',c:'#8a5a34',p:.7,r:.95},
- staff:{n:'박물관 직원',c:'#6a6f7d',p:1.05,r:1},
- bus:{n:'안내 방송',c:'#2a2a2a',p:1,r:.95},
- sign:{n:'',c:''},narr:{n:'',c:''}
-};
-
-/* ============ STATE ============ */
-const KEY='tal-save-v1';
-const fresh=()=>({loc:'madang',node:null,F:{},w:{},cs:{},nb:{},set:{auto:1,slow:0},visited:{}});
-let S=fresh();
-function load(){try{const r=localStorage.getItem(KEY);if(r){S=Object.assign(fresh(),JSON.parse(r));return true}}catch(e){}return false}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-const F=new Proxy({}, {get:(t,k)=>S.F[k], set:(t,k,v)=>{S.F[k]=v;return true}});
-
-/* ============ TOKENS ============ */
-const TOK=/\{([^}|]+)(?:\|([^}]+))?\}/g;
-const plain=s=>s.replace(TOK,'$1');
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function wrec(id){return S.w[id]||(S.w[id]={ctx:[],L:0,note:'',wrong:-1})}
-function see(id,line){if(!W[id])return;const r=wrec(id);if(!r.ctx.includes(line)){r.ctx.push(line);if(r.ctx.length>6)r.ctx.shift();r.n=(r.n||0)+1}}
-function status(id){const d=W[id];if(!d)return'new';if(d.g)return'gram';const r=S.w[id];if(r&&r.L)return'learned';if(r&&r.H)return'hunch';return'new'}
-function ko(str,tap=true){
-  return str.replace(TOK,(m,surf,id)=>{id=id||surf;see(id,str);
-    return tap?`<button class="w ${status(id)}" data-w="${esc(id)}">${esc(surf)}</button>`:esc(surf)}).replace(/\n/g,'<br>');
-}
-function learn(id,quiet){if(!W[id]||W[id].g)return;const r=wrec(id);if(r.L)return;r.L=1;if(!quiet)toast(`${W[id].i} <b>${id}</b> figured out`);checkPattern()}
-const idsIn=s=>[...s.matchAll(TOK)].map(m=>m[2]||m[1]);
-function checkPattern(){const seen=PAST.filter(p=>S.w[p[1]]).length;if(seen>=3&&!F.pattern){F.pattern=1;toast('Pattern spotted. Check your notebook.')}}
-
-/* ============ VOICE ============ */
-let VOICE=null;
-function pickVoice(){const vs=speechSynthesis.getVoices();VOICE=vs.find(v=>/^ko/i.test(v.lang)&&/google/i.test(v.name))||vs.find(v=>/^ko/i.test(v.lang))||null}
-if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
-// Recorded neural-voice clips (audio/clips.js defines window.AUDIO = {"voice|text": "audio/n.mp3"}); phone TTS is the fallback.
-const normT=s=>plain(s).replace(/[📸🏮^♡✖📞]/gu,'').replace(/\//g,', ').replace(/\s+/g,' ').trim();
-const vg=who=>['sujin','yuna','minsu','ajeossi','staff','bus','you','word'].includes(who)?who:'sign';
-let AUD=null;
-// Resolves when the line finishes (or after 7s at most), so callers can wait for it.
-function speak(text,who){
-  return new Promise(done=>{
-    const t=normT(text);if(!t)return done();
-    const f=window.AUDIO&&window.AUDIO[vg(who)+'|'+t];
-    if(AUD){AUD.pause();AUD=null}
-    if('speechSynthesis' in window)speechSynthesis.cancel();
-    const cap=setTimeout(done,7000),fin=()=>{clearTimeout(cap);done()};
-    if(f){const a=AUD=new Audio(f);a.playbackRate=S.set.slow?.75:1;a.preservesPitch=true;a.onended=fin;
-      a.play().catch(()=>tts(t,who,fin));return}
-    tts(t,who,fin);
-  });
-}
-function allLines(){
-  const out=new Set(),add=(w,s)=>{s=normT(s);if(s)out.add(w+'|'+s)};
-  for(const id in N){const n=N[id];if(n.ko)add(vg(n.who),n.ko);(n.ch||[]).forEach(c=>c.ko&&add('you',c.ko));
-    if(n.tiles){n.tiles.forEach(t=>add('you',t));n.ans.forEach(a=>add('you',a[0].join(' ')))}}
-  for(const id in W)add('word',id);
-  T.forEach(t=>t.m.forEach(m=>m.ko&&!m.sys&&add('sign',m.ko)));
-  add('sujin','안녕하세요');return[...out];
-}
-function tts(t,who,fin){
-  if(!('speechSynthesis' in window)){fin&&fin();return}
-  const u=new SpeechSynthesisUtterance(t);u.lang='ko-KR';if(VOICE)u.voice=VOICE;
-  if(fin){u.onend=fin;u.onerror=fin}
-  const c=C[who]||{};u.pitch=c.p||1;u.rate=(c.r||1)*(S.set.slow?.62:.88);speechSynthesis.speak(u);
-}
-
-/* ============ SCRIPT ============ */
-const N={
- intro1:{who:'narr',en:"Cheongsol Village. Tiled roofs, stone walls, and a river that bends around the hills. People have lived here for six hundred years. These days, so do a lot of tourists.",next:'intro2'},
- intro2:{who:'narr',en:"You came in on the last bus last night. Your host, 수진, runs a small hanok guesthouse. An old woman lives there too. She carves wooden masks, and everyone in the village calls her 할머니.",next:'intro3'},
- intro3:{who:'narr',en:"Before bed she made you tea and laughed, kindly, at your Korean. You slept well.",next:'intro4'},
- intro4:{who:'narr',en:"In the morning, someone is shouting in the courtyard.",next:'m1'},
- m1:{who:'sujin',ko:"{할머니}! {할머니}!",en:"수진 runs across the courtyard, sliding doors open one after another.",next:'m2'},
- m2:{who:'sujin',ko:"{할머니} {봤어요}?",en:"She stops in front of you, points at her own eyes, then sweeps her hand across the empty courtyard.",
-   ch:[{ko:"{네}",go:'m2yes'},{ko:"{아니요}",go:'m3',learn:['봤어요','아니요']},{en:"Shrug, confused",go:'m2shrug'}]},
- m2yes:{who:'sujin',ko:"{정말}요? {어디}{에서}요?",en:"Her face lights up and she waits for you to go on. But you haven't seen anyone this morning.",next:'m2'},
- m2shrug:{who:'sujin',ko:"{할머니}... {봤어요}?",en:"She points at her eyes again, slower this time, then at the empty courtyard.",next:'m2'},
- m3:{who:'sujin',ko:"{아니요}... {할머니}{가|이/가} {없어요}. {방}{에} {없어요}. {마당}{에}{도} {없어요}.",en:"She looks into the room behind her again, then all around the courtyard. Her voice is shaking.",next:'m4'},
- m4:{who:'sujin',ko:"{이상해요}... {할머니} {핸드폰}{이|이/가} {여기} {있어요}.",en:"She holds up a phone in a cracked, flower-patterned case and frowns at it.",next:'m5'},
- m5:{who:'sujin',ko:"{우리} {같이} {찾아요}!",en:"She starts peering behind the big clay jars, then looks back at you and waves you over.",
-   ch:[{en:"Start searching with her",go:'m6',learn:['찾아요','같이']},{en:"Sit down on the step and wait",go:'m5b'}]},
- m5b:{who:'sujin',ko:"{아니요}, {아니요}! {같이} {찾아요}!",en:"She pulls you back up by the sleeve and points: the phone, the workshop door, the front gate.",next:'m5'},
- m6:{who:'narr',en:"You nod. She looks relieved and presses 할머니's phone into your hands. It isn't locked.",fx:()=>{F.intro=1}},
- msj:{who:'sujin',ko:"{할머니}... {어디}{예요|이에요}?",en:"She's calling neighbors on her own phone now, talking more to herself than to you."},
- jars:{who:'narr',en:"A row of big brown clay jars, the kind every old house keeps soy paste and chili paste in. You lift a couple of lids. No 할머니. Mostly a smell."},
-
- g1:{who:'narr',en:"The workshop smells like cut wood. Dozens of wooden masks hang on the wall, all grinning at you.",next:'g2'},
- g2:{who:'sujin',ko:"{여기}{는|은/는} {할머니}{의} {공방}{이에요}.",en:"She brushes wood shavings off the workbench. Tiny carving knives are laid out in a neat row.",next:'g3'},
- g3:{who:'sujin',ko:"{이거} {탈}{이에요}. {할머니} {탈}. {예뻐요}?",en:"She lifts a mask off the wall and holds it up in front of her face.",
-   ch:[{ko:"{네}, {예뻐요}!",go:'g4a',learn:['예뻐요']},{ko:"{아니요}",go:'g4b'}]},
- g4a:{who:'sujin',ko:"{고마워요}.",en:"For the first time this morning, she smiles. Then she freezes, staring past you at the wall.",next:'g5'},
- g4b:{who:'sujin',ko:"{아니요}?!",en:"She looks honestly offended for a second. Then she freezes, staring past you at the wall.",next:'g5'},
- g5:{who:'sujin',ko:"어? {탈}{이|이/가} {없어요}!",en:"In the middle of the wall there's an empty hook, and a pale outline on the wood where a mask used to hang.",fx:()=>{F.maskMissing=1;learn('탈')}},
- gh1:{who:'narr',en:"Going by the outline, this mask had long eyebrows and a huge grin. Under the hook there's a little paper tag in neat handwriting:",next:'gh2'},
- gh2:{who:'sign',ko:"{축제} {탈}"},
- gc1:{who:'sign',ko:"{오늘}: {축제} 🏮\n9{시} {박물관}",en:"A paper calendar on the wall. Today's date has been circled twice in red pen."},
- gp1:{who:'narr',en:"A faded photo by the door: a young woman in hanbok with a grinning mask pushed up on top of her head. Someone wrote on the back in crayon, a long time ago:",next:'gp2'},
- gp2:{who:'sign',ko:"{엄마} ♡"},
-
- o1:{who:'narr',en:"Outside the front gate, a narrow alley runs between old stone walls. Paper lanterns are strung overhead for the festival. A little way down, the path splits left and right.",next:'o2'},
- o2:{who:'yuna',ko:"{저기요}! {저기요}!",en:"A young couple in rented hanbok is waving at you. She's holding out her phone.",next:'o3'},
- o3:{who:'yuna',ko:"{사진} {찍어 주세요}!",ch:[{en:"Take the phone and line up a photo",go:'ocam'},{en:"Point at yourself, confused",go:'o3b'},{en:"Keep walking",go:'o3c'}]},
- o3b:{who:'yuna',ko:"{사진}! {사진} {찍어 주세요}!",en:"She mimes pressing a shutter button, then points at the two of them.",next:'o3'},
- o3c:{who:'narr',en:"You turn to leave. She looks so disappointed that you turn right back around.",next:'o3'},
- ocam:{type:'camera',en:"Get them both in the frame and tap the shutter.",next:'o4',shot:()=>{learn('찍어 주세요',1);learn('사진')}},
- o4:{who:'yuna',ko:"와! {정말} {예뻐요}! {고마워요}!",en:"She zooms in on the photo and shows her boyfriend.",next:'o5'},
- o5:{who:'minsu',ko:"{정말} {고마워요}.",en:"He gives you a small, polite bow. They seem friendly. Maybe they saw something.",next:'o6'},
- o6:{who:'narr',en:"What do you ask them?",ch:[{ko:"{배고파요}?",go:'o6b'},{ko:"{할머니} {봤어요}?",go:'o7',learn:['할머니']},{ko:"{김치} {있어요}?",go:'o6c'}]},
- o6b:{who:'yuna',ko:"{배고파요}? {아니요}! 하하.",en:"She laughs. Not what you meant to ask.",next:'o6'},
- o6c:{who:'minsu',ko:"{김치}...? {식당}{에} {있어요}...?",en:"He looks puzzled and points vaguely down the alley.",next:'o6'},
- o7:{who:'yuna',ko:"{할머니}요? 음... 아! {네}! {아침}{에} {봤어요}!",en:"She taps her boyfriend's arm.",next:'o8'},
- o8:{who:'yuna',ko:"{오빠}, {사진}! {그} {사진}!",en:"He scrolls back through their camera roll.",next:'o9',fx:()=>{F.sawPhoto=1}},
- o9:{type:'photo',en:"A selfie of the two of them at a bus stop, grinning. Behind them, a little blurry: a small old woman holding a bundle wrapped in red cloth. It's 할머니.",next:'o10'},
- o10:{who:'minsu',ko:"{버스 정류장}{이에요}. {식당} {옆에} {있어요}.",en:"He points down the alley toward the fork.",
-   ch:[{ko:"{버스 정류장} {어디}{예요|이에요}?",go:'o11',learn:['버스 정류장','어디']},{en:"Nod and thank them",go:'o12'}]},
- o11:{who:'minsu',ko:"{오른쪽}{으로} {가요}. {오른쪽}!",en:"He waves in the general direction of the fork. Honestly, both ways look the same to you.",next:'o12',fx:()=>{F.heardDir=1}},
- o12:{who:'yuna',ko:"{빨리} {가요}!",en:"She shoos you off, grinning.",fx:()=>{F.couple=1}},
- oc1:{who:'minsu',ko:"{버스 정류장}{은|은/는} {오른쪽}{이에요}. {왼쪽} {아니에요}!",en:"He points again, more firmly this time.",fx:()=>{F.heardDir=1}},
-
- s1:{who:'narr',en:"The path gets narrow and steep, climbing toward the mountain behind the village. Pine trees, a grassy grave mound, birds. No bus stop up here.",next:'s2'},
- s2:{who:'sign',ko:"↑ {산} 1.2km",en:"A wooden trail marker."},
-
- k1:{who:'narr',en:"Down the right-hand path, a tiny restaurant is tucked into an old hanok. A handwritten menu hangs on the wall. A man in a white apron is wiping the counter.",next:'k2',fx:()=>{if(F.heardDir)learn('오른쪽')}},
- k2:{who:'ajeossi',ko:"{어서 오세요}!",en:"He waves you in with the cloth, smiling."},
- ktalk:{type:'build',en:"Say something to him.",tiles:["{할머니}","{봤어요}?","{안녕하세요}","{여기}","{있어요}?","{맛있어요}"],
-   ans:[[["{할머니}","{봤어요}?"],()=>F.talked?'k3r':'k3'],[["{할머니}","{여기}","{있어요}?"],()=>F.talked?'k3r':'k3'],[["{안녕하세요}"],'khi']],miss:'khuh'},
- khi:{who:'ajeossi',ko:"{네}, {안녕하세요}! 하하.",en:"He bows back, amused."},
- khuh:{who:'ajeossi',ko:"{네}?",en:"He tilts his head and waits for you to try again."},
- k3:{who:'ajeossi',ko:"순자 {할머니}요? {네}, {아침}{에} {여기} {있었어요}.",en:"He nods at a stool by the window.",next:'k4'},
- k4:{who:'ajeossi',ko:"{김밥} {두 개} {샀어요}.",en:"He holds up two fingers. Then, after a moment, holds them up again, like that part matters.",next:'k5'},
- k5:{who:'ajeossi',ko:"{그리고}... {버스} {탔어요}.",en:"He points through the window at the bus stop right next door.",next:'k6',fx:()=>{F.talked=1}},
- k6:{who:'narr',en:"",ch:[{ko:"{고마워요}!",go:'k7',learn:['고마워요']}]},
- k7:{who:'ajeossi',ko:"{네}~ {할머니} {빨리} {찾아요}!",en:"He goes back to wiping the counter, but he keeps glancing at the window."},
- k3r:{who:'ajeossi',ko:"{할머니}{는|은/는} {버스} {탔어요}. {버스 정류장}{에서}!",en:"He points at the bus stop again."},
- korder:{type:'build',en:"The menu is on the wall. Order something.",tiles:["{김밥}","{떡볶이}","{라면}","{비빔밥}","{물}","{주세요}"],
-   ans:[[["{김밥}","{주세요}"],'kf_김밥'],[["{떡볶이}","{주세요}"],'kf_떡볶이'],[["{라면}","{주세요}"],'kf_라면'],[["{비빔밥}","{주세요}"],'kf_비빔밥'],[["{물}","{주세요}"],'kwater']],miss:'khuh'},
- kwater:{who:'ajeossi',ko:"{물}? {네}, {여기} {있어요}.",en:"He fills a metal cup from a pitcher.",fx:()=>learn('물')},
- kspicy:{who:'ajeossi',ko:"하하! {매워요}? {물}! {물} {있어요}!",en:"He laughs and slides a cup of water across the counter.",fx:()=>learn('매워요')},
- kgood:{who:'ajeossi',ko:"{고마워요}!",en:"He looks very pleased with himself.",fx:()=>learn('맛있어요')},
- ksalty:{who:'ajeossi',ko:"{짜요}? {아니요}... {맛있어요}!",en:"He looks wounded and insists, very firmly."},
-
- jmap:{who:'sign',ko:"청솔마을 → {시장} → {영화관} → {박물관} → {지하철역}",en:"The route map. The bus makes four stops after the village."},
- b0:{who:'narr',en:"The bus rattles out of the village along the river road. A screen above the driver shows the stops.",next:'bs0',fx:()=>{S.loc='bus';F.led='청솔마을'}},
-
- bo_시장:{who:'narr',en:"You hop off into a crowded market. Fish, vegetables, grandmothers arguing over prices. None of them is yours. You catch the next bus and start over.",next:'b0'},
- bo_영화관:{who:'narr',en:"A movie theater with posters for an action film. Not what you're looking for. You catch the next bus and start over.",next:'b0'},
- bo_박물관:{who:'narr',en:"You press the bell and hop off in front of a big glass building.",next:'mu1',fx:()=>{learn('내려요');learn('박물관',1)}},
- bend:{who:'narr',en:"The bus stops for good and the driver switches off the engine. Everyone gets off. You missed your stop, so you ride back and try again.",next:'b0'},
-
- mu1:{who:'narr',en:"Inside, it's cool and quiet. Glass cases full of old masks line the walls. A woman at the front desk looks up.",next:'mu2',fx:()=>{S.loc='museum'}},
- mu2:{who:'staff',ko:"{안녕하세요}! 청솔 {박물관}{이에요}.",next:'mu3'},
- mu3:{type:'build',en:"Ask her about 할머니. (Her full name was on the museum's text: 김순자.)",tiles:["김순자","{선생님}","{할머니}","{봤어요}?","{여기}","{있어요}?"],
-   ans:[[["김순자","{선생님}","{봤어요}?"],'mu4'],[["{할머니}","{봤어요}?"],'mu4'],[["김순자","{선생님}","{여기}","{있어요}?"],'mu4'],[["{할머니}","{여기}","{있어요}?"],'mu4'],[["김순자","{봤어요}?"],'mu4'],[["{선생님}","{봤어요}?"],'mu4']],miss:'muhuh'},
- muhuh:{who:'staff',ko:"{네}?",en:"She smiles politely and waits.",next:'mu3'},
- mu4:{who:'staff',ko:"김순자 {선생님}이요? {아니요}... {안} {왔어요}.",en:"She checks her watch and frowns, then turns her monitor toward you: a calendar entry at 9:00, with 할머니's name on it.",next:'mu5'},
- mu5:{who:'staff',ko:"{이상해요}...",en:"She dials a number and holds the phone to her ear. Far away, on a wooden step in a courtyard, a phone is ringing.",next:'mu6',fx:()=>{F.museumDone=1}},
- mu6:{who:'narr',en:"There's nothing more to learn here. Time to put the morning together on your case board."},
- mur:{who:'staff',ko:"{선생님}{이|이/가} {안} {왔어요}... {이상해요}.",en:"She's still holding the phone, still frowning."},
- mc1:{who:'narr',en:"In the biggest case: a mask about three hundred and fifty years old. Long eyebrows, a huge grin. It looks exactly like the outline on 할머니's wall.",next:'mc2'},
- mc2:{who:'sign',ko:"{탈} · 1650"},
- ewait:{who:'narr',en:"Something doesn't add up yet. Open your case board and answer what you can first."},
-
- e1:{who:'narr',en:"By the time the bus drops you back in the village, the lanterns are lit. The festival has started without her. Somewhere across the river, drums.",next:'e2',fx:()=>{S.loc='gate';F.ending=1}},
- e2:{who:'narr',en:"수진 is standing at the front gate, perfectly still.",next:'e3'},
- e3:{who:'narr',en:"Hanging on the gate is a mask. Long eyebrows. A huge grin. The one from the empty hook. Tucked into its strap is a folded note.",next:'e4'},
- e4:{who:'sign',ko:"{찾지 마세요}.",en:"Shaky handwriting.",next:'e5'},
- e5:{who:'sujin',ko:"{엄마}...",en:"She presses the note to her chest. She isn't talking to you.",next:'e6'},
- e6:{who:'narr',en:"One question left on your case board."},
- enote:{who:'sign',ko:"{찾지 마세요}.",en:"You look at the note again. You know that first part from this morning."},
- esj:{who:'sujin',ko:"{엄마}... {어디}{예요|이에요}...",en:"She hasn't moved from the gate."}
-};
-// restaurant food nodes
-['김밥','떡볶이','라면','비빔밥'].forEach(f=>{
-  N['kf_'+f]={who:'ajeossi',ko:`{네}! {${f}} {여기} {있어요}.`,en:"A minute later, a plate lands in front of you.",
-    ch:f==='떡볶이'?[{ko:"{매워요}!",go:'kspicy'},{ko:"{맛있어요}!",go:'kgood'}]:[{ko:"{맛있어요}!",go:'kgood'},{ko:"{짜요}!",go:'ksalty'}]};
-});
-// bus stops
-const STOPS=['시장','영화관','박물관','지하철역'];
-STOPS.forEach((s,i)=>{
-  N['bs'+i]={who:'bus',led:1,ko:`{이번} {정류장}{은|은/는} {${s}}{입니다}.`,en:i===0?"The screen blinks and a recorded voice comes over the speaker.":"",fx:()=>{F.led=s},
-    ch:i<3?[{ko:"{내려요}",go:'bo_'+s,bell:1},{en:"Stay on",go:'bs'+(i+1)}]:[{ko:"{내려요}",go:'bend',bell:1},{en:"Stay on",go:'bend'}]};
-});
-N.bs0.en="The screen blinks and a recorded voice comes over the speaker. You'll have to get off at the right stop.";
-
-/* ============ CASE BOARD ============ */
-const Q=[
- {id:'q1',q:"Where was 할머니 supposed to go this morning?",a:'박물관',show:()=>F.readMuseum,why:"Her texts and her calendar both say the same place."},
- {id:'q2',q:"What was she asked to bring?",a:'탈',show:()=>F.readMuseum,why:"The festival mask. The one missing from the workshop wall."},
- {id:'q3',q:"How did she leave the village?",a:'버스',show:()=>F.talked,why:"The restaurant owner watched her get on."},
- {id:'q4',q:"Did she make it there?",a:'아니요',show:()=>F.museumDone,why:"The museum never saw her."},
- {id:'q5',q:"Who is 할머니 to 수진?",a:'엄마',show:()=>F.ending,why:"Not just the village 할머니. Her mother."}
-];
-const solved=id=>!!S.cs[id];
-const caseReady=()=>['q1','q2','q3','q4'].every(solved);
-
-/* ============ PHONE ============ */
-const T=[
- {id:'junho',name:'준호 💙',av:'준',c:'#4f6ea8',m:[{d:'{어제}'},{t:'21:40',ko:"{할머니}! {내일} {축제} {사진} {찍어 주세요} 📸"},{me:1,t:'21:52',ko:"{네} ^^"},{d:'{오늘}'},{t:'07:30',ko:"{할머니}?? {어디}{예요|이에요}?"},{sys:1,ko:"📞 ✖ 07:31"}]},
- {id:'museum',name:'청솔 박물관',av:'박',c:'#6a6f7d',m:[{d:'{어제}'},{t:'18:02',ko:"김순자 {선생님}, {내일} {아침} 9{시}{에} {박물관}{에서} {만나요}. {탈}{도} {가져오세요}!"},{me:1,t:'18:30',ko:"{네}. {내일} {만나요}."}],fx:()=>{if(!F.readMuseum){F.readMuseum=1;toast('New questions on your case board')}}},
- {id:'unknown',name:'010-4417-0923',av:'?',c:'#3a3f4a',m:[{d:'{어제}'},{t:'23:51',ko:"{탈} {주세요}."},{t:'23:58',ko:"{탈} {주세요}."}],note:"No name. Twice, just before midnight. She never answered.",fx:()=>{F.readUnknown=1}}
-];
-
-/* ============ LOCATIONS ============ */
-const L={
- madang:{ko:'마당',sub:'The courtyard',art:()=>artMadang(false),
-   desc:()=>"The courtyard. Morning sun on the roof tiles. 수진 is pacing by the jars, calling neighbors on her own phone.",
-   hs:[{l:'Talk to 수진',x:30,y:66,go:'msj'},{l:"할머니's phone",x:52,y:71,act:()=>openPhone()},{l:'Workshop',x:82,y:52,act:()=>enter('gongbang')},{l:'Clay jars',x:89,y:83,go:'jars'},{l:'Front gate',x:10,y:84,act:()=>enter('golmok')}]},
- gongbang:{ko:'공방',sub:"할머니's workshop",art:artGongbang,first:'g1',
-   desc:()=>"Masks on every wall, all grinning. One empty hook.",
-   hs:[{l:'Empty hook',x:50,y:40,go:'gh1'},{l:'Calendar',x:87,y:30,go:'gc1'},{l:'Old photo',x:12,y:36,go:'gp1'},{l:'Back to the courtyard',x:50,y:90,act:()=>enter('madang')}]},
- golmok:{ko:'골목',sub:'The alley',art:artGolmok,first:'o1',
-   desc:()=>"The alley outside the gate. Lanterns overhead. The path splits left and right.",
-   hs:[{l:'The couple',x:50,y:62,go:'oc1',show:()=>F.couple},{l:'Left path',x:14,y:76,act:()=>enter('sanqil')},{l:'Right path',x:86,y:76,act:()=>enter('sikdang')},{l:'Front gate',x:50,y:92,act:()=>enter('madang')}]},
- sanqil:{ko:'산길',sub:'A mountain path',art:artSan,always:'s1',
-   desc:()=>"A quiet path up the mountain. Pine needles underfoot. Nobody here.",
-   hs:[{l:'Go back down',x:50,y:88,act:()=>enter('golmok')}]},
- sikdang:{ko:'식당',sub:'The little restaurant',art:artSikdang,first:'k1',
-   desc:()=>"A tiny restaurant that smells like sesame oil. The bus stop is right outside the window.",
-   hs:[{l:'Talk to the owner',x:50,y:52,go:'ktalk'},{l:'Order from the menu',x:22,y:22,go:'korder'},{l:'Bus stop',x:85,y:40,act:()=>enter('jeong')},{l:'Back to the alley',x:12,y:88,act:()=>enter('golmok')}]},
- jeong:{ko:'버스 정류장',sub:'The bus stop',art:artJeong,
-   desc:()=>"A small bus stop at the edge of the village, right next to the restaurant.",
-   hs:[{l:'Route map',x:28,y:45,go:'jmap'},{l:'Wait for the bus',x:72,y:72,go:'b0'},{l:'Back to the restaurant',x:12,y:88,act:()=>enter('sikdang')}]},
- bus:{ko:'버스',sub:'On the bus',art:artBus,desc:()=>"",hs:[]},
- museum:{ko:'박물관',sub:'The museum',art:artMuseum,
-   desc:()=>F.museumDone?(caseReady()?"Your case notes are done. Time to go back to the village.":"Cool, quiet, masks behind glass. Your case board is waiting."):"Cool, quiet, full of masks behind glass.",
-   hs:[{l:'The big glass case',x:24,y:42,go:'mc1'},{l:'Front desk',x:66,y:62,go:()=>F.museumDone?'mur':'mu3'},{l:'Take the bus home',x:88,y:88,act:()=>caseReady()?go('e1'):go('ewait'),show:()=>F.museumDone}]},
- gate:{ko:'대문',sub:'The front gate, evening',art:artGate,
-   desc:()=>"The front gate, lit by lanterns. The mask hangs there, grinning.",
-   hs:[{l:'The note',x:70,y:72,go:'enote'},{l:'수진',x:22,y:66,go:'esj'}]}
-};
-
-/* ============ ENGINE ============ */
-const $=s=>document.querySelector(s);
-let bseq=[];
-function enter(loc){
-  S.loc=loc;const l=L[loc];S.node=null;
-  if(l.always){go(l.always);return}
-  if(l.first&&!S.visited[loc]){S.visited[loc]=1;go(l.first);return}
-  S.visited[loc]=1;save();render();
-}
-function go(id){
-  const nd=N[id];if(!nd){S.node=null;save();render();return}
-  S.node=id;bseq=[];if(nd.fx)nd.fx();save();render();
-  if(S.set.auto&&nd.ko)speak(nd.ko,nd.who);
-}
-function next(){
-  const nd=N[S.node];
-  if(nd&&nd.next)go(nd.next);else{S.node=null;save();render();if(F.pendingFinale){F.pendingFinale=0;finale()}}
-}
-let busy=false;
-async function choose(c){
-  if(busy)return;busy=true;$('#sf').style.opacity=.55;
-  (c.learn||[]).forEach(x=>learn(x));
-  if(c.ko){ko(c.ko);await speak(c.ko,'you');await new Promise(r=>setTimeout(r,250))}
-  busy=false;$('#sf').style.opacity='';go(c.go);
-}
-
-function render(){
-  const l=L[S.loc]||L.madang;const nd=S.node?N[S.node]:null;
-  // bar
-  const lk=$('#locKo');lk.textContent=l.ko;
-  const wid=W[l.ko]?l.ko:null;lk.dataset.w=wid||'';
-  $('#locSub').textContent=l.sub;
-  // scene
-  const sc=$('#scene');let h=l.art();
-  if(nd&&nd.type==='camera')h+=`<div class="vf"></div>`;
-  if(!nd)l.hs.forEach((x,i)=>{if(x.show&&!x.show())return;h+=`<button class="hs" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
-  h+=`<div class="flash" id="flash"></div>`;
-  sc.innerHTML=h;
-  sc.querySelectorAll('.hs').forEach(b=>b.onclick=()=>hot(+b.dataset.hs));
-  // sheet
-  const sb=$('#sb'),sf=$('#sf');let body='',foot='';
-  if(!nd){
-    body=`<div class="narr">${esc(l.desc())}</div>`;
-    foot=`<div class="acts">${l.hs.map((x,i)=>(!x.show||x.show())?`<button class="btn act" data-hs="${i}">${esc(x.l)}</button>`:'').join('')}</div>`;
-  }else if(nd.type==='build'){
-    const tl=nd.tiles;
-    body=`<div class="en">${esc(nd.en)}</div><div class="built">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false)}</span>`).join(''):'<span class="ph">Tap words to build a sentence</span>'}</div>
-      <div class="tiles">${tl.map((t,i)=>`<button class="tile" data-t="${i}" ${bseq.includes(i)?'disabled':''}>${ko(t,false)}</button>`).join('')}</div>`;
-    foot=`<div class="row"><button class="btn" id="bClr" style="justify-content:center">Clear</button><button class="btn primary" id="bSay" ${bseq.length?'':'disabled'}>Say it</button></div><button class="btn act" id="bLeave">Never mind</button>`;
-  }else if(nd.type==='camera'){
-    body=`<div class="narr">${esc(nd.en)}</div>`;
-    foot=`<button class="shutter" id="bShut" aria-label="Take photo"></button>`;
-  }else if(nd.type==='photo'){
-    body=`<svg class="photo" viewBox="0 0 300 220">${photoArt()}</svg><div class="narr">${esc(nd.en)}</div>`;
-    foot=`<button class="btn primary" id="bNext">Continue</button>`;
-  }else{
-    const c=C[nd.who]||{};
-    if(nd.who==='narr'){body=nd.en?`<div class="narr">${esc(nd.en)}</div>`:''}
-    else if(nd.who==='sign'){body=`<div class="koline sign">${ko(nd.ko)}</div><div class="who"><button class="say" data-say style="margin-left:0">▶ Read aloud</button></div>${nd.en?`<div class="en">${esc(nd.en)}</div>`:''}`}
-    else{body=`<div class="who"><span class="chip" style="background:${c.c}">${esc(c.n[0])}</span><b>${esc(c.n)}</b><button class="say" data-say>▶ Again</button></div>
-      <div class="koline ${nd.led?'led':''}">${ko(nd.ko)}</div>${nd.en?`<div class="en">${esc(nd.en)}</div>`:''}`}
-    if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.bell?'🔔 ':''}${x.ko?ko(x.ko,false):esc(x.en)}</button>`).join('')}</div>`;
-    else foot=`<button class="btn primary" id="bNext">${nd.next?'Continue':'Look around'}</button>`;
-  }
-  sb.innerHTML=body;sf.innerHTML=foot;sb.scrollTop=0;
-  // wire
-  sf.querySelectorAll('[data-hs]').forEach(b=>b.onclick=()=>hot(+b.dataset.hs));
-  sf.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>choose(nd.ch[+b.dataset.ch]));
-  const bn=$('#bNext');if(bn)bn.onclick=next;
-  const bs=sb.querySelector('[data-say]');if(bs)bs.onclick=()=>speak(nd.ko,nd.who);
-  sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{bseq.push(+b.dataset.t);speak(nd.tiles[+b.dataset.t],'you');render()});
-  if($('#bClr'))$('#bClr').onclick=()=>{bseq=[];render()};
-  if($('#bLeave'))$('#bLeave').onclick=()=>{S.node=null;save();render()};
-  if($('#bSay'))$('#bSay').onclick=()=>say(nd);
-  if($('#bShut'))$('#bShut').onclick=()=>{const f=$('#flash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');setTimeout(()=>{if(nd.shot)nd.shot();go(nd.next)},500)};
-  dots();save();
-}
-async function say(nd){
-  if(busy)return;busy=true;$('#sf').style.opacity=.55;
-  const words=bseq.map(i=>nd.tiles[i]);const line=words.join(' ');ko(line);
-  const hit=nd.ans.find(a=>a[0].length===words.length&&a[0].every((w,i)=>w===words[i]));
-  if(hit)idsIn(line).forEach(x=>learn(x));
-  await speak(line,'you');await new Promise(r=>setTimeout(r,250));
-  busy=false;$('#sf').style.opacity='';
-  if(hit){const t=typeof hit[1]==='function'?hit[1]():hit[1];go(t)}else go(nd.miss);
-}
-function hot(i){const x=L[S.loc].hs[i];if(!x)return;if(x.go)go(typeof x.go==='function'?x.go():x.go);else x.act()}
-function dots(){
-  const anyNew=Object.keys(S.w).some(id=>W[id]&&!W[id].g&&!S.nb[id]);$('#noteDot').hidden=!anyNew;
-  $('#caseDot').hidden=!Q.some(q=>q.show()&&!solved(q.id));
-}
-
-/* word taps (global) */
-document.addEventListener('click',e=>{const b=e.target.closest('.w,[data-w]');if(b&&b.dataset.w){e.stopPropagation();wordSheet(b.dataset.w)}},true);
-
-/* ============ OVERLAYS ============ */
-function overlay(html,cls=''){const o=document.createElement('div');o.className='ov '+cls;o.innerHTML=html;o.addEventListener('click',e=>{if(e.target===o)close(o)});$('#ovs').appendChild(o);return o}
-function close(o){o.remove();render()}
-function closeTop(){const o=$('#ovs').lastElementChild;if(o)close(o)}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTop()});
-
-function wordSheet(id){
-  const d=W[id];if(!d)return;const r=wrec(id);S.nb[id]=1;const st=status(id);
-  const o=overlay(`<div class="panel paper" role="dialog" aria-label="${esc(id)}"><div class="ph-head"><h2>수첩</h2><button class="x" aria-label="Close">×</button></div><div class="ph-body" id="wsb"></div></div>`);
-  o.querySelector('.x').onclick=()=>close(o);
-  const draw=()=>{
-    const st=status(id);
-    const badge=st==='learned'?`<span class="badge" style="color:var(--celadon)">Figured out ${d.i}</span>`:st==='hunch'?`<span class="badge" style="color:var(--ochre)">Hunch ${d.i}?</span>`:st==='gram'?`<span class="badge" style="color:var(--paper-mute)">Grammar piece</span>`:`<span class="badge" style="color:var(--ochre)">New word</span>`;
-    const ctx=r.ctx.slice(-4).reverse().map(l=>`<div class="ctx">${plain(l).split(id.includes('/')?'\u0000':id).map(esc).join(`<mark>${esc(id)}</mark>`)}</div>`).join('')||'<div class="empty">Not seen anywhere yet.</div>';
-    let guess='';
-    if(st==='hunch')guess=`<div class="label">Just a hunch so far. It counts as figured out once you use it right in the story.</div>`;
-    else if(st==='new'){
-      const n=r.n||0;
-      if((r.wrong??-1)<n){const opts=shuffle([d.i,...pickIcons(d.i,3)]);
-        guess=`<div class="label">Got a hunch what it means?</div><div class="guess" id="gz">${opts.map(x=>`<button data-g="${esc(x)}">${x}</button>`).join('')}</div>`}
-      else guess=`<div class="label">Not that one. Find it somewhere else first, then try again.</div>`;
-    }
-    o.querySelector('#wsb').innerHTML=`<div class="bigword">${esc(id)}</div><div class="row" style="flex:none;align-items:center;gap:10px"><span>${badge}</span><button class="say" id="wsay" style="flex:none;border:1px solid var(--paper-2);background:none;border-radius:99px;padding:6px 12px">▶ Hear it</button></div>
-      <div class="label">Where you've seen it</div>${ctx}${guess}
-      <div class="label">Your own note</div><textarea id="wnote" placeholder="Write what you think it means, in your own words.">${esc(r.note||'')}</textarea>`;
-    o.querySelector('#wsay').onclick=()=>speak(id,'word');
-    o.querySelector('#wnote').oninput=e=>{r.note=e.target.value;save()};
-    o.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
-      if(b.dataset.g===d.i){r.H=1;save();toast(`Hunch noted: <b>${id}</b> ${d.i}?`);draw()}else{r.wrong=r.n||0;save();const gz=o.querySelector('#gz');gz.classList.add('shake');setTimeout(draw,420)}
-    });
-  };draw();save();
-}
-function pickIcons(not,n){const pool=[...new Set(Object.values(W).filter(x=>!x.g&&x.i&&x.i!==not).map(x=>x.i))];return shuffle(pool).slice(0,n)}
-function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-
-let nbTab='all';
-function notebook(){
-  Object.keys(S.w).forEach(id=>S.nb[id]=1);save();
-  const o=overlay(`<div class="panel"><div class="ph-head"><h2>수첩</h2><button class="x" aria-label="Close">×</button></div><div class="ph-body" id="nbb"></div></div>`);
-  o.querySelector('.x').onclick=()=>close(o);
-  const draw=()=>{
-    const ids=Object.keys(S.w).filter(id=>W[id]);
-    const vocab=ids.filter(id=>!W[id].g),gram=ids.filter(id=>W[id].g);
-    const learned=vocab.filter(id=>status(id)==='learned').length;
-    const list=nbTab==='all'?vocab:nbTab==='todo'?vocab.filter(id=>status(id)!=='learned'):nbTab==='learned'?vocab.filter(id=>status(id)==='learned'):[];
-    let inner=`<div class="tabs">${[['all','All words'],['todo','Still figuring out'],['learned','Figured out'],['gram','Grammar'],['pat','Patterns']].map(([k,t])=>`<button class="tab ${nbTab===k?'on':''}" data-tab="${k}">${t}</button>`).join('')}</div>
-      <div class="label">${learned} figured out · ${vocab.length} seen</div>`;
-    if(nbTab==='gram')inner+=gram.length?`<div class="grid">${gram.map(id=>`<button class="card" data-w="${esc(id)}"><span class="k">${esc(id)}</span><span class="tag">grammar</span></button>`).join('')}</div>`:`<div class="empty">Particles and endings you spot will collect here.</div>`;
-    else if(nbTab==='pat'){
-      if(!F.pattern)inner+=`<div class="empty">Nothing yet. Keep listening to how people talk about this morning.</div>`;
-      else inner+=`<div class="q"><div class="qt">The ㅆ pattern</div><div class="why">People keep using these ㅆ versions whenever they talk about this morning.</div>
-        ${PAST.filter(p=>S.w[p[1]]).map(p=>`<div style="font-family:var(--f-ko);font-size:1.3rem">${p[0]} <span style="color:var(--mist)">→</span> <button class="w ${status(p[1])}" data-w="${p[1]}" style="color:var(--celadon-lt)">${p[1]}</button></div>`).join('')}</div>`;
-    }
-    else inner+=list.length?`<div class="grid">${list.map(id=>{const st=status(id);return`<button class="card ${st}" data-w="${esc(id)}"><span class="ic">${st==='learned'?W[id].i:st==='hunch'?W[id].i+'?':'?'}</span><span class="k">${esc(id)}</span><span class="tag">${st==='learned'?'figured out':st==='hunch'?'hunch':'new'}</span></button>`}).join('')}</div>`:`<div class="empty">Nothing here yet.</div>`;
-    o.querySelector('#nbb').innerHTML=inner;
-    o.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{nbTab=b.dataset.tab;draw()});
-  };
-  draw();
-  o.addEventListener('click',()=>setTimeout(()=>{if(document.body.contains(o))draw()},50));
-}
-
-let pickQ=null;
-function caseBoard(){
-  const o=overlay(`<div class="panel"><div class="ph-head"><h2>사건</h2><button class="x" aria-label="Close">×</button></div><div class="ph-body" id="cbb"></div></div>`);
-  o.querySelector('.x').onclick=()=>close(o);
-  const draw=(miss)=>{
-    const qs=Q.filter(q=>q.show());
-    const cards=Object.keys(S.w).filter(id=>W[id]&&!W[id].g);
-    let h=qs.length?'<div class="empty">Answer each question with a word from your notebook.</div>':'<div class="empty">No questions yet. Look around and see what you can find.</div>';
-    h+=qs.map(q=>{
-      if(solved(q.id))return`<div class="q solved"><div class="qt">${esc(q.q)}</div><div class="ans">${W[q.a].i} ${esc(q.a)}</div><div class="why">${esc(q.why)}</div></div>`;
-      const open=pickQ===q.id;
-      return`<div class="q"><div class="qt">${esc(q.q)}</div>${open?`<div class="pick">${cards.map(id=>`<button class="${status(id)}" data-pk="${esc(id)}">${esc(id)}</button>`).join('')}</div>${miss?`<div class="miss">That doesn't fit the evidence.</div>`:''}`:`<button class="btn-ink" data-open="${q.id}">Pick an answer</button>`}</div>`;
-    }).join('');
-    o.querySelector('#cbb').innerHTML=h;
-    o.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{pickQ=b.dataset.open;draw()});
-    o.querySelectorAll('[data-pk]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();const q=Q.find(x=>x.id===pickQ);
-      if(b.dataset.pk===q.a){S.cs[q.id]=1;learn(q.a,1);pickQ=null;toast('Solved');save();draw();
-        if(q.id==='q5'){setTimeout(()=>{close(o);finale()},700)}
-        else if(caseReady()&&S.loc==='museum')toast('Case notes done. Head home.');
-      }else draw(true)});
-  };
-  draw();
-}
-
-function openPhone(){
-  const o=overlay(`<div class="phone" role="dialog" aria-label="Phone"><div class="ph-status"><span>08:47</span><span>▂▄▆ 42%</span></div><div id="phv" style="flex:1;display:flex;flex-direction:column;min-height:0"></div></div>`,'center');
-  const list=()=>{
-    o.querySelector('#phv').innerHTML=`<div class="ph-top"><b>메시지</b><button id="pc">Close</button></div><div class="ph-list">${T.map(t=>`<button class="thr" data-th="${t.id}"><span class="av" style="background:${t.c}">${t.av}</span><span style="min-width:0;flex:1"><div class="nm">${esc(t.name)}</div><div class="pv">${esc(plain(t.m[t.m.length-1].ko||''))}</div></span>${S.F['th_'+t.id]?'':'<span class="new"></span>'}</button>`).join('')}</div>`;
-    o.querySelector('#pc').onclick=()=>close(o);
-    o.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>thread(T.find(t=>t.id===b.dataset.th)));
-  };
-  const thread=t=>{
-    S.F['th_'+t.id]=1;if(t.fx)t.fx();
-    o.querySelector('#phv').innerHTML=`<div class="ph-top"><button id="pb">‹ Back</button><b>${esc(t.name)}</b></div><div class="msgs">${t.m.map(m=>m.d?`<div class="day">${ko(m.d)}</div>`:m.sys?`<div class="bub sys">${esc(m.ko)}</div>`:`<div class="bub ${m.me?'me':''}" data-bi="${t.m.indexOf(m)}">${ko(m.ko)}<small>${m.t} · tap to hear</small></div>`).join('')}${t.note?`<div class="ph-note">${esc(t.note)}</div>`:''}</div>`;
-    o.querySelectorAll('[data-bi]').forEach(b=>b.onclick=()=>speak(t.m[+b.dataset.bi].ko,'sign'));
-    o.querySelector('#pb').onclick=list;save();dots();
-  };
-  F.phoneSeen=1;list();
-}
-
-function hint(){
-  let h;
-  if(!F.intro)h="Listen to 수진. Watch what she does with her hands while she talks.";
-  else if(!F.th_museum)h="수진 gave you 할머니's phone. People text about their plans.";
-  else if(!F.maskMissing)h="The workshop is where 할머니 spends her days. Have a look.";
-  else if(!F.sawPhoto)h="Head out the front gate. The village is waking up, and someone might have seen something.";
-  else if(!F.talked&&S.loc==='golmok')h=F.heardDir?"He said which way to go. Tap the couple if you want to hear it again.":"Ask the couple where the bus stop is.";
-  else if(!F.talked)h="The restaurant owner sees everyone who walks past. Try talking to him.";
-  else if(!F.museumDone)h="She left on a bus. Her phone said where she was going. Listen for that stop.";
-  else if(!caseReady())h="Open the case board. You have enough to answer the questions.";
-  else if(!F.ending)h="You've learned what you can at the museum. Take the bus home.";
-  else if(!solved('q5'))h="Who wrote on the back of that photo in the workshop? What did 수진 just say?";
-  else h="The prologue is done. Look back through your notebook while you wait for Chapter 1.";
-  toast(h,5200);
-}
-
-function settings(){
-  const o=overlay(`<div class="panel"><div class="ph-head"><h2>설정</h2><button class="x" aria-label="Close">×</button></div><div class="ph-body" id="stb"></div></div>`);
-  o.querySelector('.x').onclick=()=>close(o);
-  let confirmReset=false;
-  const draw=()=>{
-    o.querySelector('#stb').innerHTML=`
-      <div class="set-row"><span>Read lines aloud automatically</span><span class="seg"><button data-a="1" class="${S.set.auto?'on':''}">On</button><button data-a="0" class="${S.set.auto?'':'on'}">Off</button></span></div>
-      <div class="set-row"><span>Voice speed</span><span class="seg"><button data-s="0" class="${S.set.slow?'':'on'}">Normal</button><button data-s="1" class="${S.set.slow?'on':''}">Slow</button></span></div>
-      <div class="set-row"><span>Korean voice</span><span style="color:var(--mist);font-size:.9rem">${window.AUDIO?'Recorded voices':VOICE?esc(VOICE.name):'Not found'}</span></div>
-      ${VOICE||window.AUDIO?'':`<div class="empty">No Korean voice on this device. On Android: Settings → search “Text-to-speech” → Google engine → Install voice data → 한국어.</div>`}
-      <button class="btn-ink" id="tv">▶ Test voice: 안녕하세요</button>
-      <button class="btn-ink" id="rs" style="color:#e59a87">${confirmReset?'Tap again to erase all progress':'Start over'}</button>`;
-    o.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{S.set.auto=+b.dataset.a;save();draw()});
-    o.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{S.set.slow=+b.dataset.s;save();draw()});
-    o.querySelector('#tv').onclick=()=>speak('안녕하세요','sujin');
-    o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{S=fresh();save();o.remove();title()}};
-  };draw();
-}
-
-function finale(){
-  const vocab=Object.keys(S.w).filter(id=>W[id]&&!W[id].g);
-  const got=vocab.filter(id=>status(id)==='learned');
-  const back=got.filter(id=>W[id].k).length;
-  const o=overlay(`<div class="panel paper"><div class="ph-head"><h2>프롤로그 끝</h2><button class="x" aria-label="Close">×</button></div><div class="ph-body">
-    <div class="narr">할머니 is out there somewhere, and she doesn't want to be found. Someone else wants her mask. Chapter 1 picks up the next morning.</div>
-    <div><div class="stat"><span>Words figured out</span><b>${got.length}</b></div><div class="stat"><span>Hunches</span><b>${vocab.filter(id=>status(id)==='hunch').length}</b></div><div class="stat"><span>Words still a mystery</span><b>${vocab.filter(id=>status(id)==='new').length}</b></div></div>
-    <button class="btn primary" id="fin">Keep exploring</button></div></div>`,'center');
-  o.querySelector('.x').onclick=()=>close(o);o.querySelector('#fin').onclick=()=>close(o);
-}
-
-function toast(h,ms=2600){const t=document.createElement('div');t.className='toast';t.innerHTML=h;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),ms)}
-
-function title(){
-  const has=!!S.F.started;
-  const o=document.createElement('div');o.className='title';
-  o.innerHTML=`<div class="art"><svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">${artGateInner(false)}</svg></div>
-    <h1>탈</h1><div class="vil">청솔마을</div>
-    <p>A mystery in Korean. Nobody will translate for you. Tap any word to look at it in your notebook, and work out the rest from what people do.</p>
-    <div class="acts">${has?'<button class="btn primary" id="tc">Continue</button>':''}<button class="btn ${has?'':'primary'}" id="tn">${has?'New game':'Start the prologue'}</button></div>
-    <div class="fine">Turn your sound on. Korean voices work best in Chrome on Android.</div>`;
-  document.body.appendChild(o);
-  if(has)o.querySelector('#tc').onclick=()=>{o.remove();render()};
-  o.querySelector('#tn').onclick=()=>{S=fresh();S.F.started=1;o.remove();go('intro1')};
-}
-
-/* ============ ART ============ */
-const DEFS=`<defs>
- <pattern id="lat" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#f1e8d2"/><path d="M0 0H8M0 0V8" stroke="#a07a52" stroke-width="1"/></pattern>
- <pattern id="latE" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#f2c27a"/><path d="M0 0H8M0 0V8" stroke="#6b4528" stroke-width="1"/></pattern>
- <pattern id="stone" width="26" height="16" patternUnits="userSpaceOnUse"><rect width="26" height="16" fill="#8d877b"/><ellipse cx="7" cy="5" rx="7" ry="4.5" fill="#a39c8e"/><ellipse cx="20" cy="5.5" rx="6" ry="4" fill="#9a9385"/><ellipse cx="13" cy="12.5" rx="7.5" ry="4" fill="#aaa294"/><ellipse cx="0" cy="12.5" rx="5" ry="3.5" fill="#968f81"/><ellipse cx="26" cy="12.5" rx="5" ry="3.5" fill="#968f81"/></pattern>
- <pattern id="stoneE" width="26" height="16" patternUnits="userSpaceOnUse"><rect width="26" height="16" fill="#2f3140"/><ellipse cx="7" cy="5" rx="7" ry="4.5" fill="#3d4052"/><ellipse cx="20" cy="5.5" rx="6" ry="4" fill="#393b4c"/><ellipse cx="13" cy="12.5" rx="7.5" ry="4" fill="#43465a"/></pattern>
- <pattern id="plank" width="40" height="22" patternUnits="userSpaceOnUse"><rect width="40" height="22" fill="#7a5536"/><path d="M0 21.5H40" stroke="#5e3f27" stroke-width="1"/><path d="M28 0V22" stroke="#6a4930" stroke-width=".8"/></pattern>
- <radialGradient id="glow"><stop offset="0" stop-color="#ffcf7a" stop-opacity=".75"/><stop offset="1" stop-color="#ffcf7a" stop-opacity="0"/></radialGradient>
- <filter id="blur"><feGaussianBlur stdDeviation="1.4"/></filter>
-</defs>`;
-const svg=inner=>`<svg class="art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${DEFS}${inner}</svg>`;
-function roof(x,y,w,c='#3b4048',t='#4d545e'){
-  const top=y-30;let s=`<path d="M${x-30},${y-3} Q${x-8},${y+8} ${x+16},${y+2} L${x+w-16},${y+2} Q${x+w+8},${y+8} ${x+w+30},${y-3} L${x+w-12},${top} L${x+12},${top} Z" fill="${c}"/>`;
-  for(let k=x-4;k<x+w+6;k+=7){const dx=(k-(x+w/2))*.09;s+=`<line x1="${k-dx*.4}" y1="${top+3}" x2="${k+dx}" y2="${y}" stroke="${t}" stroke-width="2.4"/>`}
-  s+=`<path d="M${x+4},${top-1} L${x+w-4},${top-1} L${x+w+4},${top-8} L${x+w-6},${top-4} L${x+6},${top-4} L${x-4},${top-8} Z" fill="${c}" stroke="#262a30" stroke-width="1"/>`;
-  return s;
-}
-function hanok(x,y,w,h,eve){
-  const n=Math.max(2,Math.round(w/56)),dw=w/n;let s='';
-  s+=`<rect x="${x-6}" y="${y+h}" width="${w+12}" height="12" fill="${eve?'#4a4a55':'#9a958b'}"/>`;
-  s+=`<rect x="${x}" y="${y}" width="${w}" height="${h-12}" fill="${eve?'#4b3c33':'#ede5d3'}"/>`;
-  for(let i=0;i<n;i++)s+=`<rect x="${x+i*dw+6}" y="${y+8}" width="${dw-12}" height="${h-30}" fill="url(#${eve?'latE':'lat'})"/>`;
-  s+=`<rect x="${x}" y="${y+h-12}" width="${w}" height="12" fill="${eve?'#5a3b24':'#8a5a34'}"/>`;
-  for(let i=0;i<=n;i++)s+=`<rect x="${x+i*dw-3}" y="${y}" width="6" height="${h}" fill="${eve?'#3a2616':'#6b4528'}"/>`;
-  s+=`<rect x="${x-8}" y="${y-7}" width="${w+16}" height="9" fill="#3f7f6e"/><rect x="${x-8}" y="${y-7}" width="${w+16}" height="2" fill="#b5412d"/>`;
-  for(let k=x;k<x+w;k+=14)s+=`<circle cx="${k}" cy="${y-2}" r="1.7" fill="#e8c35a"/>`;
-  return s+roof(x,y-7,w);
-}
-function person(x,y,o={}){
-  const s=o.s||1,top=o.top||'#7fa89a',bot=o.bot||'#3b4a5a',skin=o.skin||'#e3c09a',hair=o.hair||'#1f1a18';
-  let g=`<g transform="translate(${x},${y}) scale(${s})">`;
-  g+=o.hanbok?`<path d="M-15,0 L-6,-30 L6,-30 L15,0 Z" fill="${bot}"/><path d="M-9,-31 L9,-31 L11,-44 L-11,-44 Z" fill="${top}"/>`
-    :`<rect x="-7" y="-24" width="5" height="24" fill="${bot}"/><rect x="2" y="-24" width="5" height="24" fill="${bot}"/><path d="M-9,-22 L9,-22 L10,-44 L-10,-44 Z" fill="${top}"/>`;
-  if(o.apron)g+=`<rect x="-7" y="-38" width="14" height="22" fill="#f4f1ea"/>`;
-  g+=`<circle cx="0" cy="-51" r="7.5" fill="${skin}"/><path d="M-7.5,-52 A7.5,7.5 0 0 1 7.5,-52 L7.5,-55 A7.5,6 0 0 0 -7.5,-55 Z" fill="${hair}"/>`;
-  if(o.bun)g+=`<circle cx="0" cy="-60" r="4" fill="${hair}"/>`;
-  if(o.long)g+=`<path d="M-7.5,-54 L-8,-42 L-4,-44 L-4,-54 Z M7.5,-54 L8,-42 L4,-44 L4,-54 Z" fill="${hair}"/>`;
-  return g+'</g>';
-}
-function mask(cx,cy,s,o={}){
-  const c=o.c||'#e7d2a7';
-  return `<g transform="translate(${cx},${cy}) scale(${s})"><ellipse rx="14" ry="18" fill="${c}" stroke="#7d5c3a" stroke-width="1.2"/>
-   <path d="M-11,-9 Q-6,-14 -1,-9 M1,-9 Q6,-14 11,-9" stroke="#2e2218" stroke-width="1.8" fill="none"/>
-   <path d="M-9,-3 Q-5,-7 -2,-3 M2,-3 Q5,-7 9,-3" stroke="#2e2218" stroke-width="1.6" fill="none"/>
-   <path d="M-9,6 Q0,16 9,6 Q0,10 -9,6Z" fill="#5a2a1d"/>
-   <circle cx="-9" cy="3" r="2.6" fill="#c45a45" opacity=".5"/><circle cx="9" cy="3" r="2.6" fill="#c45a45" opacity=".5"/></g>`;
-}
-function lantern(x,y,c,lit){return `<line x1="${x}" y1="${y-10}" x2="${x}" y2="${y-5}" stroke="#2a2a2a"/>${lit?`<circle cx="${x}" cy="${y+3}" r="16" fill="url(#glow)"/>`:''}<ellipse cx="${x}" cy="${y+3}" rx="6" ry="8" fill="${c}"/><rect x="${x-3}" y="${y-6}" width="6" height="2" fill="#2a2a2a"/><rect x="${x-3}" y="${y+10}" width="6" height="2" fill="#2a2a2a"/>`}
-function lanternString(eve){let s=`<path d="M-10,40 Q100,70 200,48 T410,44" stroke="#2a2a2a" fill="none" stroke-width="1"/>`;const cs=['#c9452f','#3f7f6e','#d9a43d','#4f6ea8'];for(let i=0;i<9;i++){const x=10+i*46;const y=40+Math.sin(i*1.3)*8+14;s+=lantern(x,y,cs[i%4],eve)}return s}
-function mountains(c1,c2){return `<path d="M0,150 Q60,90 120,130 T240,110 T400,120 V300 H0Z" fill="${c1}"/><path d="M0,175 Q90,130 170,160 T330,140 T400,150 V300 H0Z" fill="${c2}"/>`}
-function pine(x,y,s=1,c='#2f4a3c'){return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-2" y="-6" width="4" height="12" fill="#4a3424"/><path d="M0,-44 L14,-18 L6,-18 L18,-2 L-18,-2 L-6,-18 L-14,-18Z" fill="${c}"/></g>`}
-
-function artMadang(eve){
-  let s=`<rect width="400" height="300" fill="${eve?'#1c2238':'#bcd6df'}"/><rect y="90" width="400" height="80" fill="${eve?'#3c3352':'#f2dcc0'}" opacity=".7"/>`;
-  s+=mountains(eve?'#2a3047':'#8aa79b',eve?'#232a3d':'#6f8f82');
-  s+=hanok(70,128,260,90,eve);
-  s+=`<rect y="230" width="400" height="70" fill="${eve?'#3a3446':'#d8c7a3'}"/>`;
-  // jars
-  [[342,262,16],[368,268,13],[318,272,11],[386,280,10]].forEach(([x,y,r])=>s+=`<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r*1.05}" fill="#6b3f26"/><ellipse cx="${x-r*.35}" cy="${y-r*.4}" rx="${r*.25}" ry="${r*.35}" fill="#8c5a3a"/><rect x="${x-r*.55}" y="${y-r*1.15}" width="${r*1.1}" height="3" fill="#4d2c19"/>`);
-  // persimmon tree
-  s+=`<path d="M28,240 Q30,200 22,170 M24,190 Q10,180 4,170 M26,200 Q42,185 50,176" stroke="#4a3424" stroke-width="4" fill="none"/><circle cx="24" cy="160" r="26" fill="${eve?'#26402f':'#5d8a5a'}"/>`;
-  for(let i=0;i<7;i++)s+=`<circle cx="${8+i*6.5}" cy="${150+(i%3)*9}" r="3" fill="#e2862e"/>`;
-  // phone on maru
-  if(!eve)s+=`<rect x="205" y="204" width="9" height="5" rx="1" fill="#e9a3b4" stroke="#333" stroke-width=".6"/>`;
-  // gate post bottom-left
-  s+=`<rect x="0" y="232" width="16" height="68" fill="#5a3b24"/>`;
-  if(!eve)s+=person(120,232,{top:'#c7d3cf',bot:'#5b6a7a',bun:1});
-  if(eve)for(let i=0;i<6;i++)s+=lantern(90+i*44,126,i%2?'#c9452f':'#d9a43d',true);
-  return svg(s);
-}
-function artGongbang(){
-  let s=`<rect width="400" height="300" fill="url(#plank)"/>`;
-  s+=`<rect x="0" y="0" width="400" height="14" fill="#3f7f6e"/><rect y="12" width="400" height="3" fill="#b5412d"/>`;
-  const cols=['#e7d2a7','#f1ece0','#d9a07a','#e7d2a7','#c4865c','#efe2c0'];
-  let k=0;for(let r=0;r<3;r++)for(let c=0;c<5;c++){const x=80+c*60,y=48+r*52;
-    s+=`<circle cx="${x}" cy="${y-24}" r="2" fill="#2a1d12"/>`;
-    if(r===1&&c===2){s+=`<ellipse cx="${x}" cy="${y}" rx="15" ry="19" fill="#8a6545" stroke="#c9b48c" stroke-dasharray="3 3" stroke-width="1.2"/>`}
-    else s+=mask(x,y,.95,{c:cols[k++%cols.length]});}
-  // photo + calendar
-  s+=`<rect x="28" y="88" width="40" height="50" fill="#f3ead7" transform="rotate(-4 48 113)"/><rect x="32" y="92" width="32" height="34" fill="#b9a585" transform="rotate(-4 48 113)"/>`;
-  s+=`<rect x="330" y="60" width="52" height="64" fill="#f6f0e0"/><rect x="330" y="60" width="52" height="12" fill="#b5412d"/>`;
-  for(let i=0;i<4;i++)for(let j=0;j<4;j++)s+=`<rect x="${335+j*12}" y="${78+i*11}" width="8" height="7" fill="#d9cfb8"/>`;
-  s+=`<circle cx="363" cy="92" r="7" fill="none" stroke="#b5412d" stroke-width="1.6"/>`;
-  // bench
-  s+=`<rect x="0" y="218" width="400" height="82" fill="#4e3421"/><rect x="0" y="214" width="400" height="8" fill="#6b4528"/>`;
-  for(let i=0;i<22;i++)s+=`<path d="M${30+i*16},${228+(i%3)*6} q4,-4 8,0" stroke="#d9b98a" stroke-width="1.4" fill="none"/>`;
-  for(let i=0;i<5;i++)s+=`<rect x="${150+i*14}" y="232" width="3" height="18" fill="#b8b8b8"/><rect x="${149+i*14}" y="248" width="5" height="10" fill="#6b4528"/>`;
-  return svg(s);
-}
-function artGolmok(){
-  let s=`<rect width="400" height="300" fill="#c6dbe0"/>`+mountains('#94ae9f','#7c9a8b');
-  s+=`<path d="M0,110 L150,160 L150,300 L0,300Z" fill="url(#stone)"/><path d="M400,110 L250,160 L250,300 L400,300Z" fill="url(#stone)"/>`;
-  s+=`<path d="M0,104 L152,156 L152,162 L0,114Z" fill="#3b4048"/><path d="M400,104 L248,156 L248,162 L400,114Z" fill="#3b4048"/>`;
-  s+=`<path d="M150,160 L250,160 L250,300 L150,300Z" fill="#cdbb95"/>`;
-  s+=`<path d="M178,300 L195,190 L205,190 L222,300Z" fill="#dccca8"/><path d="M195,190 L120,215 L150,232 Z" fill="#dccca8"/><path d="M205,190 L280,215 L250,232Z" fill="#dccca8"/>`;
-  s+=lanternString(false);
-  s+=person(178,214,{top:'#e9a3b4',bot:'#c9452f',hanbok:1,long:1,s:.95})+person(214,214,{top:'#9fb7d9',bot:'#2d3f66',hanbok:1,s:1});
-  return svg(s);
-}
-function artSan(){
-  let s=`<rect width="400" height="300" fill="#cfe0dc"/>`+mountains('#86a596','#5f7f6f');
-  s+=`<path d="M160,300 Q200,220 190,170 Q185,150 205,130" stroke="#d6c39b" stroke-width="40" fill="none"/>`;
-  for(let i=0;i<9;i++)s+=pine(20+i*45+(i%2)*10,200+(i%3)*30,1+(i%2)*.3);
-  s+=`<ellipse cx="310" cy="250" rx="40" ry="18" fill="#7e9c64"/><rect x="230" y="190" width="5" height="40" fill="#6b4528"/><rect x="214" y="188" width="38" height="12" fill="#8a5a34"/>`;
-  return svg(s);
-}
-function artSikdang(){
-  let s=`<rect width="400" height="300" fill="#c9a577"/><rect y="0" width="400" height="10" fill="#5a3b24"/>`;
-  const menu=[['김밥','3,000'],['떡볶이','4,000'],['라면','4,500'],['비빔밥','8,000']];
-  menu.forEach((m,i)=>{const x=20+i*58;s+=`<rect x="${x}" y="30" width="50" height="78" fill="#f2e8d0" stroke="#6b4528" stroke-width="2"/><text x="${x+25}" y="62" text-anchor="middle" font-family="Gowun Batang,serif" font-size="13" fill="#2a231d" writing-mode="horizontal-tb">${m[0]}</text><text x="${x+25}" y="90" text-anchor="middle" font-family="Gowun Dodum,sans-serif" font-size="10" fill="#7b705f">${m[1]}</text>`});
-  s+=`<rect x="270" y="28" width="116" height="92" fill="#a9c9d3" stroke="#5a3b24" stroke-width="5"/><line x1="328" y1="28" x2="328" y2="120" stroke="#5a3b24" stroke-width="3"/>`;
-  s+=`<rect x="338" y="58" width="4" height="58" fill="#555"/><circle cx="340" cy="56" r="10" fill="#2f5aa8"/><text x="340" y="60" text-anchor="middle" font-size="8" fill="#fff" font-family="Gowun Dodum,sans-serif">버스</text>`;
-  s+=person(200,206,{top:'#7d8a96',bot:'#3a3a3a',apron:1,s:1.25,hair:'#5a5555'});
-  s+=`<rect x="0" y="190" width="400" height="24" fill="#6b4528"/><rect x="0" y="214" width="400" height="86" fill="#4e3421"/>`;
-  s+=`<ellipse cx="90" cy="186" rx="22" ry="5" fill="#f4f1ea"/><ellipse cx="90" cy="183" rx="14" ry="4" fill="#c9452f"/><rect x="300" y="170" width="10" height="20" fill="#cfd6db"/>`;
-  return svg(s);
-}
-function artJeong(){
-  let s=`<rect width="400" height="300" fill="#c9dde3"/>`+mountains('#94ae9f','#7c9a8b');
-  s+=`<rect y="200" width="400" height="100" fill="#7c9a5f"/><rect y="236" width="400" height="44" fill="#55595f"/><path d="M0,258 H400" stroke="#e8e0c8" stroke-width="2" stroke-dasharray="18 14"/>`;
-  s+=`<rect x="200" y="150" width="140" height="8" fill="#3b4048"/><rect x="206" y="156" width="5" height="80" fill="#3b4048"/><rect x="330" y="156" width="5" height="80" fill="#3b4048"/><rect x="214" y="160" width="112" height="56" fill="#a9c9d3" opacity=".5"/><rect x="220" y="206" width="100" height="6" fill="#6b4528"/>`;
-  s+=`<rect x="90" y="120" width="5" height="116" fill="#555"/><rect x="60" y="112" width="70" height="44" fill="#f6f0e0" stroke="#2f5aa8" stroke-width="3"/><circle cx="72" cy="124" r="3" fill="#2f5aa8"/><path d="M72,124 H118" stroke="#2f5aa8" stroke-width="1.5"/>`;
-  [84,96,108,118].forEach(x=>s+=`<circle cx="${x}" cy="124" r="2.4" fill="#fff" stroke="#2f5aa8"/>`);
-  s+=`<rect x="0" y="150" width="50" height="86" fill="#ede5d3"/>`+roof(4,150,42);
-  return svg(s);
-}
-function artBus(){
-  const led=F.led||'';
-  let s=`<rect width="400" height="300" fill="#2b2f37"/>`;
-  s+=`<g><rect x="20" y="70" width="360" height="120" fill="#a9cfd8"/><g class="drift">`;
-  for(let k=0;k<2;k++){s+=`<g transform="translate(${k*400},0)"><path d="M20,170 Q120,120 220,150 T420,140 V190 H20Z" fill="#7fa08f"/>${pine(60,182,.8)}${pine(150,184,.9)}${pine(260,182,.7)}${pine(340,186,.85)}<rect x="0" y="180" width="400" height="10" fill="#6f8c5a"/></g>`}
-  s+=`</g></g>`;
-  s+=`<rect x="20" y="70" width="360" height="120" fill="none" stroke="#1a1d22" stroke-width="6"/><line x1="140" y1="70" x2="140" y2="190" stroke="#1a1d22" stroke-width="6"/><line x1="260" y1="70" x2="260" y2="190" stroke="#1a1d22" stroke-width="6"/>`;
-  s+=`<rect x="90" y="14" width="220" height="40" rx="4" fill="#120e0a" stroke="#444" stroke-width="2"/><text x="200" y="42" text-anchor="middle" font-family="Gowun Batang,serif" font-size="20" fill="#ffb347">${esc(led)}</text>`;
-  s+=`<rect y="196" width="400" height="104" fill="#3f4652"/>`;
-  [[40,210],[160,210],[280,210]].forEach(([x,y])=>s+=`<rect x="${x}" y="${y}" width="80" height="60" rx="10" fill="#2f6f61"/><rect x="${x}" y="${y}" width="80" height="16" rx="6" fill="#3f8b77"/>`);
-  s+=`<rect x="0" y="60" width="400" height="5" fill="#9aa"/>`;
-  return svg(s);
-}
-function artMuseum(){
-  let s=`<rect width="400" height="300" fill="#e4e6e8"/><rect y="0" width="400" height="40" fill="#cfd3d7"/>`;
-  for(let i=0;i<8;i++)s+=`<rect x="${10+i*50}" y="10" width="30" height="6" fill="#fff" opacity=".9"/>`;
-  s+=`<rect x="30" y="80" width="130" height="110" fill="#f3f5f7" stroke="#b9c0c6" stroke-width="2"/><rect x="34" y="84" width="122" height="102" fill="#dbe8ee" opacity=".55"/>`;
-  s+=mask(95,130,1.6,{c:'#cfa877'});
-  s+=`<rect x="30" y="190" width="130" height="50" fill="#9aa3ab"/>`;
-  s+=`<rect x="190" y="110" width="40" height="40" fill="#f3f5f7" stroke="#b9c0c6"/>${mask(210,130,.7,{c:'#e7d2a7'})}<rect x="190" y="150" width="40" height="90" fill="#aab2b9"/>`;
-  s+=person(264,236,{top:'#2d3f66',bot:'#2a2a2a',long:1,s:1.15});
-  s+=`<rect x="220" y="200" width="150" height="50" fill="#5b6370"/><rect x="220" y="196" width="150" height="6" fill="#3c434d"/><rect x="300" y="176" width="34" height="22" fill="#222"/>`;
-  s+=`<rect y="250" width="400" height="50" fill="#c3c8cd"/>`;
-  return svg(s);
-}
-function artGateInner(withMask){
-  let s=`<rect width="400" height="300" fill="#141a2c"/>`;
-  for(let i=0;i<40;i++)s+=`<circle cx="${(i*97)%400}" cy="${(i*53)%120}" r="${(i%3)*.4+.4}" fill="#fff" opacity=".6"/>`;
-  s+=mountains('#1f2740','#1a2135');
-  s+=`<rect x="0" y="130" width="120" height="170" fill="url(#stoneE)"/><rect x="280" y="130" width="120" height="170" fill="url(#stoneE)"/>`;
-  s+=roof(118,118,164,'#23262d','#2f333b');
-  s+=`<rect x="122" y="118" width="156" height="10" fill="#2e5f53"/><rect x="128" y="128" width="10" height="150" fill="#3a2616"/><rect x="262" y="128" width="10" height="150" fill="#3a2616"/>`;
-  s+=`<rect x="138" y="132" width="61" height="146" fill="#5a3b24"/><rect x="201" y="132" width="61" height="146" fill="#5a3b24"/>`;
-  for(let i=0;i<4;i++){s+=`<line x1="140" y1="${150+i*34}" x2="197" y2="${150+i*34}" stroke="#3a2616" stroke-width="3"/><line x1="203" y1="${150+i*34}" x2="260" y2="${150+i*34}" stroke="#3a2616" stroke-width="3"/>`}
-  s+=`<circle cx="195" cy="206" r="3" fill="#c9a04a"/><circle cx="205" cy="206" r="3" fill="#c9a04a"/>`;
-  s+=lantern(100,150,'#c9452f',true)+lantern(300,150,'#d9a43d',true);
-  s+=`<rect y="278" width="400" height="22" fill="#2a2636"/>`;
-  if(withMask){s+=`<circle cx="200" cy="175" r="40" fill="url(#glow)" opacity=".6"/><path d="M186,152 Q200,140 214,152" stroke="#2a1d12" stroke-width="1.5" fill="none"/>`+mask(200,176,1.25,{c:'#e7d2a7'})+`<rect x="208" y="196" width="18" height="12" fill="#f6f0e0" transform="rotate(8 217 202)"/>`;
-    s+=person(80,282,{top:'#c7d3cf',bot:'#3b4a5a',bun:1,s:1.1})}
-  return DEFS+s;
-}
-function artGate(){return `<svg class="art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${artGateInner(true)}</svg>`}
-function photoArt(){
-  let s=`<rect width="300" height="220" fill="#c9dde3"/><rect y="150" width="300" height="70" fill="#55595f"/><rect x="170" y="70" width="120" height="7" fill="#3b4048"/><rect x="176" y="76" width="4" height="80" fill="#3b4048"/><rect x="282" y="76" width="4" height="80" fill="#3b4048"/>`;
-  s+=`<g filter="url(#blur)">${person(232,160,{top:'#8c7f6e',bot:'#4a4440',bun:1,hair:'#d8d4ce',s:.9})}<rect x="240" y="122" width="16" height="12" rx="3" fill="#b5412d"/></g>`;
-  s+=person(95,232,{top:'#e9a3b4',bot:'#c9452f',hanbok:1,long:1,s:2.4})+person(160,232,{top:'#9fb7d9',bot:'#2d3f66',hanbok:1,s:2.5});
-  return DEFS+s;
-}
-
-/* ============ BOOT ============ */
-$('#bNote').onclick=notebook;$('#bCase').onclick=caseBoard;$('#bHint').onclick=hint;$('#bSet').onclick=settings;
-load();render();title();
-if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude\.ai|claudeusercontent/.test(location.host)){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
-}
-</script>
+<script src="js/art.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/engine.js"></script>

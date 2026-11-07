@@ -452,9 +452,23 @@ function title(){
 async function boot(){
   try{
     let st=null;
-    for(const f of STORY_FILES){const r=await fetch(f,{cache:'no-cache'});if(!r.ok)throw new Error(f);st=parseStory(await r.text(),st)}
+    for(const f of STORY_FILES){const r=await fetch(f,{cache:'no-cache'});if(!r.ok)throw new Error(f+' returned '+r.status);st=parseStory(await r.text(),st)}
     ST=st;W=ST.words;
-  }catch(e){$('#boot').textContent='Could not load the story.';return}
+    try{sessionStorage.removeItem('tal-repair')}catch(_){}
+  }catch(e){
+    // First failure: throw away the offline copy (an old one can mix with new files) and reload once.
+    let tried=null;try{tried=sessionStorage.getItem('tal-repair')}catch(_){}
+    if(!tried){
+      try{sessionStorage.setItem('tal-repair','1');
+        if(navigator.serviceWorker){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()))}
+        if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}
+      }catch(_){}
+      location.reload();return;
+    }
+    $('#boot').innerHTML=`<div style="font-family:var(--f-ui);font-size:1rem;line-height:1.5;text-align:center;padding:24px;max-width:32ch">Could not load the story.<br><small style="color:var(--mist)">${esc(e&&e.message||e)}</small><br><br><button class="btn-ink" id="retry">Try again</button></div>`;
+    $('#retry').onclick=()=>{try{sessionStorage.removeItem('tal-repair')}catch(_){}location.reload()};
+    return;
+  }
   load();
   if(!S.loc||!ST.places[S.loc])S.loc=ST.meta['start-place'];
   if(S.node&&!ST.nodes[S.node])S.node=null;

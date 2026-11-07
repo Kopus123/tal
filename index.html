@@ -285,6 +285,74 @@ textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;bor
 .chb:empty{display:none}
 .ov{z-index:40}
 .toasts{z-index:50}
+/* ---------- v3: playtest fixes ---------- */
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+textarea,input{-webkit-user-select:text;user-select:text}
+/* word colors (on paper) */
+.w{border-bottom:2px solid transparent;font-weight:inherit}
+.w.new{color:#a8620f;border-bottom:2px dotted #c98f2c;font-weight:700}
+.w.seen{color:#3d5f9a;border-bottom:2px dotted rgba(61,95,154,.55)}
+.w.guess{color:#7a4a9a;border-bottom:2px dashed rgba(122,74,154,.6)}
+.w.sure{color:var(--celadon);border-bottom:2px solid rgba(63,139,119,.45)}
+.w.gram{color:#6b6255;border-bottom:1px solid rgba(123,112,95,.35)}
+/* same colors, lighter, on dark backgrounds */
+.bub .w.new,.led .w.new,.day .w.new,.pick .w.new{color:#f0b35a;border-bottom-color:#f0b35a}
+.bub .w.seen,.led .w.seen,.day .w.seen,.pick .w.seen{color:#9db8ea;border-bottom-color:rgba(157,184,234,.6)}
+.bub .w.guess,.led .w.guess,.day .w.guess,.pick .w.guess{color:#c9a3e6;border-bottom-color:rgba(201,163,230,.6)}
+.bub .w.sure,.led .w.sure,.day .w.sure,.pick .w.sure{color:#8fe0c6;border-bottom-color:rgba(143,224,198,.6)}
+.bub .w.gram,.led .w.gram,.day .w.gram{color:#c9cfdb}
+.w.demo{font-family:var(--f-ko);font-size:1.3rem;flex:0 0 44px;text-align:center}
+.badge.st-new{color:#a8620f}.badge.st-seen{color:#3d5f9a}.badge.st-guess{color:#7a4a9a}.badge.st-sure{color:var(--celadon)}.badge.st-gram{color:var(--paper-mute)}
+/* explore: compact choices inside the scrolling paper */
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chipbtn{border:1.5px solid var(--paper-ink);background:#f6f0e0;border-radius:10px;padding:9px 10px;font-size:.92rem;text-align:left;display:flex;align-items:center;gap:8px;min-height:44px;color:var(--paper-ink)}
+.chipbtn::before{content:"";width:7px;height:7px;transform:rotate(45deg);background:var(--ochre);flex:0 0 auto}
+.chipbtn.mapchip::before{background:var(--celadon)}
+.chipbtn:active{transform:translateY(1px)}
+.btn.dev{min-height:36px;padding:6px 10px;font-size:.82rem;justify-content:center;border-style:dashed;color:var(--paper-mute)}
+/* notebook page */
+.defbox{background:#f6f0e0;border:1px solid #cbbf9f;border-radius:10px;padding:10px 12px;line-height:1.55}
+.sure{display:flex;align-items:center;gap:10px;font-size:1rem;padding:4px 2px}
+.sure input{width:22px;height:22px;accent-color:var(--celadon)}
+.sure input:disabled+span{opacity:.45}
+.linkish{background:none;border:0;padding:0;color:var(--paper-mute);text-decoration:underline;font-size:.88rem;align-self:flex-start}
+.card{align-items:flex-start;text-align:left;gap:3px;padding:10px}
+.card .note{font-size:.78rem;color:var(--mist);line-height:1.3;max-height:2.6em;overflow:hidden}
+.card.st-sure{border-color:rgba(124,195,174,.55)}.card.st-sure .k{color:var(--celadon-lt)}
+.card.st-guess{border-color:rgba(201,163,230,.45)}.card.st-guess .k{color:#c9a3e6}
+.card.st-new .k{color:#f0b35a}.card.st-seen .k{color:#9db8ea}
+.card.st-new .tag,.card.st-seen .tag{color:var(--mist)}
+.glist{display:flex;flex-direction:column;gap:6px}
+.grow{display:flex;flex-direction:column;gap:3px;text-align:left;background:var(--ink);border:1px solid var(--ink-3);border-radius:10px;padding:10px 12px;color:var(--paper)}
+.grow b{font-family:var(--f-ko);font-size:1.15rem}
+.grow span{font-size:.9rem;color:var(--mist);line-height:1.45}
+.symlist{display:flex;flex-direction:column;gap:10px}
+.symrow{display:flex;gap:12px;align-items:center;line-height:1.45;font-size:.92rem}
+.symic{width:44px;height:44px;flex:0 0 auto;background:var(--paper);border-radius:8px}
+.glowdemo{width:30px;height:30px;margin:0 7px;border-radius:50%;flex:0 0 auto;border:3px solid rgba(255,214,120,.95);box-shadow:0 0 12px 4px rgba(255,200,90,.5)}
+.spotdemo{width:14px;height:14px;margin:0 15px;flex:0 0 auto;transform:rotate(45deg);border:2px solid #fff;background:rgba(201,143,44,.9)}
+.demo-rw{width:44px;text-align:center;font-size:1.5rem;flex:0 0 auto}
+/* case board typing */
+.typeans{display:flex;gap:8px}
+.typeans input{flex:1;min-width:0;font:inherit;font-family:var(--f-ko);font-size:1.1rem;border-radius:10px;border:1px solid var(--ink-3);background:var(--ink-2);color:var(--paper);padding:8px 10px}
+.pick{max-height:34vh;overflow-y:auto}
+.pick .w{font-family:var(--f-ko);font-size:1.05rem;border:1px solid var(--ink-3);background:var(--ink-2);border-radius:10px;padding:6px 10px}
+/* menu */
+.menulist{display:flex;flex-direction:column;gap:8px}
+.mi{display:flex;align-items:center;gap:14px;text-align:left;background:var(--ink);border:1px solid var(--ink-3);border-radius:12px;padding:12px 14px}
+.mi .mic{width:28px;display:grid;place-items:center;font-size:1.3rem;color:var(--paper)}
+.mi b{display:block;font-weight:600}
+.mi small{color:var(--mist);font-size:.82rem}
+.hintbox{background:var(--paper);color:var(--paper-ink);border-radius:12px;padding:12px 14px;line-height:1.5}
+/* rewind */
+.scene.rewinding .artwrap{filter:sepia(.8) contrast(.9) blur(1px);transition:filter .3s}
+.rewind-badge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:3rem;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);animation:rwspin .9s ease}
+@keyframes rwspin{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+/* camera frame you drag */
+.fx .vf{pointer-events:auto;position:absolute;inset:auto;width:44%;height:52%;border:2px solid rgba(255,255,255,.9);border-radius:6px;cursor:grab;touch-action:none;
+  box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.fx .vf::after{width:26px;height:26px}
+.fx .vf span{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:.7rem;color:#fff;background:rgba(0,0,0,.45);padding:2px 8px;border-radius:99px;white-space:nowrap}
 /* history */
 .hl{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--paper-2)}
 .hl .hn{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-mute)}
@@ -297,11 +365,10 @@ textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;bor
 <div id="app">
   <div class="bar">
     <div class="loc"><button class="ko" id="locKo"></button><span class="sub" id="locSub"></span></div>
+    <button class="ib" id="bPhone" aria-label="할머니's phone" hidden><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg><span class="dot" id="phoneDot" hidden></span></button>
     <button class="ib" id="bNote" aria-label="Notebook"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg><span class="dot" id="noteDot" hidden></span></button>
     <button class="ib" id="bCase" aria-label="Case board"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.6"/><circle cx="16" cy="9" r="1.6"/><circle cx="12" cy="15.5" r="1.6"/><path d="M8 9l4 6.5L16 9"/></svg><span class="dot" id="caseDot" hidden></span></button>
-    <button class="ib" id="bLog" aria-label="What was said"><svg viewBox="0 0 24 24"><path d="M5 5h14v10H10l-5 4z"/><path d="M9 9h6M9 12h4"/></svg></button>
-    <button class="ib" id="bHint" aria-label="Think"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
-    <button class="ib" id="bSet" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+    <button class="ib" id="bMenu" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
   <div class="scene" id="scene"><div class="artwrap" id="art"></div><div class="amb" id="amb"></div><div class="fx" id="fx"></div></div>
   <div class="sheet"><div class="sheet-body" id="sb"></div><div class="sheet-foot" id="sf"></div></div>

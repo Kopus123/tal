@@ -150,6 +150,31 @@ sign       |               |          | SunHi  -10%  +0Hz
 의 = (grammar)
 으로 = (grammar)
 
+=== grammar
+# piece | what it does (shown when you tap it)
+이에요 | "is / am / are". Goes at the very end: 학생이에요 = (I) am a student. After a word ending in a vowel it shrinks to 예요: 어디예요? = where is it?
+아니에요 | "is not / am not". 왼쪽 아니에요 = it's not the left.
+입니다 | A formal "is". Announcements and signs use it: 이번 정류장은 박물관입니다.
+이/가 | Subject marker. Sticks to whoever or whatever is doing something or being described: 할머니가 없어요 = grandma isn't here. 이 after a consonant, 가 after a vowel.
+은/는 | Topic marker, like "as for ___". Sticks to what the sentence is about, and often contrasts it with something else: 여기는 마당이에요. 은 after a consonant, 는 after a vowel.
+에 | "at / in / to" a place, or "at" a time: 방에 없어요 = not in the room. 아침에 = in the morning.
+에서 | "at" the place where something happens, or "from": 박물관에서 만나요 = let's meet at the museum.
+도 | "also / too / either": 마당에도 없어요 = not in the courtyard either.
+의 | Possessive, like 's: 할머니의 공방 = grandma's workshop.
+으로 | "toward" or "by way of": 오른쪽으로 가요 = go to the right. After a vowel it's just 로.
+
+=== endings
+# shown in the notebook's Grammar tab
+-요 | The polite ending. Almost everything people say to you ends in 요. Without it, speech sounds casual.
+-아요 / -어요 | Present tense, polite: 가요 = (I) go, 있어요 = there is.
+-았어요 / -었어요 | Past tense: it already happened. 있어요 → 있었어요. The ochre ↺ badge on a picture means this.
+-요? | The same ending, as a question. Just raise your voice at the end: 봤어요? = did you see?
+-세요 | A polite request: 가져오세요 = please bring. 어서 오세요 = welcome (literally "come quickly").
+주세요 | "Please give" or "please do (for me)": 물 주세요 = water, please. 사진 찍어 주세요 = please take a photo.
+-지 마세요 | "Please don't": 찾지 마세요 = don't look for (me).
+안 + verb | Makes it "not": 안 왔어요 = didn't come.
+-입니다 | Formal version of 이에요, for announcements and signs.
+
 === pattern past
 title The ㅆ pattern
 note People keep using these ㅆ versions whenever they talk about what already happened.

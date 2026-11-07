@@ -10,14 +10,14 @@ end-text 할머니 is out there somewhere, and she doesn't want to be found. Som
 
 === hints
 if !intro: Listen to 수진. Watch what she does with her hands while she talks.
-if !read_museum: 수진 gave you 할머니's phone. People text about their plans.
+if !read_museum: 수진 gave you 할머니's phone. Tap the phone button at the top of the screen and read her messages.
 if !maskMissing: The workshop is where 할머니 spends her days.
 if !sawPhoto: Head out the front gate. Someone in the village might have seen something.
 if !talked&@golmok&heardDir: He said which way to go. Tap the couple if you want to hear it again.
 if !talked&@golmok: Ask the couple where the bus stop is.
 if !talked: The restaurant owner sees everyone who walks past. Try talking to him.
 if !museumDone: She left on a bus. Her phone said where she was going. Listen for that stop.
-if !allSolved: Open the case board. You have enough to answer the questions.
+if !allSolved: Open the case board (the board button at the top) and answer the questions you can see.
 if !ending: You've learned what you can at the museum. Take the bus home.
 if !solved_q5: Who wrote on the back of that photo in the workshop? What did 수진 just say?
 The prologue is done. Look back through your notebook while you wait for Chapter 1.
@@ -52,7 +52,6 @@ art madang
 ambient leaves
 desc The courtyard. Morning sun on the roof tiles. 수진 is pacing by the jars, calling neighbors on her own phone.
 spot "Talk to 수진" 30 66 -> msj
-spot "할머니's phone" 52 71 => phone
 spot "Workshop" 82 52 => place gongbang
 spot "Clay jars" 89 83 -> jars
 spot "Front gate" 10 84 => place golmok
@@ -234,8 +233,11 @@ sujin[worried]: {할머니} {봤어요}?
 
 === scene m_yes
 sujin[surprised]: {정말}요? {어디}{에서}요?
-(Her face lights up and she waits for you to go on. But you haven't seen anyone this morning.)
--> m1.2
+(Her face lights up and she grabs your arm.)
+sujin[worried]: {할머니}... {어디}{예요|이에요}? {어디}{에서} {봤어요}?
+(She waits for you to point somewhere. Anywhere. But you haven't seen anyone this morning, and there's nothing to point at.)
+~ That answer didn't make sense. You haven't seen 할머니 at all.
+<- m1.2
 
 === scene m_shrug
 sujin[worried]: {할머니}... {봤어요}?
@@ -259,7 +261,7 @@ sujin[worried]: {아니요}, {아니요}! {같이} {찾아요}!
 
 === scene m6
 ~ You nod. She looks relieved and presses 할머니's phone into your hands. It isn't locked.
-! set intro
+! set intro, hasPhone; toast 할머니's phone is in your pocket now. Tap the phone button at the top of the screen to read it.
 
 === scene msj
 sujin[sad]: {할머니}... {어디}{예요|이에요}?
@@ -309,7 +311,7 @@ yuna: {사진}! {사진} {찍어 주세요}!
 -> o1.3
 
 === scene ocam
-@camera Get them both in the frame and tap the shutter.
+@camera 50 62 | Drag the frame over them, then tap the shutter.
 ! learn 사진, 찍어 주세요
 yuna[happy]: 와! {정말} {예뻐요}! {고마워요}!
 (She zooms in on the photo and shows her boyfriend.)
@@ -322,13 +324,18 @@ minsu[happy]: {정말} {고마워요}.
 
 === scene o6b
 yuna[happy]: {배고파요}? {아니요}! 하하.
-(She laughs. Not what you meant to ask.)
--> ocam.4
+(She laughs. Her boyfriend helpfully points down the alley.)
+minsu: {식당}{은|은/는} {오른쪽}{에} {있어요}.
+~ Good to know, but that's not what you need right now. You were going to ask them about 할머니.
+<- ocam.4
 
 === scene o6c
 minsu[surprised]: {김치}...? {식당}{에} {있어요}...?
-(He looks puzzled and points vaguely down the alley.)
--> ocam.4
+(He looks at his girlfriend. She shrugs.)
+yuna: {김치}{는|은/는}... {아니요}. 하하...
+(They're both smiling politely, waiting for you to explain why you need kimchi.)
+~ Kimchi was not the question. Try again.
+<- ocam.4
 
 === scene o7
 yuna[surprised]: {할머니}요? 음... 아! {네}! {아침}{에} {봤어요}!
@@ -376,15 +383,25 @@ tiles: {할머니} | {봤어요}? | {안녕하세요} | {여기} | {있어요}? 
 answer: {할머니} | {봤어요}? -> talked ? k3r : k3
 answer: {할머니} | {여기} | {있어요}? -> talked ? k3r : k3
 answer: {안녕하세요} -> khi
-miss -> khuh
+miss -> khuh_t
 
 === scene khi
 ajeossi[happy]: {네}, {안녕하세요}! 하하.
 (He bows back, amused.)
 
-=== scene khuh
-ajeossi: {네}?
-(He tilts his head and waits for you to try again.)
+=== scene khuh_t
+ajeossi[surprised]: {네}?
+(He tilts his head.)
+ajeossi: {네}...? {김밥}? {라면}?
+(He points hopefully at the menu. He thinks you're trying to order food.)
+~ He didn't understand. Try putting the words together differently.
+<- ktalk
+
+=== scene khuh_o
+ajeossi[surprised]: {네}?
+(He looks at the menu, then back at you, waiting.)
+~ That's not something on the menu. Try again: the food, then 주세요.
+<- korder
 
 === scene k3
 ajeossi[surprised]: 순자 {할머니}요? {네}, {아침}{에} {여기} {있었어요}.
@@ -413,7 +430,7 @@ answer: {떡볶이} | {주세요} -> kf_tteok
 answer: {라면} | {주세요} -> kf_ramen
 answer: {비빔밥} | {주세요} -> kf_bibim
 answer: {물} | {주세요} -> kwater
-miss -> khuh
+miss -> khuh_o
 
 === scene kf_gimbap
 ajeossi: {네}! {김밥} {여기} {있어요}.
@@ -472,34 +489,34 @@ sign: 청솔마을 → {시장} → {영화관} → {박물관} → {지하철�
 bus: {이번} {정류장}{은|은/는} {시장}{입니다}.
 (The screen blinks and a recorded voice comes over the speaker. You'll have to get off at the right stop.)
 ! led 시장
-* 🔔 {내려요} -> bo_market
+* [🔔 Press the stop button] -> bo_market
 * [Stay on] -> bs2
 
 === scene bs2
 bus: {이번} {정류장}{은|은/는} {영화관}{입니다}.
 ! led 영화관
-* 🔔 {내려요} -> bo_cinema
+* [🔔 Press the stop button] -> bo_cinema
 * [Stay on] -> bs3
 
 === scene bs3
 bus: {이번} {정류장}{은|은/는} {박물관}{입니다}.
 ! led 박물관
-* 🔔 {내려요} -> bo_museum
+* [🔔 Press the stop button] -> bo_museum
 * [Stay on] -> bs4
 
 === scene bs4
 bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
 ! led 지하철역
-* 🔔 {내려요} -> bend
+* [🔔 Press the stop button] -> bend
 * [Stay on] -> bend
 
 === scene bo_market
 ~ You hop off into a crowded market. Fish, vegetables, grandmothers arguing over prices. None of them is yours. You catch the next bus and start over.
--> b0
+<- b0
 
 === scene bo_cinema
 ~ A movie theater with posters for an action film. Not what you're looking for. You catch the next bus and start over.
--> b0
+<- b0
 
 === scene bo_museum
 ~ You press the bell and hop off in front of a big glass building.
@@ -508,7 +525,7 @@ bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
 
 === scene bend
 ~ The bus stops for good and the driver switches off the engine. Everyone gets off. You missed your stop, so you ride back and try again.
--> b0
+<- b0
 
 # ------------------------------------------------------------ museum
 === scene mu1
@@ -529,9 +546,10 @@ answer: {선생님} | {봤어요}? -> mu4
 miss -> muhuh
 
 === scene muhuh
-staff: {네}?
-(She smiles politely and waits.)
--> mu3
+staff[surprised]: {네}?
+(She smiles politely and waits. She didn't catch that.)
+~ Try asking again, using her name or who she is to you.
+<- mu3
 
 === scene mu4
 staff[surprised]: 김순자 {선생님}이요? {아니요}... {안} {왔어요}.
@@ -550,7 +568,7 @@ staff[worried]: {선생님}{이|이/가} {안} {왔어요}... {이상해요}.
 sign: {탈} · 1650
 
 === scene ewait
-~ Something doesn't add up yet. Open your case board and answer what you can first.
+~ Something doesn't add up yet. Open the case board (the board button at the top) and answer the questions there first.
 
 # ------------------------------------------------------------ evening
 === scene e1

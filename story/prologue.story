@@ -10,7 +10,7 @@ end-text 할머니 is out there somewhere, and she doesn't want to be found. Som
 
 === hints
 if !intro: Listen to 수진. Watch what she does with her hands while she talks.
-if !read_museum: 수진 gave you 할머니's phone. Tap the phone button at the top of the screen and read her messages.
+if !read_museum: 수진 gave you 할머니's phone. Tap the phone icon in the top-right corner and read her messages.
 if !maskMissing: The workshop is where 할머니 spends her days.
 if !sawPhoto: Head out the front gate. Someone in the village might have seen something.
 if !talked&@golmok&heardDir: He said which way to go. Tap the couple if you want to hear it again.
@@ -181,7 +181,7 @@ name 청솔 박물관
 avatar 박 #6a6f7d
 on-open toast New questions on your case board if !read_museum
 day {어제}
-them 18:02 김순자 {선생님}, {내일} {아침} 9{시}, {박물관}{에서} {만나요}!
+them 18:02 김순자 {선생님}, {내일} {아침} {9시}, {박물관}{에서} {만나요}!
 me 18:30 {네}! {내일} {만나요}.
 
 === phone unknown
@@ -261,7 +261,7 @@ sujin[worried]: {아니요}, {아니요}! {같이} {찾아요}!
 
 === scene m6
 ~ You nod. She looks relieved and presses 할머니's phone into your hands. It isn't locked.
-! set intro, hasPhone; toast 할머니's phone is in your pocket now. Tap the phone button at the top of the screen to read it.
+! set intro, hasPhone; toast 할머니's phone is in your pocket now. Tap the phone icon in the top-right corner, next to the notebook, to read it.
 
 === scene msj
 sujin[sad]: {할머니}... {어디}{예요|이에요}?
@@ -284,7 +284,7 @@ sujin[surprised]: {탈}... {탈}... 어? {탈}{이|이/가} {없어요}!
 sign: {축제} {탈}
 
 === scene gc1
-sign: {오늘}: {축제} 🏮\n9{시} {박물관}
+sign: {오늘}: {축제} 🏮\n{9시} {박물관}
 (A paper calendar on the wall. Today's date has been circled twice in red pen.)
 
 === scene gp1

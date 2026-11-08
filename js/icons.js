@@ -53,7 +53,9 @@ const ICON={
   pretty:()=>[0,72,144,216,288].map(a=>`<ellipse cx="32" cy="20" rx="8" ry="12" fill="#e9a3b4" stroke="${IK}" stroke-width="2.5" transform="rotate(${a} 32 34)"/>`).join('')+Ci(32,34,6,IO,2.5)+P('M52,8 L54,13 L59,15 L54,17 L52,22 L50,17 L45,15 L50,13Z',IO,1.5),
   thanks:()=>`<g transform="rotate(35 32 52)">${fig(32,38,1.1,IG,'#2a1d18')}</g>`+P('M8,58 H56','none',3),
   sleep:()=>P('M40,10 A22,22 0 1 0 54,42 A17,17 0 1 1 40,10Z',IO)+Tx(16,22,'z',14)+Tx(24,14,'z',10),
-  festival:()=>P('M32,4 V12','none',2.5)+`<ellipse cx="32" cy="32" rx="16" ry="20" fill="${IR}" stroke="${IK}" stroke-width="3"/>`+P('M22,20 Q32,32 22,44 M42,20 Q32,32 42,44','none',2)+Re(26,10,12,4,1,IK,0)+Re(26,50,12,4,1,IK,0)+P('M32,54 V62','none',2.5),
+  festival:()=>P('M3,10 Q32,24 61,10','none',2)+[[9,13,IR],[19,17,IO],[29,19,IG],[39,18.5,IB],[49,16,IR],[57,12.5,IO]].map(([x,y,c])=>`<path d="M${x-4.5},${y} L${x+4.5},${y+.5} L${x},${y+10}Z" fill="${c}" stroke="${IK}" stroke-width="1.4" stroke-linejoin="round"/>`).join('')
+    +[0,45,90,135,180,225,270,315].map((a,i)=>{const r=Math.PI*a/180,c=i%2?IR:IO;return `<path d="M${(32+Math.cos(r)*5).toFixed(1)},${(45+Math.sin(r)*5).toFixed(1)} L${(32+Math.cos(r)*13).toFixed(1)},${(45+Math.sin(r)*13).toFixed(1)}" stroke="${c}" stroke-width="3" stroke-linecap="round"/><circle cx="${(32+Math.cos(r)*16).toFixed(1)}" cy="${(45+Math.sin(r)*16).toFixed(1)}" r="1.8" fill="${c}"/>`}).join('')+`<circle cx="32" cy="45" r="2.5" fill="${IO}"/>`,
+  lantern:()=>P('M32,4 V12','none',2.5)+`<ellipse cx="32" cy="32" rx="16" ry="20" fill="${IR}" stroke="${IK}" stroke-width="3"/>`+P('M22,20 Q32,32 22,44 M42,20 Q32,32 42,44','none',2)+Re(26,10,12,4,1,IK,0)+Re(26,50,12,4,1,IK,0)+P('M32,54 V62','none',2.5),
   calendar:()=>Re(10,12,44,44,4,IP)+Re(10,12,44,11,4,IR)+P('M20,6 V16 M44,6 V16','none',3)+[0,1,2].map(r=>[0,1,2,3].map(c=>`<rect x="${16+c*9}" y="${28+r*8}" width="6" height="5" fill="#d1c4a6"/>`).join('')).join(''),
   today:()=>ICON.calendar()+`<circle cx="34" cy="38" r="8" fill="${IO}" stroke="${IR}" stroke-width="2.5"/>`,
   morning:()=>P('M8,46 H56','none',3)+P('M16,46 A16,16 0 0 1 48,46Z',IO)+P('M32,22 V14 M16,30 L10,24 M48,30 L54,24','none',3),
@@ -101,7 +103,7 @@ const ICON={
 
 const BADGE={
   past:`<circle cx="13" cy="13" r="11" fill="${IO}" stroke="${IK}" stroke-width="2.5"/><path d="M18,9 A6.5,6.5 0 1 0 19,15" fill="none" stroke="${IK}" stroke-width="2.5" stroke-linecap="round"/><path d="M14,5 L18.5,9 L13.5,11.5" fill="none" stroke="${IK}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
-  future:`<circle cx="51" cy="13" r="11" fill="${IG}" stroke="${IK}" stroke-width="2.5"/><path d="M46,9 A6.5,6.5 0 1 1 45,15" fill="none" stroke="${IK}" stroke-width="2.5" stroke-linecap="round"/><path d="M50,5 L45.5,9 L50.5,11.5" fill="none" stroke="${IK}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  future:`<rect x="39" y="2" width="23" height="22" rx="5" fill="${IG}" stroke="${IK}" stroke-width="2.5"/><path d="M44,7.5 L49.5,13 L44,18.5 M51.5,7.5 L57,13 L51.5,18.5" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>`,
   not:`<path d="M8,56 L56,8" stroke="#fff" stroke-width="10" stroke-linecap="round"/><path d="M8,56 L56,8" stroke="${IR}" stroke-width="6" stroke-linecap="round"/>`
 };
 

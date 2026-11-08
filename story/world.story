@@ -100,7 +100,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 어제 = calendar +past
 내일 = calendar +future
 아침 = morning
-시 = clock
+9시 = clock
 저기요 = excuse
 안녕하세요 = wave
 어서 오세요 = welcome
@@ -174,6 +174,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 -지 마세요 | "Please don't": 찾지 마세요 = don't look for (me).
 안 + verb | Makes it "not": 안 왔어요 = didn't come.
 -입니다 | Formal version of 이에요, for announcements and signs.
+시 | o'clock. Hours use the native Korean numbers, not the ones for counting money: 9시 = 아홉 시, not 구 시.
 
 === pattern past
 title The ㅆ pattern

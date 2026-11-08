@@ -84,6 +84,9 @@ function parseStory(src,st){
 const KEY='tal-save-v2';
 const fresh=()=>({ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
+// erasing progress keeps what you wrote about each word (for playtesting)
+function freshKeepNotes(){const old=S;const n=fresh();n.set=old.set;
+  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});return n}
 let S=fresh();
 function load(){try{const r=localStorage.getItem(KEY);if(r){S=Object.assign(fresh(),JSON.parse(r));S.set=Object.assign(fresh().set,S.set);return true}}catch(e){}return false}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -177,7 +180,9 @@ function buzz(p){if(S.set.sound&&navigator.vibrate)try{navigator.vibrate(p)}catc
 /* ---------- flow ---------- */
 const $=s=>document.querySelector(s);
 let bseq=[],busy=false,glowFor=null,revealFor=null,revealUntil=0,artKey=null,ambKey=null,lastLoc=null,quiet=false,cam={x:28,y:30};
-function runFx(list){(list||[]).forEach(e=>{if(e.c&&!cond(e.c))return;const a=e.a;
+let BACK=[];const SEEN=new Set();   // lines you can step back to in the current scene; beats already shown
+function runFx(list,replay){(list||[]).forEach(e=>{if(e.c&&!cond(e.c))return;const a=e.a;
+  if(replay&&e.k==='toast')return;
   if(e.k==='set')a.split(',').forEach(f=>S.F[f.trim()]=1);
   else if(e.k==='unset')a.split(',').forEach(f=>delete S.F[f.trim()]);
   else if(e.k==='place')S.loc=a;
@@ -186,14 +191,16 @@ function runFx(list){(list||[]).forEach(e=>{if(e.c&&!cond(e.c))return;const a=e.
 })}
 function logLine(e){S.log.push(e);if(S.log.length>80)S.log.shift()}
 function enter(place){
-  S.loc=place;const l=ST.places[place];S.node=null;
+  S.loc=place;const l=ST.places[place];S.node=null;BACK=[];
   if(l.always){go(l.always);return}
   if(l.first&&!S.visited[place]){S.visited[place]=1;go(l.first);return}
   S.visited[place]=1;save();render();
 }
 function go(id){
-  id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;save();render();return}
-  S.node=id;bseq=[];runFx(nd.fx);checkPattern();
+  id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
+  if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
+  const replay=SEEN.has(id);SEEN.add(id);
+  S.node=id;bseq=[];runFx(nd.fx,replay);checkPattern();
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
   if(nd.ko||(nd.who==='narr'&&nd.en))logLine({who:nd.who,ex:nd.ex,ko:nd.ko,en:nd.en});
   save();render();
@@ -202,7 +209,13 @@ function go(id){
 function next(){
   sfx('page');const nd=ST.nodes[S.node];
   if(nd&&nd.rewind){rewindTo(nd.rewind);return}
-  if(nd&&nd.next)go(nd.next);else{S.node=null;save();render()}
+  if(nd&&nd.next)go(nd.next);else{S.node=null;BACK=[];save();render()}
+}
+// step back one line in the current scene (like a visual novel's back button)
+function goBack(){
+  if(busy||!BACK.length)return;const p=BACK.pop();stopAudio();sfx('page');
+  S.node=p.id;S.loc=p.loc;bseq=[];revealFor=p.id;glowFor=p.id;save();render();
+  const nd=ST.nodes[p.id];if(S.set.auto&&nd&&nd.ko)speak(nd.ko,nd.who);
 }
 // wrong turns: play the rewind effect, then put you back at the decision
 function rewindTo(t){
@@ -275,6 +288,8 @@ function render(){
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
   const devSkip=S.set.dev&&nd&&!nd.ch&&nd.type!=='build'?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
+  const backBtn=nd&&BACK.length?`<button class="btn back" id="bBack" aria-label="Back one line">‹ Back</button>`:'';
+  const cont=label=>`<div class="controw">${backBtn}<button class="btn primary" id="bNext">${label}</button></div>`;
   if(!nd){
     const d=l.desc.find(x=>cond(x.c));
     const chips=l.spots.map((x,i)=>cond(x.c)?`<button class="chipbtn" data-hs="${i}">${esc(x.l)}</button>`:'').join('');
@@ -284,14 +299,14 @@ function render(){
     const tl=nd.tiles;
     body=`<div class="en">${esc(nd.en)}</div><div class="built">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):'<span class="ph">Tap words to build a sentence</span>'}</div>
       <div class="tiles">${tl.map((t,i)=>`<button class="tile" data-t="${i}" ${bseq.includes(i)?'disabled':''}>${ko(t,false,false)}</button>`).join('')}</div>`;
-    foot=`<div class="row"><button class="btn" id="bClr" style="justify-content:center">Clear</button><button class="btn primary" id="bSay" ${bseq.length?'':'disabled'}>Say it</button></div><button class="btn act" id="bLeave">Never mind</button>`;
+    foot=`<div class="row"><button class="btn" id="bClr" style="justify-content:center">Clear</button><button class="btn primary" id="bSay" ${bseq.length?'':'disabled'}>Say it</button></div><div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
   }else if(nd.type==='camera'){
     body=`<div class="narr">${esc(nd.en)}</div>`;foot=`<button class="shutter" id="bShut" aria-label="Take photo"></button>`;
   }else if(nd.type==='photo'){
     body=`<svg class="photo" viewBox="0 0 300 220">${photoArt()}</svg><div class="narr">${esc(nd.en)}</div>`;
-    foot=`<button class="btn primary" id="bNext">Continue</button>${devSkip}`;
+    foot=`${cont('Continue')}${devSkip}`;
   }else if(nd.type==='card'){
-    body=`<div class="en" style="margin:auto;text-align:center">Sound on. Tap any underlined word to see a picture of it and write down what you think it means.</div>`;foot=`<button class="btn primary" id="bNext">Begin</button>${devSkip}`;
+    body=`<div class="en" style="margin:auto;text-align:center">Sound on. Tap any underlined word to see a picture of it and write down what you think it means.</div>`;foot=`${cont('Begin')}${devSkip}`;
   }else{
     const c=ST.cast[nd.who]||{};
     if(nd.who==='narr')body=nd.en?`<div class="narr">${esc(nd.en)}</div>`:'';
@@ -303,8 +318,8 @@ function render(){
         <div class="talk"><div class="koline ${nd.who==='bus'?'led':''}">${ko(nd.ko)}</div><button class="say" data-say aria-label="Hear it again">▶ Again</button></div></div>
         ${nd.en?`<div class="en">${esc(nd.en)}</div>`:''}`;
     }
-    if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span>${ko(x.ko,false,false)}`:esc(x.en)}</button>`).join('')}</div>`;
-    else foot=`<button class="btn primary" id="bNext">${nd.next||nd.rewind?'Continue':'Look around'}</button>${devSkip}`;
+    if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span>${ko(x.ko,false,false)}`:esc(x.en)}</button>`).join('')}</div>${backBtn?`<div class="controw">${backBtn}</div>`:''}`;
+    else foot=`${cont(nd.next||nd.rewind?'Continue':'Look around')}${devSkip}`;
   }
   sb.innerHTML=body;sf.innerHTML=foot;sb.scrollTop=0;setBusy(busy);
   if(nd&&revealFor!==S.node){revealFor=S.node;const k=sb.querySelector('.koline,.narr');const ms=reveal(k);revealUntil=Date.now()+ms;
@@ -314,10 +329,11 @@ function render(){
   const bn=$('#bNext');if(bn)bn.onclick=next;
   if($('#bSkip'))$('#bSkip').onclick=skipAhead;
   if($('#bMap'))$('#bMap').onclick=openMap;
+  if($('#bBack'))$('#bBack').onclick=goBack;
   const bs=sb.querySelector('[data-say]');if(bs)bs.onclick=()=>{sfx('tap');speak(nd.ko,nd.who)};
   sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{sfx('tap');bseq.push(+b.dataset.t);speak(nd.tiles[+b.dataset.t],'you');render()});
   if($('#bClr'))$('#bClr').onclick=()=>{bseq=[];render()};
-  if($('#bLeave'))$('#bLeave').onclick=()=>{S.node=null;save();render()};
+  if($('#bLeave'))$('#bLeave').onclick=()=>{S.node=null;BACK=[];save();render()};
   if($('#bSay'))$('#bSay').onclick=()=>say(nd);
   if($('#bShut'))$('#bShut').onclick=()=>shoot(nd);
   dots();save();
@@ -385,7 +401,7 @@ function wordSheet(id){
       ${def?`<div class="defbox">${esc(def)}</div>`:''}
       <button class="btn" id="wsay" style="justify-content:center">▶ Hear it</button>
       ${d.g?'':`<div class="label">What you think it means</div><textarea id="wnote" placeholder="Your own words. Nobody checks this.">${esc(r.note||'')}</textarea>
-      <label class="sure"><input type="checkbox" id="wsure" ${r.sure?'checked':''} ${r.note&&r.note.trim()?'':'disabled'}><span>I'm sure about this</span></label>`}
+      <label class="surebox"><input type="checkbox" id="wsure" ${r.sure?'checked':''} ${r.note&&r.note.trim()?'':'disabled'}><span>I'm sure about this</span></label>`}
       <div class="label">Where you've seen it</div>${ctx}
       ${d.g?'':`<button class="linkish" id="wsym">What do the badges on the picture mean?</button>`}`;
     o.querySelector('#wsay').onclick=()=>speak(id,'word');
@@ -400,8 +416,8 @@ function wordSheet(id){
 let nbTab='all';
 const SYMBOLS=()=>`
   <div class="label">Badges on word pictures</div>
-  <div class="symrow">${iconSVG('eye +past','symic')}<div><b>Ochre arrow turning back</b><br>It already happened (past). 봤어요 = saw.</div></div>
-  <div class="symrow">${iconSVG('calendar +future','symic')}<div><b>Green arrow turning forward</b><br>It hasn't happened yet (future). 내일 = tomorrow.</div></div>
+  <div class="symrow">${iconSVG('eye +past','symic')}<div><b>Ochre circle with an arrow turning back</b><br>It already happened (past). 봤어요 = saw.</div></div>
+  <div class="symrow">${iconSVG('calendar +future','symic')}<div><b>Green square with ››</b><br>It hasn't happened yet (future). 내일 = tomorrow.</div></div>
   <div class="symrow">${iconSVG('exists +not','symic')}<div><b>Red slash</b><br>Not, none, or don't. 없어요 = there isn't any.</div></div>
   <div class="label">Word colors</div>
   <div class="symrow"><span class="w new demo">새</span><div><b>New</b>: the first time you've run into this word.</div></div>
@@ -547,7 +563,7 @@ function settings(){
       <button class="btn-ink" id="rs" style="color:#e59a87">${confirmReset?'Tap again to erase all progress':'Start over'}</button>`;
     o.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.set[b.dataset.k]=+b.dataset.v;save();sfx('tap');draw();document.documentElement.dataset.size=S.set.size});
     o.querySelector('#tv').onclick=()=>speak('{안녕하세요}!','sujin');
-    o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{const set=S.set;S=fresh();S.set=set;save();o.remove();title()}};
+    o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{S=freshKeepNotes();BACK=[];save();o.remove();title()}};
   };draw();
 }
 
@@ -565,7 +581,7 @@ const chStarted=id=>id===S.ch?!!S.F.started:!!(S.prog[id]&&S.prog[id].F&&S.prog[
 function stash(){if(S.ch)S.prog[S.ch]=JSON.parse(JSON.stringify(Object.fromEntries(CH_FIELDS.map(k=>[k,S[k]]))))}
 function startChapter(id,restart){
   stash();const p=!restart&&S.prog[id];
-  S.ch=id;useChapter(id);artKey=null;ambKey=null;lastLoc=null;
+  S.ch=id;useChapter(id);artKey=null;ambKey=null;lastLoc=null;BACK=[];if(restart)SEEN.clear();
   if(p&&p.F&&p.F.started){
     CH_FIELDS.forEach(k=>S[k]=p[k]);
     if(!ST.places[S.loc])S.loc=ST.meta['start-place'];if(S.node&&!ST.nodes[S.node])S.node=null;
@@ -658,7 +674,7 @@ function title(){
   let sure=!has;const tn=o.querySelector('#tn');
   tn.onclick=()=>{
     if(!sure){sure=true;tn.textContent='Tap again to erase all progress';tn.style.color='#e59a87';return}
-    sfx('page');const set=S.set;S=fresh();S.set=set;o.remove();startChapter(WORLD.chapters[0].id,true);
+    sfx('page');S=freshKeepNotes();BACK=[];o.remove();startChapter(WORLD.chapters[0].id,true);
   };
 }
 

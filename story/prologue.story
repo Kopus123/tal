@@ -378,13 +378,11 @@ ajeossi[happy]: {어서 오세요}!
 (He waves you in with the cloth, smiling.)
 
 === scene ktalk
-@build Say something to him.
-tiles: {할머니} | {봤어요}? | {안녕하세요} | {여기} | {있어요}? | {맛있어요}
-answer: {할머니} | {봤어요}? -> talked ? k3r : k3
-answer: {할머니} | {여기} | {있어요}? -> talked ? k3r : k3
+@type Ask him if he's seen 할머니.
+answer: {할머니} {봤어요}? -> talked ? k3r : k3
+answer: {할머니} {여기} {있어요}? -> talked ? k3r : k3
 answer: {안녕하세요} -> khi
 miss -> khuh_t
-
 === scene khi
 ajeossi[happy]: {네}, {안녕하세요}! 하하.
 (He bows back, amused.)
@@ -394,7 +392,7 @@ ajeossi[surprised]: {네}?
 (He tilts his head.)
 ajeossi: {네}...? {김밥}? {라면}?
 (He points hopefully at the menu. He thinks you're trying to order food.)
-~ He didn't understand. Try putting the words together differently.
+~ He didn't understand. Try asking him the same thing you asked the couple in the alley.
 <- ktalk
 
 === scene khuh_o
@@ -535,16 +533,13 @@ staff[happy]: {안녕하세요}! 청솔 {박물관}{이에요}.
 -> mu3
 
 === scene mu3
-@build Ask her about 할머니. (Her full name was in the museum's text: 김순자.)
-tiles: 김순자 | {선생님} | {할머니} | {봤어요}? | {여기} | {있어요}?
-answer: 김순자 | {선생님} | {봤어요}? -> mu4
-answer: {할머니} | {봤어요}? -> mu4
-answer: 김순자 | {선생님} | {여기} | {있어요}? -> mu4
-answer: {할머니} | {여기} | {있어요}? -> mu4
-answer: 김순자 | {봤어요}? -> mu4
-answer: {선생님} | {봤어요}? -> mu4
+@type Ask her about 할머니. (Her full name was in the museum's text: 김순자.)
+answer: 김순자 {선생님} {봤어요}? -> mu4
+answer: {할머니} {봤어요}? -> mu4
+answer: 김순자 {선생님} {여기} {있어요}? -> mu4
+answer: {할머니} {여기} {있어요}? -> mu4
+answer: {선생님} {봤어요}? -> mu4
 miss -> muhuh
-
 === scene muhuh
 staff[surprised]: {네}?
 (She smiles politely and waits. She didn't catch that.)

@@ -7,7 +7,7 @@
 start c1_open
 start-place madang
 end-title 1장 끝
-end-text 할머니 is safe, for now. But someone climbed the mountain in the dark, and he knows which mask is the real one. Chapter 2 picks up on the mountain.
+end-text 할머니 is safe, for now. But someone climbed the mountain in the dark, and he knows which mask is the real one. The story continues soon.
 
 === hints
 if !sawFake: Look closely at the mask on the courtyard floor.
@@ -234,7 +234,7 @@ note@threatSent They know. Somehow they know the mask on the gate isn't the real
 
 # ------------------------------------------------------------ morning: the courtyard
 === scene c1_open
-@card 1장 | 두 개
+@card 다음 날 | The next morning
 ! set hasPhone
 ~ The next morning. Nobody in the guesthouse really slept.
 ~ 수진 brought the mask in from the gate. It lies on the wooden floor of the courtyard, grinning at the sky.
@@ -395,14 +395,12 @@ ajeossi[sad]: {아니요}...?
 (He nods slowly and goes back to wiping a counter that's already clean.)
 
 === scene c1_ktalk
-@build Ask him about the second 김밥.
-tiles: {누구} | {김밥}{이에요}? | {할머니} | {봤어요}? | {두 개} | {맛있어요}
-answer: {누구} | {김밥}{이에요}? -> c1_kwho
-answer: {두 개} | {누구} | {김밥}{이에요}? -> c1_kwho
-answer: {할머니} | {봤어요}? -> c1_ksaw
+@type Ask him who the second 김밥 was for.
+answer: {누구} {김밥}{이에요}? -> c1_kwho
+answer: {김밥} {두 개} {누구}{예요|이에요}? -> c1_kwho
+answer: {할머니} {봤어요}? -> c1_ksaw
 answer: {맛있어요} -> c1_kyum
 miss -> c1_khuh
-
 === scene c1_ksaw
 ajeossi[sad]: {오늘}{은|은/는}... {아니요}. {안} {왔어요}.
 (He shakes his head.)

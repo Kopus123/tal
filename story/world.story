@@ -37,9 +37,9 @@ village 청솔마을
 blurb A mystery in Korean. Nobody will translate for you. Tap any word to see a picture of it, and work out the rest from what people do.
 
 === chapters
-# id       | title    | subtitle | file (blank = coming soon)
-prologue   | 프롤로그 | 탈       | prologue.story
-ch1        | 1장      | 두 개    | ch1.story
+# id       | title    | subtitle | file           | continues (blank = starts a new chapter)
+prologue   | 1장      | 탈       | prologue.story
+ch1        | 1장      | 탈       | ch1.story      | continues
 
 === map
 # pin PLACE X% Y%  (places show on the map once you've been there)

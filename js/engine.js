@@ -29,7 +29,7 @@ function parseStory(src,st){
     switch(sec){
       case 'meta':{const i=line.indexOf(' ');st.meta[line.slice(0,i)]=line.slice(i+1).trim();break}
       case 'cast':{const [k,n,c,v,look]=line.split('|').map(s=>s.trim());st.cast[k]={n,c,voice:!!v,look:look||''};break}
-      case 'chapters':{const [id,t,sub,file]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file});break}
+      case 'chapters':{const [id,t,sub,file,cont]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file,cont:!!cont});break}
       case 'map':{m=line.match(/^pin\s+(\S+)\s+([\d.]+)\s+([\d.]+)/);if(m)st.map.push({p:m[1],x:+m[2],y:+m[3]});break}
       case 'words':{m=line.match(/^(.+?)\s*=\s*(.+)$/);if(m)st.words[m[1]]=m[2]==='(grammar)'?{g:1}:{p:m[2]};break}
       case 'grammar':{const i=line.indexOf('|');if(i>0)st.grammar[line.slice(0,i).trim()]=line.slice(i+1).trim();break}
@@ -68,7 +68,8 @@ function parseStory(src,st){
         else if(m=line.match(/^<-\s*(.+)$/)){if(last)last.rewind=m[1].trim()}
         else if(m=line.match(/^@build\s+(.+)$/))node({type:'build',en:m[1],tiles:[],ans:[]});
         else if(m=line.match(/^tiles:\s*(.+)$/))last.tiles=m[1].split('|').map(s=>s.trim());
-        else if(m=line.match(/^answer:\s*(.+?)\s+->\s+(.+)$/))last.ans.push([m[1].split('|').map(s=>s.trim()),m[2].trim()]);
+        else if(m=line.match(/^@type\s+(.+)$/))node({type:'type',en:m[1],ans:[]});
+        else if(m=line.match(/^answer:\s*(.+?)\s+->\s+(.+)$/))last.ans.push([last.type==='type'?m[1].trim():m[1].split('|').map(s=>s.trim()),m[2].trim()]);
         else if(m=line.match(/^miss\s+->\s+(.+)$/))last.miss=m[1].trim();
         else if(m=line.match(/^@camera\s+(?:([\d.]+)\s+([\d.]+)\s*\|\s*)?(.+)$/))node({type:'camera',tx:+(m[1]||50),ty:+(m[2]||50),en:m[3]});
         else if(m=line.match(/^@photo\s+(.+)$/))node({type:'photo',en:m[1]});
@@ -110,6 +111,12 @@ const TOK=/\{([^}|]+)(?:\|([^}]+))?\}/g;
 const plain=s=>String(s).replace(TOK,'$1');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const idsIn=s=>[...String(s).matchAll(TOK)].map(m=>m[2]||m[1]);
+// Hangul -> jamo, so 봣어요 vs 봤어요 counts as one small slip, not a whole wrong syllable
+function jamo(s){const out=[];for(const ch of String(s)){const c=ch.charCodeAt(0)-0xAC00;
+  if(c>=0&&c<11172){out.push('L'+Math.floor(c/588),'V'+Math.floor(c%588/28));if(c%28)out.push('T'+c%28)}else out.push(ch)}return out}
+function lev(a,b){const d=Array.from({length:a.length+1},(_, i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length]}
+const jamoDist=(a,b)=>lev(jamo(a),jamo(b));
 function wrec(id){return S.w[id]||(S.w[id]={ctx:[],note:''})}
 function see(id,line){if(!W[id])return;const r=wrec(id);if(!r.ctx.includes(line)){r.ctx.push(line);if(r.ctx.length>6)r.ctx.shift();r.n=(r.n||0)+1}}
 function status(id){const d=W[id];if(!d)return'seen';if(d.g)return'gram';const r=S.w[id];if(!r)return'new';
@@ -203,7 +210,7 @@ function go(id){
   id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
   if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
-  S.node=id;bseq=[];runFx(nd.fx,replay);checkPattern();
+  S.node=id;bseq=[];TFB=null;tHint=0;runFx(nd.fx,replay);checkPattern();
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
   if(nd.ko||(nd.who==='narr'&&nd.en))logLine({who:nd.who,ex:nd.ex,ko:nd.ko,en:nd.en});
   save();render();
@@ -241,13 +248,38 @@ async function say(nd){
   await speakBuilt(words,line);await new Promise(r=>setTimeout(r,250));
   setBusy(false);go(hit?hit[1]:nd.miss);
 }
+/* ---------- typed answers: close enough counts, and you see what to fix ---------- */
+let TFB=null,tHint=0;
+const typedNorm=s=>plain(s).replace(/[\s.?!~,·…]/g,'');
+// hint levels: 1 = first syllable of each word, 2 = first two, 3 = everything
+function skeleton(nd,level){const a=plain(nd.ans[0][0]);if(level>=3)return a;
+  return a.split(' ').map(w=>{const ch=[...w];return ch.map((c,i)=>i<level||/[.?!~,…]/.test(c)?c:'_').join('')}).join(' ')}
+function diffHTML(user,correct){
+  const u=[...user].filter(c=>!/[\s.?!~,·…]/.test(c));const cp=[...correct];const ci=cp.map((c,i)=>i).filter(i=>!/[\s.?!~,·…]/.test(cp[i]));const cc=ci.map(i=>cp[i]);
+  const L=Array.from({length:u.length+1},()=>Array(cc.length+1).fill(0));
+  for(let i=u.length-1;i>=0;i--)for(let j=cc.length-1;j>=0;j--)L[i][j]=u[i]===cc[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const okU=new Set(),okC=new Set();let i=0,j=0;
+  while(i<u.length&&j<cc.length){if(u[i]===cc[j]){okU.add(i);okC.add(j);i++;j++}else if(L[i+1][j]>=L[i][j+1])i++;else j++}
+  const yours=u.map((c,k)=>okU.has(k)?esc(c):`<mark class="bad">${esc(c)}</mark>`).join('');
+  const fixed=cp.map((c,k)=>{const n=ci.indexOf(k);return n<0||okC.has(n)?esc(c):`<mark class="fix">${esc(c)}</mark>`}).join('');
+  return `<div class="tfb"><div class="label">Close enough! Watch the highlighted parts.</div><div class="tfrow"><span>You wrote</span><b>${yours}</b></div><div class="tfrow"><span>Correct</span><b>${fixed}</b></div></div>`;
+}
+async function sayTyped(nd,val){
+  if(busy)return;const v=typedNorm(val);if(!v){toast('Type something first.');return}
+  sfx('tap');
+  const scored=nd.ans.map(a=>({a,d:jamoDist(v,typedNorm(a[0])),n:jamo(typedNorm(a[0])).length})).sort((x,y)=>x.d-y.d);
+  const best=scored[0],lim=best?Math.max(1,Math.floor(best.n*.15)):0;
+  if(best&&best.d===0){ko(best.a[0]);logLine({who:'you',ko:best.a[0]});setBusy(true);await speak(best.a[0],'you');await new Promise(r=>setTimeout(r,250));setBusy(false);go(best.a[1]);return}
+  if(best&&best.d<=lim){ko(best.a[0]);logLine({who:'you',ko:best.a[0]});TFB={html:diffHTML(val,plain(best.a[0])),target:best.a[1]};render();speak(best.a[0],'you');return}
+  logLine({who:'you',ko:val});go(nd.miss);
+}
 function spot(i){const x=ST.places[S.loc].spots[i];if(!x)return;sfx('tap');
   if(x.kind==='->')go(x.t);else if(x.t==='phone')openPhone();else{const m=x.t.match(/^place\s+(\S+)/);if(m)enter(m[1])}}
 // playtest: jump ahead to the next decision without the voices
 function skipAhead(){
   quiet=true;stopAudio();let n=0;
   while(S.node&&n++<60){const nd=ST.nodes[S.node];
-    if(nd.ch||nd.type==='build'||nd.type==='camera')break;
+    if(nd.ch||nd.type==='build'||nd.type==='type'||nd.type==='camera')break;
     if(nd.rewind){go(nd.rewind);continue}
     if(nd.next)go(nd.next);else{S.node=null;save();render();break}}
   quiet=false;
@@ -290,7 +322,7 @@ function render(){
   $('#fx').querySelectorAll('.hs').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
-  const devSkip=S.set.dev&&nd&&!nd.ch&&nd.type!=='build'?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
+  const devSkip=S.set.dev&&nd&&!nd.ch&&nd.type!=='build'&&nd.type!=='type'?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
   const backBtn=nd&&BACK.length?`<button class="btn back" id="bBack" aria-label="Back one line">‹ Back</button>`:'';
   const cont=label=>`<div class="controw">${backBtn}<button class="btn primary" id="bNext">${label}</button></div>`;
   if(!nd){
@@ -303,6 +335,13 @@ function render(){
     body=`<div class="en">${esc(nd.en)}</div><div class="built">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):'<span class="ph">Tap words to build a sentence</span>'}</div>
       <div class="tiles">${tl.map((t,i)=>`<button class="tile" data-t="${i}" ${bseq.includes(i)?'disabled':''}>${ko(t,false,false)}</button>`).join('')}</div>`;
     foot=`<div class="row"><button class="btn" id="bClr" style="justify-content:center">Clear</button><button class="btn primary" id="bSay" ${bseq.length?'':'disabled'}>Say it</button></div><div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
+  }else if(nd.type==='type'){
+    if(TFB){body=`<div class="en">${esc(nd.en)}</div>${TFB.html}`;foot=cont('Continue')}
+    else{
+      body=`<div class="en">${esc(nd.en)}</div><form class="typeans big" id="tf"><input id="tin" lang="ko" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="Type it in Korean"></form>
+        ${tHint?`<div class="hintline">${esc(skeleton(nd,tHint))}</div>`:''}`;
+      foot=`<div class="row"><button class="btn" id="bHintT" style="justify-content:center">Hint</button><button class="btn primary" id="bSayT">Say it</button></div><div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
+    }
   }else if(nd.type==='camera'){
     body=`<div class="narr">${esc(nd.en)}</div>`;foot=`<button class="shutter" id="bShut" aria-label="Take photo"></button>`;
   }else if(nd.type==='photo'){
@@ -329,7 +368,9 @@ function render(){
     const en=sb.querySelector('.en');if(en){en.classList.add('rv');en.style.animationDelay=Math.min(ms,1400)+'ms'}}
   document.querySelectorAll('#sb [data-hs],#sf [data-hs]').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
   sf.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>choose(nd.ch[+b.dataset.ch]));
-  const bn=$('#bNext');if(bn)bn.onclick=next;
+  const bn=$('#bNext');if(bn)bn.onclick=TFB?()=>{const t=TFB.target;TFB=null;go(t)}:next;
+  if($('#bSayT')){const tin=$('#tin');$('#bSayT').onclick=()=>sayTyped(nd,tin.value);$('#tf').onsubmit=e=>{e.preventDefault();sayTyped(nd,tin.value)};
+    $('#bHintT').onclick=()=>{tHint=Math.min(tHint+1,3);const v=tin.value;render();const t2=$('#tin');t2.value=v;t2.focus()}}
   if($('#bSkip'))$('#bSkip').onclick=skipAhead;
   if($('#bMap'))$('#bMap').onclick=openMap;
   if($('#bBack'))$('#bBack').onclick=goBack;
@@ -481,18 +522,31 @@ function showLog(){
 
 let pickQ=null;
 const normAns=s=>String(s).replace(/[\s.?!~,·]/g,'');
+// a short list for one question: every answer on this chapter's board plus a few other words you've met (about 14).
+// Typing searches everything you've seen.
+function shortlist(q,filter){
+  const ok=id=>W[id]&&!W[id].g&&S.w[id];
+  if(filter)return Object.keys(S.w).filter(id=>ok(id)&&(id.includes(filter)||(S.w[id].note||'').toLowerCase().includes(filter.toLowerCase()))).slice(0,16);
+  let h=7;for(const ch of q.id)h=(h*31+ch.charCodeAt(0))>>>0;
+  const rnd=()=>{h=(h*1103515245+12345)>>>0;return h/4294967296};
+  const mix=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const pool=new Set();ST.cases.forEach(c=>c.a.split('/').forEach(a=>{if(W[a])pool.add(a)}));
+  mix(Object.keys(S.w).filter(id=>ok(id)&&W[id].p&&!pool.has(id))).slice(0,Math.max(0,14-pool.size)).forEach(x=>pool.add(x));
+  return mix([...pool]);
+}
 function caseBoard(){
   const o=overlay(`<div class="panel">${head('사건')}<div class="ph-body" id="cbb"></div></div>`);
   o.querySelector('.x').onclick=()=>close(o);
   let filter='',miss=false;
   const tryAnswer=(q,val)=>{
-    if(q.a.split('/').some(a=>normAns(val)===normAns(a))){S.cs[q.id]=1;S.F['solved_'+q.id]=1;save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);toast('Solved');draw();
+    const close=q.a.split('/').find(a=>normAns(val)!==normAns(a)&&jamoDist(normAns(val),normAns(a))<=1);
+    if(close)toast('Close! It\'s spelled <b>'+esc(close)+'</b>',4000);
+    if(close||q.a.split('/').some(a=>normAns(val)===normAns(a))){S.cs[q.id]=1;S.F['solved_'+q.id]=1;save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);toast('Solved');draw();
       if(q.final)setTimeout(()=>{close(o);finale()},700);else if(caseReadyNow())toast('Case notes done.');}
     else{sfx('wrong');buzz(60);miss=true;draw()}
   };
   const draw=()=>{
     const qs=ST.cases.filter(q=>cond(q.c));
-    const cards=Object.keys(S.w).filter(id=>W[id]&&!W[id].g&&(!filter||id.includes(filter)||(S.w[id].note||'').toLowerCase().includes(filter.toLowerCase())));
     let h=qs.length?'<div class="empty">Answer each question with a word. Type it, or pick it from the words you\'ve seen.</div>':'<div class="empty">No questions yet. Look around and see what you can find.</div>';
     h+=qs.map(q=>{
       if(S.cs[q.id])return`<div class="q solved"><div class="qt">${esc(q.q)}</div><div class="ans">${iconSVG(W[q.a.split('/')[0]]&&W[q.a.split('/')[0]].p)} ${esc(q.a.split('/').join(' · '))}</div><div class="why">${esc(q.why)}</div></div>`;
@@ -500,14 +554,14 @@ function caseBoard(){
       return`<div class="q"><div class="qt">${esc(q.q)}</div>
         <form class="typeans" id="ta"><input id="ti" lang="ko" autocomplete="off" placeholder="Type in Korean, or search your words" value="${esc(filter)}"><button class="btn-ink" type="submit">Answer</button></form>
         ${miss?`<div class="miss">That doesn't fit the evidence.</div>`:''}
-        <div class="pick">${cards.map(id=>`<button class="w ${status(id)}" data-pk="${esc(id)}" data-w="">${esc(id)}</button>`).join('')||'<span class="empty">No matching words.</span>'}</div></div>`;
+        <div class="pick">${shortlist(q,filter).map(id=>`<button class="w ${status(id)}" data-pk="${esc(id)}" data-w="">${esc(id)}</button>`).join('')||'<span class="empty">No matching words.</span>'}</div></div>`;
     }).join('');
     o.querySelector('#cbb').innerHTML=h;
     o.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{sfx('tap');pickQ=b.dataset.open;filter='';miss=false;draw();const i=o.querySelector('#ti');if(i)i.focus()});
     const q=ST.cases.find(x=>x.id===pickQ);
     o.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>tryAnswer(q,b.dataset.pk));
     const ti=o.querySelector('#ti');if(ti){ti.oninput=e=>{filter=e.target.value.trim();const pos=e.target.selectionStart;
-      const pk=o.querySelector('.pick');const cs=Object.keys(S.w).filter(id=>W[id]&&!W[id].g&&(!filter||id.includes(filter)||(S.w[id].note||'').toLowerCase().includes(filter.toLowerCase())));
+      const pk=o.querySelector('.pick');const cs=shortlist(q,filter);
       pk.innerHTML=cs.map(id=>`<button class="w ${status(id)}" data-pk="${esc(id)}" data-w="">${esc(id)}</button>`).join('')||'<span class="empty">No matching words.</span>';
       pk.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>tryAnswer(q,b.dataset.pk))}}
     const ta=o.querySelector('#ta');if(ta)ta.onsubmit=e=>{e.preventDefault();tryAnswer(q,o.querySelector('#ti').value)};
@@ -583,6 +637,9 @@ const chIndex=id=>WORLD.chapters.findIndex(c=>c.id===id);
 const chInfo=id=>WORLD.chapters.find(c=>c.id===id)||{};
 const chReady=id=>!!CH[id];
 const chUnlocked=id=>{const i=chIndex(id);return i===0||!!S.done[WORLD.chapters[i-1].id]};
+// a chapter can be several story files in a row ("continues" in the chapter list): they play as one
+const groupHead=id=>{let i=Math.max(0,chIndex(id));while(i>0&&WORLD.chapters[i].cont)i--;return WORLD.chapters[i]};
+const groupParts=head=>{const i=chIndex(head.id),out=[head];for(let k=i+1;k<WORLD.chapters.length&&WORLD.chapters[k].cont;k++)out.push(WORLD.chapters[k]);return out};
 const chStarted=id=>id===S.ch?!!S.F.started:!!(S.prog[id]&&S.prog[id].F&&S.prog[id].F.started);
 function stash(){if(S.ch)S.prog[S.ch]=JSON.parse(JSON.stringify(Object.fromEntries(CH_FIELDS.map(k=>[k,S[k]]))))}
 function startChapter(id,restart){
@@ -600,6 +657,8 @@ const nextChapter=()=>WORLD.chapters[chIndex(S.ch)+1]||null;
 
 function finale(){
   S.done[S.ch]=1;stash();save();
+  const cont=nextChapter();
+  if(cont&&cont.cont&&chReady(cont.id)){startChapter(cont.id,true);return} // same chapter, the story just keeps going
   const vocab=Object.keys(S.w).filter(id=>W[id]&&!W[id].g);const n=s=>vocab.filter(id=>status(id)===s).length;
   const nx=nextChapter();
   const nextBit=!nx?'':chReady(nx.id)?`<button class="btn primary" id="nextch">Start ${esc(nx.t)}</button>`:`<div class="en" style="text-align:center">${esc(nx.t)} is coming soon.</div>`;
@@ -615,21 +674,27 @@ function chapterList(){
   const o=overlay(`<div class="panel">${head('목차')}<div class="ph-body" id="clb"></div></div>`);
   o.querySelector('.x').onclick=()=>close(o);
   let confirmId=null;
-  const pick=(id,restart)=>{o.remove();const t=document.querySelector('.title');if(t)t.remove();startChapter(id,restart)};
+  const leave=()=>{o.remove();const t=document.querySelector('.title');if(t)t.remove()};
+  const restartGroup=hid=>{const parts=groupParts(chInfo(hid));leave();
+    parts.forEach(p=>{if(p.id!==S.ch)delete S.prog[p.id];delete S.done[p.id]});
+    startChapter(hid,true);parts.slice(1).forEach(p=>delete S.prog[p.id]);save()};
   const draw=()=>{
-    o.querySelector('#clb').innerHTML=WORLD.chapters.map(c=>{
-      const ready=chReady(c.id),open=ready&&chUnlocked(c.id),done=!!S.done[c.id],started=chStarted(c.id);
+    o.querySelector('#clb').innerHTML=WORLD.chapters.filter(c=>!c.cont).map(c=>{
+      const parts=groupParts(c).filter(p=>chReady(p.id));
+      const ready=parts.length>0,open=ready&&chUnlocked(c.id);
+      const done=ready&&!!S.done[parts[parts.length-1].id],started=parts.some(p=>chStarted(p.id));
+      const cur=[...parts].reverse().find(p=>chStarted(p.id)&&!S.done[p.id]);
       const state=!ready?'Coming soon':!open?'Locked':done?'Finished':started?'In progress':'New';
       let b='';
       if(open){
-        if(started&&!done)b+=`<button class="btn-ink" data-go="${c.id}">Continue</button>`;
+        if(cur&&!done)b+=`<button class="btn-ink" data-go="${cur.id}">Continue</button>`;
         if(!started&&!done)b+=`<button class="btn-ink" data-new="${c.id}">Start</button>`;
         if(started||done)b+=confirmId===c.id?`<button class="btn-ink" data-new="${c.id}" style="color:#e59a87">Tap again to start over</button>`:`<button class="btn-ink" data-ask="${c.id}">${done?'Replay':'Start over'}</button>`;
       }
-      return `<div class="chrow ${open?'':'locked'} ${c.id===S.ch?'cur':''}"><div class="chn"><b>${esc(c.t)}</b><span>${esc(open||done?c.sub:'?')}</span></div><div class="chs">${state}</div><div class="chb">${b}</div></div>`;
+      return `<div class="chrow ${open?'':'locked'} ${groupHead(S.ch).id===c.id?'cur':''}"><div class="chn"><b>${esc(c.t)}</b><span>${esc(open||done?c.sub:'?')}</span></div><div class="chs">${state}</div><div class="chb">${b}</div></div>`;
     }).join('')+`<div class="empty">Your notebook and map carry over between chapters. Replaying a chapter starts it from the beginning.</div>`;
-    o.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>pick(x.dataset.go,false));
-    o.querySelectorAll('[data-new]').forEach(x=>x.onclick=()=>pick(x.dataset.new,true));
+    o.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>{leave();startChapter(x.dataset.go,false)});
+    o.querySelectorAll('[data-new]').forEach(x=>x.onclick=()=>restartGroup(x.dataset.new));
     o.querySelectorAll('[data-ask]').forEach(x=>x.onclick=()=>{confirmId=x.dataset.ask;draw()});
   };
   draw();
@@ -670,7 +735,7 @@ function title(){
   const o=document.createElement('div');o.className='title';
   o.innerHTML=`<div class="art"><svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">${artGateInner(false)}</svg><div class="amb">${ambientHTML('motes')}</div></div>
     <h1>${esc(m.title||'')}</h1><div class="vil">${esc(m.village||'')}</div><p>${esc(m.blurb||'')}</p>
-    <div class="acts">${has?`<button class="btn primary" id="tc">Continue · ${esc(chInfo(S.ch).t||'')}</button><button class="btn" id="tl">Chapters</button>`:''}<button class="btn ${has?'':'primary'}" id="tn">${has?'New game':'Start'}</button></div>
+    <div class="acts">${has?`<button class="btn primary" id="tc">Continue · ${esc(groupHead(S.ch).t||'')}</button><button class="btn" id="tl">Chapters</button>`:''}<button class="btn ${has?'':'primary'}" id="tn">${has?'New game':'Start'}</button></div>
     <div class="fine">Turn your sound on.</div>`;
   document.body.appendChild(o);
   if(has){

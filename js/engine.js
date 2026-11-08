@@ -559,7 +559,7 @@ function dedHTML(q,mode){
     const f=(FILL[q.id]||[])[i];return `<button class="slot ${f?'filled':'empty'} ${i===ACT?'active':''}" data-slot="${i}">${f?esc(f):'＿＿'}</button>`});
 }
 function caseBoard(tab){
-  if(tab)boardTab=tab;
+  if(typeof tab==='string')boardTab=tab; // the top-bar button passes a click event, not a tab name
   const o=overlay(`<div class="panel">${head('사건')}<div class="ph-body" id="cbb"></div></div>`);
   o.querySelector('.x').onclick=()=>close(o);
   let filter='',miss=false;
@@ -842,7 +842,7 @@ async function boot(){
   if(S.node&&!ST.nodes[S.node])S.node=null;
   revealFor=S.node;lastLoc=S.loc;
   $('#boot').remove();
-  $('#bNote').onclick=notebook;$('#bCase').onclick=caseBoard;$('#bPhone').onclick=openPhone;$('#bMenu').onclick=menu;
+  $('#bNote').onclick=notebook;$('#bCase').onclick=()=>caseBoard();$('#bPhone').onclick=openPhone;$('#bMenu').onclick=menu;
   $('#locKo').onclick=openMap;$('#locSub').onclick=openMap;
   render();title();
 }

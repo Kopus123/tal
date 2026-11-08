@@ -1,6 +1,6 @@
 // Offline support. Game code and story: network first (so updates arrive), cache as offline fallback.
 // Audio clips, icons, fonts: cache first (they never change once recorded).
-const VERSION = 'tal-v9';
+const VERSION = 'tal-v10';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './audio/clips.js', './js/art.js', './js/icons.js', './js/people.js', './js/engine.js',
   './story/world.story', './story/prologue.story', './icons/icon-192.png', './icons/icon-512.png'];
 

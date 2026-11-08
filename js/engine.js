@@ -707,7 +707,6 @@ async function boot(){
   }
   if(!CH[S.ch])S.ch=WORLD.chapters[0].id;
   useChapter(S.ch);
-  if(S.F.intro||S.F.phoneSeen)S.F.hasPhone=1; // older saves already had the phone
   if(!S.loc||!ST.places[S.loc])S.loc=ST.meta['start-place'];
   if(S.node&&!ST.nodes[S.node])S.node=null;
   revealFor=S.node;lastLoc=S.loc;

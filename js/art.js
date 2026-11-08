@@ -64,6 +64,46 @@ function lanternString(eve){let s=`<path d="M-10,40 Q100,70 200,48 T410,44" stro
 function mountains(c1,c2){return `<path d="M0,150 Q60,90 120,130 T240,110 T400,120 V300 H0Z" fill="${c1}"/><path d="M0,175 Q90,130 170,160 T330,140 T400,150 V300 H0Z" fill="${c2}"/>`}
 function pine(x,y,s=1,c='#2f4a3c'){return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-2" y="-6" width="4" height="12" fill="#4a3424"/><path d="M0,-44 L14,-18 L6,-18 L18,-2 L-18,-2 L-6,-18 L-14,-18Z" fill="${c}"/></g>`}
 
+function artMadangMask(){
+  // the morning courtyard, with a mask lying on the wooden floor
+  let s=artMadang(false);
+  return s.replace('</svg>',`<g transform="translate(232,212) rotate(-8)"><ellipse rx="10" ry="4" fill="rgba(0,0,0,.18)" transform="translate(1,6)"/>${mask(0,0,.5,{c:'#e7d2a7'})}</g></svg>`);
+}
+function artRiver(){
+  let s=`<rect width="400" height="300" fill="#c9dde3"/><rect y="70" width="400" height="80" fill="#e9d8bf" opacity=".5"/>`+mountains('#94ae9f','#7c9a8b');
+  s+=`<rect y="160" width="400" height="140" fill="#86a370"/>`;
+  s+=`<path d="M0,198 C110,182 220,214 400,186 L400,300 L0,300Z" fill="#8fb3c4"/><path d="M0,214 C120,200 230,228 400,204" stroke="#b9d3de" stroke-width="3" fill="none"/>`;
+  for(let i=0;i<12;i++)s+=`<path d="M${20+i*33},${236+(i%3)*14} q8,-3 16,0" stroke="#d8e8ee" stroke-width="1.6" fill="none"/>`;
+  // wooden bridge, downstream
+  s+=`<path d="M276,150 Q328,104 384,146" stroke="#6b4528" stroke-width="8" fill="none"/><path d="M276,146 Q328,100 384,142" stroke="#8a5a34" stroke-width="3" fill="none"/>`;
+  for(let x=286;x<380;x+=12){const y=150-Math.sin((x-276)/108*Math.PI)*40;s+=`<line x1="${x}" y1="${y}" x2="${x}" y2="${y-12}" stroke="#5a3b24" stroke-width="2"/>`}
+  s+=`<rect x="280" y="148" width="5" height="44" fill="#5a3b24"/><rect x="376" y="144" width="5" height="44" fill="#5a3b24"/>`;
+  // reeds
+  for(let i=0;i<16;i++){const x=6+i*9+(i%3)*3,h=34+(i%4)*10;s+=`<path d="M${x},270 q${(i%2?3:-3)},-${h/2} ${(i%2?1:-2)},-${h}" stroke="#5f7a3e" stroke-width="2" fill="none"/>${i%3===0?`<rect x="${x-2+(i%2?1:-2)}" y="${270-h-8}" width="4" height="10" rx="2" fill="#7a5530"/>`:''}`}
+  // the old man on his rock, fishing
+  s+=`<ellipse cx="258" cy="206" rx="34" ry="12" fill="#8d877b"/><ellipse cx="252" cy="201" rx="26" ry="8" fill="#a39c8e"/>`;
+  s+=person(256,198,{top:'#6b7a5a',bot:'#4a4f3a',hair:'#e4e0da',s:.95});
+  s+=`<path d="M266,166 L338,118" stroke="#3a2a1a" stroke-width="2"/><path d="M338,118 Q342,170 336,212" stroke="#e8e0c8" stroke-width=".8" fill="none"/>`;
+  s+=`<rect x="220" y="194" width="12" height="9" rx="2" fill="#4f6ea8"/>`;
+  return svg(s);
+}
+function artTemple(){
+  let s=`<defs><linearGradient id="dusk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2a4a"/><stop offset=".55" stop-color="#b8664a"/><stop offset="1" stop-color="#e3a35a"/></linearGradient></defs>`;
+  s+=`<rect width="400" height="300" fill="url(#dusk)"/>`;
+  for(let i=0;i<14;i++)s+=`<circle cx="${(i*71)%400}" cy="${(i*37)%70}" r=".9" fill="#fff" opacity=".7"/>`;
+  s+=`<path d="M0,170 Q80,120 160,150 T320,130 T400,140 V300 H0Z" fill="#3b3346"/>`;
+  s+=hanok(120,150,170,62,true);
+  s+=lantern(300,148,'#c9452f',true);
+  // stone steps and ground
+  s+=`<rect y="222" width="400" height="78" fill="#4a3f45"/><rect x="170" y="222" width="80" height="8" fill="#7d7470"/><rect x="164" y="230" width="92" height="8" fill="#6f6662"/>`;
+  for(let i=0;i<8;i++)s+=pine(10+i*55+(i%2)*14,232+(i%3)*12,1+(i%2)*.3,'#1f2a28');
+  // 할머니 on the step with her red bundle
+  s+=person(232,222,{top:'#8a6a9a',bot:'#4a3a52',hanbok:1,bun:1,hair:'#d8d4ce',s:.95});
+  s+=`<rect x="223" y="196" width="18" height="12" rx="4" fill="#b5412d" stroke="#2a231d" stroke-width=".8"/>`;
+  // a flashlight far below on the path
+  s+=`<circle cx="46" cy="276" r="10" fill="url(#glowG)"/><circle cx="46" cy="276" r="2.2" fill="#fff4c8"/>`;
+  return svg(s);
+}
 function artMadang(eve){
   let s=`<rect width="400" height="300" fill="${eve?'#1c2238':'#bcd6df'}"/><rect y="90" width="400" height="80" fill="${eve?'#3c3352':'#f2dcc0'}" opacity=".7"/>`;
   s+=mountains(eve?'#2a3047':'#8aa79b',eve?'#232a3d':'#6f8f82');
@@ -212,6 +252,10 @@ function artMap(){
   s+=`<rect x="328" y="146" width="34" height="18" fill="#dfe3e6" stroke="#6a6f7d" stroke-width="1.5"/><path d="M324,147 L345,136 L366,147Z" fill="#c9ced3" stroke="#6a6f7d" stroke-width="1.5"/>`;
   // stone wall around the guesthouse
   s+=`<rect x="138" y="240" width="76" height="34" rx="6" fill="none" stroke="#8d877b" stroke-width="2" stroke-dasharray="3 2"/>`;
+  // the little temple up the mountain, and the old man's fishing rock
+  s+=`<path d="M24,82 Q36,76 48,82 L45,82 L45,90 L27,90 L27,82Z" fill="#3b4048"/><rect x="29" y="84" width="14" height="6" fill="#f2c27a"/>`;
+  s+=`<path d="M64,142 Q50,110 40,92" stroke="#b08b5e" stroke-width="2" fill="none" stroke-dasharray="2 5"/>`;
+  s+=`<ellipse cx="318" cy="292" rx="9" ry="4" fill="#8d877b"/>`+road('M244,386 Q280,340 316,294','2 6');
   // compass + title seal
   s+=`<g transform="translate(360,470)"><circle r="20" fill="#f6f0e0" stroke="#2a231d" stroke-width="1.5"/><path d="M0,-16 L5,0 L0,16 L-5,0Z" fill="#b5412d"/><path d="M0,0 L5,0 L0,16 L-5,0Z" fill="#2a231d"/><text y="-23" text-anchor="middle" font-family="Gowun Batang,serif" font-size="12" fill="#2a231d">북</text></g>`;
   s+=`<g transform="translate(20,20) rotate(-3)"><rect width="108" height="40" rx="3" fill="#b5412d"/><rect x="3" y="3" width="102" height="34" rx="2" fill="none" stroke="#f6e7d2" stroke-width="1"/><text x="54" y="29" text-anchor="middle" font-family="Nanum Brush Script,serif" font-size="28" fill="#fff4e6">청솔마을</text></g>`;
@@ -219,7 +263,7 @@ function artMap(){
 }
 
 const ART={
-  madang:()=>artMadang(false), madang_eve:()=>artMadang(true),
+  madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple,
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
   jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate
 };

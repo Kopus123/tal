@@ -50,10 +50,11 @@ function parseStory(src,st){
         if(m=line.match(/^name\s+(.+)/))cur.name=m[1];
         else if(m=line.match(/^avatar\s+(\S+)\s+(\S+)/)){cur.av=m[1];cur.c=m[2]}
         else if(m=line.match(/^on-open\s+(.+)/))cur.fx=fx(m[1]);
-        else if(m=line.match(/^day\s+(.+)/))cur.m.push({d:m[1]});
-        else if(m=line.match(/^(them|me)\s+(\S+)\s+(.+)/))cur.m.push({me:m[1]==='me',t:m[2],ko:m[3]});
-        else if(m=line.match(/^sys\s+(.+)/))cur.m.push({sys:1,ko:m[1]});
-        else if(m=line.match(/^note\s+(.+)/))cur.note=m[1];
+        // "them@FLAG ..." = this message only arrives once FLAG is set
+        else if(m=line.match(/^day(?:@(\S+))?\s+(.+)/))cur.m.push({d:m[2],c:m[1]});
+        else if(m=line.match(/^(them|me)(?:@(\S+))?\s+(\S+)\s+(.+)/))cur.m.push({me:m[1]==='me',c:m[2],t:m[3],ko:m[4]});
+        else if(m=line.match(/^sys(?:@(\S+))?\s+(.+)/))cur.m.push({sys:1,c:m[1],ko:m[2]});
+        else if(m=line.match(/^note(?:@(\S+))?\s+(.+)/)){cur.note=m[2];cur.noteC=m[1]}
         break}
       case 'scene':{
         if(line.startsWith('~'))node({who:'narr',en:line.slice(1).trim()});
@@ -352,7 +353,7 @@ function reveal(el){
 function dots(){
   $('#noteDot').hidden=!Object.keys(S.w).some(id=>W[id]&&!W[id].g&&!S.nb[id]);
   $('#caseDot').hidden=!ST.cases.some(q=>cond(q.c)&&!S.cs[q.id]);
-  $('#phoneDot').hidden=!ST.phones.some(t=>!S.F['read_'+t.id]);
+  $('#phoneDot').hidden=!ST.phones.some(unread);
 }
 
 /* camera: drag the frame over the people, then shoot */
@@ -512,18 +513,21 @@ function caseBoard(){
   draw();
 }
 
+const msgsOf=t=>t.m.filter(m=>cond(m.c));
+const msgCount=t=>msgsOf(t).filter(m=>!m.d).length;
+const unread=t=>(S.F['readn_'+t.id]||0)<msgCount(t);
 function openPhone(){
   const o=overlay(`<div class="phone" role="dialog" aria-label="Phone"><div class="ph-status"><span>08:47</span><span>▂▄▆ 42%</span></div><div id="phv" style="flex:1;display:flex;flex-direction:column;min-height:0"></div></div>`,'center');
   const list=()=>{
     stopAudio();
-    o.querySelector('#phv').innerHTML=`<div class="ph-top"><b>메시지</b><button id="pc">Close</button></div><div class="ph-list">${ST.phones.map(t=>`<button class="thr" data-th="${t.id}"><span class="av" style="background:${t.c}">${esc(t.av)}</span><span style="min-width:0;flex:1"><div class="nm">${esc(t.name)}</div><div class="pv">${esc(plain(t.m[t.m.length-1].ko||''))}</div></span>${S.F['read_'+t.id]?'':'<span class="new"></span>'}</button>`).join('')}</div>`;
+    o.querySelector('#phv').innerHTML=`<div class="ph-top"><b>메시지</b><button id="pc">Close</button></div><div class="ph-list">${ST.phones.map(t=>`<button class="thr" data-th="${t.id}"><span class="av" style="background:${t.c}">${esc(t.av)}</span><span style="min-width:0;flex:1"><div class="nm">${esc(t.name)}</div><div class="pv">${esc(plain((msgsOf(t).filter(m=>m.ko).pop()||{}).ko||''))}</div></span>${unread(t)?'<span class="new"></span>':''}</button>`).join('')}</div>`;
     o.querySelector('#pc').onclick=()=>close(o);
     o.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{sfx('tap');thread(ST.phones.find(t=>t.id===b.dataset.th))});
   };
   const thread=t=>{
-    runFx(t.fx);S.F['read_'+t.id]=1;
-    o.querySelector('#phv').innerHTML=`<div class="ph-top"><button id="pb">‹ Back</button><b>${esc(t.name)}</b></div><div class="msgs">${t.m.map((m,i)=>m.d?`<div class="day">${ko(m.d)}</div>`:m.sys?`<div class="bub sys">${esc(m.ko)}</div>`:`<div class="bub ${m.me?'me':''}" data-bi="${i}">${ko(m.ko)}<small>${m.t} · tap to hear</small></div>`).join('')}${t.note?`<div class="ph-note">${esc(t.note)}</div>`:''}</div>`;
-    o.querySelectorAll('[data-bi]').forEach(b=>b.onclick=()=>speak(t.m[+b.dataset.bi].ko,'sign'));
+    runFx(t.fx);S.F['read_'+t.id]=1;S.F['readn_'+t.id]=msgCount(t);const ms=msgsOf(t);
+    o.querySelector('#phv').innerHTML=`<div class="ph-top"><button id="pb">‹ Back</button><b>${esc(t.name)}</b></div><div class="msgs">${ms.map((m,i)=>m.d?`<div class="day">${ko(m.d)}</div>`:m.sys?`<div class="bub sys">${esc(m.ko)}</div>`:`<div class="bub ${m.me?'me':''}" data-bi="${i}">${ko(m.ko)}<small>${m.t} · tap to hear</small></div>`).join('')}${t.note&&cond(t.noteC)?`<div class="ph-note">${esc(t.note)}</div>`:''}</div>`;
+    o.querySelectorAll('[data-bi]').forEach(b=>b.onclick=()=>speak(ms[+b.dataset.bi].ko,'sign'));
     o.querySelector('#pb').onclick=list;save();dots();
   };
   list();

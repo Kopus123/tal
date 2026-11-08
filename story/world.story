@@ -39,7 +39,7 @@ blurb A mystery in Korean. Nobody will translate for you. Tap any word to see a 
 === chapters
 # id       | title    | subtitle | file (blank = coming soon)
 prologue   | 프롤로그 | 탈       | prologue.story
-ch1        | 1장      | ?        |
+ch1        | 1장      | 두 개    | ch1.story
 
 === map
 # pin PLACE X% Y%  (places show on the map once you've been there)
@@ -50,6 +50,8 @@ pin sanqil 16 27
 pin sikdang 51 70
 pin jeong 61 74
 pin museum 86 30
+pin gang 79 55
+pin jeol 9 14
 
 === cast
 # key      | name          | color    | voice  rate  pitch | look (see js/people.js)
@@ -59,6 +61,7 @@ yuna       | 유나          | #c26a86  | SunHi  +8%   +25Hz | hair=long hc=#3a2
 minsu      | 민수          | #4f6ea8  | InJoon +0%   +0Hz  | hair=short hc=#1f1a18 top=#9fb7d9 wear=hanbok
 ajeossi    | 식당 아저씨   | #8a5a34  | InJoon -6%   -18Hz | hair=short hc=#6f6a66 top=#7d8a96 wear=apron extra=stubble skin=#dcb08a
 staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz | hair=long hc=#1f1a18 top=#2d3f66 wear=blazer extra=glasses
+haraboji   | 할아버지      | #6b7a5a  | InJoon -12%  -26Hz | hair=short hc=#e4e0da top=#6b7a5a wear=plain extra=wrinkles,stubble skin=#d9b38e
 bus        | 안내 방송     | #2a2a2a  | Hyunsu -5%   +0Hz
 you        |               |          | Hyunsu -8%   +0Hz
 word       |               |          | SunHi  -15%  +0Hz
@@ -139,6 +142,21 @@ sign       |               |          | SunHi  -10%  +0Hz
 만나요 = meet
 안 = not
 왔어요 = come +past
+할아버지 = grandpa
+학생 = student
+괜찮아요 = okay
+새 = new
+가짜 = fake
+진짜 = real
+밤 = night
+다리 = bridge
+강 = river
+몰라요 = dontknow
+누구 = who
+절 = temple
+손 = hand
+만들었어요 = make +past
+뒤에 = behind
 이에요 = (grammar)
 아니에요 = (grammar)
 입니다 = (grammar)
@@ -149,6 +167,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 도 = (grammar)
 의 = (grammar)
 으로 = (grammar)
+하고 = (grammar)
 
 === grammar
 # piece | what it does (shown when you tap it)
@@ -162,6 +181,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 도 | "also / too / either": 마당에도 없어요 = not in the courtyard either.
 의 | Possessive, like 's: 할머니의 공방 = grandma's workshop.
 으로 | "toward" or "by way of": 오른쪽으로 가요 = go to the right. After a vowel it's just 로.
+하고 | "with" or "and" (casual): 친구하고 = with a friend. 누구하고? = with who?
 
 === endings
 # shown in the notebook's Grammar tab
@@ -185,3 +205,4 @@ need 3
 타요 > 탔어요
 와요 > 왔어요
 보다 > 봤어요
+만들어요 > 만들었어요

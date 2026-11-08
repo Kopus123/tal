@@ -98,6 +98,21 @@ const ICON={
   meet:()=>fig(16,36,.85,IG,'#2a1d18')+fig(48,36,.85,IB,'#2a1d18')+P('M26,46 Q32,40 38,46',IO,3),
   not:()=>`<circle cx="32" cy="32" r="22" fill="none" stroke="${IR}" stroke-width="6"/><path d="M17,47 L47,17" stroke="${IR}" stroke-width="6" stroke-linecap="round"/>`,
   come:()=>Re(36,10,22,44,2,IW)+P('M6,32 H30 M22,24 L30,32 L22,40','none',4),
+  grandpa:()=>fig(32,34,1.25,'#6b7a5a','#e4e0da')+P('M23,26 Q32,40 41,26 Q38,34 32,35 Q26,34 23,26Z','#e4e0da',1.5),
+  student:()=>fig(26,34,1.15,IB,'#2a1d18')+Re(40,32,16,22,2,IR)+P('M44,32 V54','none',1.5),
+  okay:()=>Ci(30,34,20,IS)+P('M22,30 q3,-3 6,0 M32,30 q3,-3 6,0','none',2.5)+P('M21,40 Q30,48 39,40','none',2.5)+`<circle cx="50" cy="16" r="11" fill="${IG}" stroke="${IK}" stroke-width="2.5"/><path d="M45,16 L49,20 L56,11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`,
+  new:()=>Re(12,30,34,24,3,'#d9b98a')+P('M16,38 H42 M16,46 H40','none',1.5).replace(IK,'#a07a52')+[[50,14,1],[54,34,.7],[36,16,.6]].map(([x,y,k])=>`<path d="M${x},${y-9*k} L${x+2.5*k},${y-2.5*k} L${x+9*k},${y} L${x+2.5*k},${y+2.5*k} L${x},${y+9*k} L${x-2.5*k},${y+2.5*k} L${x-9*k},${y} L${x-2.5*k},${y-2.5*k}Z" fill="${IO}" stroke="${IK}" stroke-width="1.5"/>`).join(''),
+  fake:()=>`<g transform="translate(30,34) scale(1.3)"><ellipse rx="14" ry="18" fill="#f3ead7" stroke="${IK}" stroke-width="2" stroke-dasharray="4 3"/><path d="M-9,-3 Q-5,-7 -2,-3 M2,-3 Q5,-7 9,-3 M-8,7 Q0,13 8,7" stroke="${IK}" stroke-width="1.6" fill="none" stroke-dasharray="3 2"/></g>`+P('M44,52 L58,30','none',4).replace(IK,'#8a5a34')+`<path d="M41,56 L45,50 L48,53Z" fill="${IR}"/>`,
+  real:()=>ICON.mask()+`<circle cx="51" cy="13" r="11" fill="${IO}" stroke="${IK}" stroke-width="2.5"/><path d="M51,5 L53.2,10.5 L59,11 L54.5,14.6 L56,20 L51,17 L46,20 L47.5,14.6 L43,11 L48.8,10.5Z" fill="#fff"/>`,
+  night:()=>`<rect x="4" y="4" width="56" height="56" rx="10" fill="#2b2f4a"/>`+P('M38,12 A18,18 0 1 0 50,40 A14,14 0 1 1 38,12Z',IO,2)+[[14,16],[20,44],[48,52],[12,32]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1.8" fill="#fff"/>`).join(''),
+  bridge:()=>`<path d="M4,48 C16,44 26,52 38,48 S56,52 60,48 V58 H4Z" fill="#9fc6e0"/>`+P('M6,40 Q32,12 58,40','none',5).replace(IK,'#6b4528')+P('M6,40 Q32,12 58,40','none',1.5)+[14,22,32,42,50].map(x=>{const y=40-Math.sin((x-6)/52*Math.PI)*20;return P(`M${x},${y} V${y-8}`,'none',2)}).join('')+P('M8,40 V52 M56,40 V52','none',3),
+  river:()=>[18,32,46].map((y,i)=>P(`M4,${y} q7,-6 14,0 t14,0 t14,0 t14,0`,'none',4).replace(IK,['#4f8fb5','#6fa7c8','#9fc6e0'][i])).join(''),
+  dontknow:()=>fig(32,38,1,IG,'#2a1d18')+P('M16,40 L8,30 M48,40 L56,30','none',4)+Tx(50,18,'?',18,IR)+Tx(14,18,'?',14,IR),
+  who:()=>`<circle cx="32" cy="24" r="14" fill="#3b4048" stroke="${IK}" stroke-width="2.5"/><path d="M8,60 Q10,40 32,40 Q54,40 56,60Z" fill="#3b4048" stroke="${IK}" stroke-width="2.5"/>`+Tx(32,31,'?',20,'#fff'),
+  temple:()=>P('M4,26 Q18,22 32,10 Q46,22 60,26 L54,26 L54,30 L10,30 L10,26Z','#3b4048')+Re(14,30,36,22,1,'#f2c27a')+P('M32,30 V52 M22,30 V52 M42,30 V52','none',2)+Re(8,52,48,6,1,'#9a958b')+P('M52,30 V34','none',1.5)+`<ellipse cx="52" cy="38" rx="3" ry="4" fill="${IR}"/>`,
+  hand:()=>ICON.wave()+`<path d="M30,40 q6,-4 10,2 q2,6 -6,8 q-6,0 -4,-10Z" fill="${IR}" opacity=".85"/>`,
+  make:()=>Re(10,34,30,20,2,'#d9b98a')+P('M38,30 L56,12','none',4)+P('M34,34 L40,28 L44,32 L38,38Z','#b8b8b8',2)+P('M44,40 q4,-4 8,0 M48,46 q3,-3 6,0','none',1.6).replace(IK,'#a07a52'),
+  behind:()=>Re(26,10,24,24,3,IG)+Re(10,22,30,30,3,IO)+P('M48,48 Q56,40 50,30','none',2.5)+P('M46,34 L50,30 L54,34','none',2.5),
   unknown:()=>Tx(32,42,'?',30,'#9a8f7d')
 };
 

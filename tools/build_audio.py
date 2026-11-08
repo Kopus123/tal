@@ -43,7 +43,7 @@ def collect():
                 m = re.match(r"^(.+?)\s*=", line)
                 if m: add("word", m.group(1))
             elif sec == "phone":
-                m = re.match(r"^(them|me)\s+\S+\s+(.+)", line)
+                m = re.match(r"^(them|me)(?:@\S+)?\s+\S+\s+(.+)", line)
                 if m: add("sign", m.group(2))
             elif sec == "scene":
                 if m := re.match(r"^\*\s+(.+?)\s+->", line):

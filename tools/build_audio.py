@@ -22,7 +22,7 @@ def collect():
     cast, keys = {}, []
     def add(who, text):
         t = normalize(text)
-        if t:
+        if t and re.search(r"\w", t):  # "..." alone has nothing to say
             keys.append(f"{who}|{t}")
     files = sorted((ROOT / "story").glob("*.story"), key=lambda p: (p.name != "world.story", p.name))  # cast first
     for f in files:
@@ -57,7 +57,7 @@ def collect():
                     for t in m.group(1).split("|"): add("you", t)
                 elif m := re.match(r"^answer:\s*(.+?)\s+->", line):
                     add("you", " ".join(t.strip() for t in m.group(1).split("|")))
-                elif m := re.match(r"^([a-z_]+)(?:\[\w+\])?:\s*(.+)", line):
+                elif m := re.match(r"^([a-z_]+)(?:\[\w+\])?(?:@[a-z]{2})?:\s*(.+)", line):
                     who = m.group(1)
                     add(who if who in cast else "sign", m.group(2))
     add("sujin", "{안녕하세요}!")  # settings voice test
@@ -96,4 +96,5 @@ async def main():
     (AUDIO / "clips.js").write_text("window.AUDIO=" + json.dumps(mapping, ensure_ascii=False) + ";\n", encoding="utf-8")
     print(f"{len(mapping)}/{len(keys)} clips ready, {sum(1 for x in made if x)} newly recorded, {removed} old clips removed")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

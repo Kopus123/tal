@@ -4,10 +4,11 @@
 # ===================================================================
 
 === meta
+lang ko
 start c1_open
 start-place madang
 end-title 1장 끝
-end-text 할머니 is safe, for now. But someone climbed the mountain in the dark, and he knows which mask is the real one. The story continues soon.
+end-text 할머니 is safe, for now. But someone followed you up the mountain in the dark, and he knows which mask is the real one. The story continues soon.
 
 === hints
 if !sawFake: Look closely at the mask on the courtyard floor.
@@ -22,12 +23,13 @@ if !solved_d7: Put what 할아버지 told you together on the case board before 
 if !metHalmeoni: You worked out where she is. Up the mountain path, and keep climbing.
 if !hidden: Someone with a light is coming. Don't let them see you.
 if !allSolved: Open the case board (the board button at the top) and answer the questions you can see.
-if !solved_q8: What did 할머니 say about the mask in the museum?
+if !solved_d8: What did 할머니 say about the mask in the museum?
 Chapter 1 is done. Look back through your notebook while you wait for Chapter 2.
 
 === deduce
-d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, last night. | Wet paint, fresh shavings, and no chip in the eyebrow.
-d2 if read_threat | Someone wants the {진짜} mask, at the {다리}, tonight at 9. | And somehow they know the one on the gate is fake.
+d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow.
+d2 if read_threat | Someone wants the {진짜} mask, at the {다리}, tonight at 9, and wants her to come {혼자}. | And somehow they know the one on the gate is fake.
+dw if sawWall&sawFake | 할머니 never used the front gate. She came and went over the wall {뒤에} the house, by the {산} path. | Red paint on the stones, the same red as the mask. That's how she got past everyone.
 d3 if marketDone | Yesterday she got off at the {시장}, not at the museum, and met {할아버지} there. | The second 김밥 was for him. They ate it together at the market.
 d4 if marketDone&sawBag | She bought {나무} and {빨간} {물감} there, to make the copy. | The bag under her workbench came from that same stall.
 d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다리}. | Maybe the same person who sent the message.
@@ -41,7 +43,8 @@ photo79 | {사진} · 1979 | photo | A faded photo from the workshop: a young wo
 couplephoto | {사진} · {버스 정류장} | photo | The couple's selfie at the bus stop. Behind them, a little blurry: 할머니, holding a bundle in red cloth. |
 note | {찾지 마세요} | letter | The note tucked into the mask on the gate. Shaky handwriting. | {찾지 마세요}.
 fakemask | {가짜} {탈} | fake | The mask from the gate. Fresh wood, wet red paint, and no chip in the eyebrow. |
-threat | {핸드폰} · 010-4417-0923 | phone | This morning's message to 할머니's phone. | {진짜} {탈} {주세요}. {오늘} {밤} {9시}. {다리}.
+threat | {핸드폰} · 010-4417-0923 | phone | This morning's message to 할머니's phone. No 요 anywhere. | {진짜} {탈} {가져와}. {오늘} {밤} {9시}. {다리}. {혼자} {와}.
+wall | {뒤에} · {빨간} | paint | Red paint on the stones of the back wall, where someone climbed over. Beyond it, a path toward the mountain. |
 paintbag | {시장} · {빨간} {물감} | bag | From under the workbench: an open pot of red paint, and a paper bag stamped with the market's name. | 청솔 {시장}
 sketch | {나무} · 30cm | wood | 할머니's pencil sketch of the mask, with the size of the wood block she needed. | {나무} · 30cm
 bootprint | {다리} · ? | man | By the bridge: a big bootprint, and the round mark a heavy flashlight leaves when it's stood on its end. |
@@ -112,7 +115,7 @@ first c1_k1
 desc The restaurant. The owner keeps glancing at the window.
 spot "Talk to the owner" 50 52 -> c1_ktalk if !talkedOwner
 spot "Talk to the owner" 50 52 -> c1_kafter if talkedOwner
-spot "Order from the menu" 22 22 -> c1_korder
+spot "The menu" 22 22 -> c1_kfeed
 spot "Bus stop" 85 40 => place jeong
 spot "Back to the alley" 12 88 => place golmok
 glow 김밥 11 23 7
@@ -219,6 +222,7 @@ them 07:30 {할머니}?? {어디}{예요|이에요}?
 sys 📞 ✖ 07:31
 them@threatSent 09:40 {할머니}... {괜찮아요}?
 them@marketDone 13:05 {할머니}!! {전화} {주세요}!!
+them@marketDone 13:06 {내일} {가요}!
 
 === phone museum
 name 청솔 박물관
@@ -234,12 +238,13 @@ name 010-4417-0923
 avatar ? #3a3f4a
 on-open set read_threat if threatSent; give threat if threatSent
 day {어제}
-them 23:51 {탈} {주세요}.
-them 23:58 {탈} {주세요}.
+them 23:51 {탈}. {어디}?
+them 23:58 {탈}.
 day@threatSent {오늘}
-them@threatSent 09:12 {진짜} {탈} {주세요}.
+them@threatSent 09:12 {진짜} {탈} {가져와}.
 them@threatSent 09:13 {오늘} {밤} {9시}. {다리}.
-note@threatSent They know. Somehow they know the mask on the gate isn't the real one.
+them@threatSent 09:13 {혼자} {와}.
+note@threatSent They know. Somehow they know the mask on the gate isn't the real one. And there isn't a single 요 in any of it.
 
 # ------------------------------------------------------------ morning: the courtyard
 === scene c1_open
@@ -257,6 +262,8 @@ sujin: {네}?
 * {할머니} {어디}{예요|이에요}? -> c1_sjq1
 * {탈}{이에요}? -> sawFake ? c1_sjq2b : c1_sjq2
 * {괜찮아요}? -> c1_sjq3
+* {경찰}...? -> c1_sjpolice
+* 준호{는|은/는} {누구}{예요|이에요}? -> c1_sjjunho if read_junho
 * {김밥} {두 개}... {누구}{예요|이에요}? -> c1_sjq4 if showed
 * [Show her something] -> c1_sjshow
 * [Leave her be] -> c1_sjbye
@@ -283,6 +290,21 @@ sujin[sad]: {괜찮아요}? ...
 (She tries to smile and doesn't quite manage it.)
 sujin[sad]: {괜찮아요}. {괜찮아요}...
 (She says it like she's telling herself, not you.)
+-> c1_sjhub.2
+
+=== scene c1_sjpolice
+sujin[sad]: {경찰}...?
+(She holds up the note from the gate and taps the shaky words.)
+sujin[sad]: {엄마} {편지}{예요|이에요}. {찾지 마세요}...
+~ 할머니 left on her own and asked not to be found. To the police, that's a family matter, not a crime. 수진 knows it, and it's eating at her.
+-> c1_sjhub.2
+
+=== scene c1_sjjunho
+sujin: 준호요?
+(For the first time this morning, something like a smile.)
+sujin[happy]: {제} {아들}{이에요}.
+(She holds her hand up high above her own head. Taller than her, apparently.)
+sujin[worried]: {내일} {와요}.
 -> c1_sjhub.2
 
 === scene c1_sjq4
@@ -331,31 +353,31 @@ sujin: {네}...?
 === scene c1_mask2
 ~ It's lighter than you expected, and it smells strongly of fresh wood. When you put it down, there's a red smear across your fingers.
 sujin[surprised]: 어? {손}! {손}!
-(She grabs your hand and turns it over. Red paint. Still wet.)
+(She grabs your hand and turns it over. Red paint. Thick old-fashioned paint, still tacky a whole day later.)
 sujin[surprised]: {새} {탈}{이에요}! {새} {탈}!
 (She knocks on the mask with one knuckle. It sounds hollow and new.)
 sujin[worried]: {이거}{는|은/는} {가짜}{예요|이에요}. {가짜}!
 (She runs into the workshop and comes back with the faded photo. In it, the old mask has a small chip missing from the left eyebrow. This one has no chip at all.)
-sujin[worried]: {할머니}{가|이/가} {만들었어요}. {어제} {밤}{에}...
-(She looks at the workshop door, then at the gate. 할머니 was here last night, close enough to touch.)
+sujin[worried]: {할머니}{가|이/가} {만들었어요}. {어제}...
+(She looks at the workshop door, then at the gate. While everyone was out searching yesterday, 할머니 was right here.)
 ! set sawFake; give fakemask
 ~ In your pocket, 할머니's phone buzzes.
 ! set threatSent; toast New message on 할머니's phone.
 
 === scene c1_show
-sujin[surprised]: {진짜} {탈} {주세요}... {오늘} {밤}... {다리}?!
+sujin[surprised]: {진짜} {탈} {가져와}... {오늘} {밤}... {다리}... {혼자}?!
 ! set showed
 (The color drains out of her face.)
 sujin[worried]: {누구}{예요|이에요}? {누구}?!
-(She shouts it at the phone, as if it could answer.)
+(She shouts it at the phone, as if it could answer. Then she starts dialing 112, and stops. And tell them what? That someone wants a mask?)
 sujin: {김밥} {두 개}... {할머니}{는|은/는} {누구}{하고}...
 (She stops, thinking. Then she gives the phone back.)
 sujin[worried]: {김밥}... {식당} {아저씨}{는|은/는} {알아요}. {우리} {같이} {찾아요}. {빨리}!
 
 === scene c1_wall
 ~ Behind the clay jars, on the old stone wall: a smear of red paint, and a few chips of stone knocked loose. Someone climbed over here in a hurry, with wet paint on their hands.
-~ On the other side of the wall, a narrow path runs toward the mountain.
-! set sawWall
+~ On the other side of the wall, a narrow path runs toward the mountain. Nobody watching the front gate would ever have seen.
+! set sawWall; give wall
 
 # ------------------------------------------------------------ workshop
 === scene c1_bench
@@ -432,18 +454,11 @@ ajeossi[sad]: {아니요}...?
 answer: {누구} {김밥}{이에요}? -> c1_kwho
 answer: {김밥} {두 개} {누구}{예요|이에요}? -> c1_kwho
 answer: {할머니} {봤어요}? -> c1_ksaw
-answer: {맛있어요} -> c1_kyum
 miss -> c1_khuh
 === scene c1_ksaw
 ajeossi[sad]: {오늘}{은|은/는}... {아니요}. {안} {왔어요}.
 (He shakes his head.)
 ~ You knew that already. You wanted to know who the second 김밥 was for.
-<- c1_ktalk
-
-=== scene c1_kyum
-ajeossi[happy]: {맛있어요}? 하하, {고마워요}!
-(He looks delighted. You haven't eaten anything.)
-~ Nice, but not the question.
 <- c1_ktalk
 
 === scene c1_khuh
@@ -471,6 +486,12 @@ ajeossi: {시장} {아주머니}{는|은/는} {알아요}. {시장}! {아주머�
 ajeossi: {시장}! {시장} {아주머니}{는|은/는} {알아요}.
 (He points at the bus stop again.)
 
+=== scene c1_kfeed
+ajeossi[worried]: {먹었어요}?
+(He looks at you hard. You haven't eaten since yesterday, and he can tell. He's already reaching for a plate.)
+~ He won't let you out of here hungry. Better order something quickly.
+-> c1_korder
+
 === scene c1_korder
 @build The menu is on the wall. Order something.
 tiles: {김밥} | {떡볶이} | {라면} | {비빔밥} | {물} | {주세요}
@@ -489,7 +510,7 @@ ajeossi[surprised]: {네}?
 
 === scene c1_kf
 ajeossi[happy]: {네}! {여기} {있어요}.
-(A minute later, a plate lands in front of you. He watches you eat, and for a moment he looks less worried.)
+(A minute later, a plate lands in front of you. You eat fast, standing up. He watches, and for a moment he looks less worried.)
 * {맛있어요}! -> c1_kgood
 * {매워요}! -> c1_kspicy
 
@@ -509,30 +530,30 @@ sign: 청솔마을 → {시장} → {영화관} → {박물관} → {지하철�
 (The route map. The market is the very first stop.)
 
 === scene c1_b0
-~ The bus rattles out of the village along the river road. The screen above the driver shows the stops.
+~ Same bus, same driver as yesterday. This time you sit up front, right under the screen, and listen for each announcement before the stop.
 ! place bus; led 청솔마을
 -> c1_bs1
 
 === scene c1_bs1
-bus: {이번} {정류장}{은|은/는} {시장}{입니다}.
+bus: {다음} {정류장}{은|은/는} {시장}{입니다}.
 ! led 시장
 * [🔔 Press the stop button] -> c1_bo_market
 * [Stay on] -> c1_bs2
 
 === scene c1_bs2
-bus: {이번} {정류장}{은|은/는} {영화관}{입니다}.
+bus: {다음} {정류장}{은|은/는} {영화관}{입니다}.
 ! led 영화관
 * [🔔 Press the stop button] -> c1_bo_cinema
 * [Stay on] -> c1_bs3
 
 === scene c1_bs3
-bus: {이번} {정류장}{은|은/는} {박물관}{입니다}.
+bus: {다음} {정류장}{은|은/는} {박물관}{입니다}.
 ! led 박물관
 * [🔔 Press the stop button] -> c1_bo_museum
 * [Stay on] -> c1_bs4
 
 === scene c1_bs4
-bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
+bus: {다음} {정류장}{은|은/는} {지하철역}{입니다}.
 ! led 지하철역
 * [🔔 Press the stop button] -> c1_bend
 * [Stay on] -> c1_bend
@@ -624,12 +645,12 @@ ajumma[happy]: {고마워요}!
 === scene c1_mtalk
 ~ What do you ask her?
 * {할머니} {봤어요}? -> c1_m2
-* {맛있어요}? -> c1_mwrong
+* {고마워요}! -> c1_mwrong
 
 === scene c1_mwrong
-ajumma[surprised]: {맛있어요}? 이거?
-(She looks down at the pot of paint, then back at you, very concerned.)
-~ Please don't eat the paint. Ask about 할머니.
+ajumma[happy]: {네}! {안녕}!
+(She's already turning to the next customer.)
+~ You've got her attention for one more second. Ask about 할머니.
 <- c1_mtalk
 
 === scene c1_m2
@@ -644,8 +665,8 @@ ajumma[worried]: {이상해요}... {할머니}{는|은/는} {축제}{에} {안} 
 * {할아버지}{는|은/는} {어디}{예요|이에요}? -> c1_m3
 
 === scene c1_m3
-ajumma: {할아버지}? {강}! {아침}{에}{는|은/는} {강}{에} {있어요}.
-(She mimes casting a fishing line.)
+ajumma: {할아버지}? {강}! {매일} {강}{에} {있어요}.
+(She mimes casting a fishing line. Every single day. Yesterday was the first time in years he came to the market instead.)
 ajumma: {강}{은|은/는} {버스 정류장} {뒤에} {있어요}.
 (She draws in the air: the bus stop, and a little path going down behind it.)
 ! set marketDone, knowRiver
@@ -729,14 +750,7 @@ haraboji: {학생}... {네}.
 (He nods once and goes back to watching his line.)
 ~ What do you ask him?
 * {할머니} {봤어요}? -> c1_g3
-* {강}{이에요}? -> c1_g2b
 * {물고기} {있어요}? -> c1_g2c
-
-=== scene c1_g2b
-haraboji: {네}. {강}{이에요}.
-(He points at the river. Then at you. Then back at the river.)
-~ Yes, it's a river. Ask him something more useful.
-<- c1_g2.2
 
 === scene c1_g2c
 haraboji[happy]: {물고기}? {아니요}. 하하.
@@ -747,7 +761,7 @@ haraboji[happy]: {물고기}? {아니요}. 하하.
 === scene c1_g3
 haraboji[worried]: ...{몰라요}.
 (He doesn't look at you. His hands tighten on the rod.)
-~ Next to him on the rock: two empty 김밥 wrappers, and a folded piece of red cloth.
+~ His trouser legs are soaked to the knee and stuck with pine needles, and his boots are caked in mountain mud. He hasn't been sitting here all morning.
 haraboji[worried]: {몰라요}. {몰라요}.
 (He says it again, quieter, like he's trying to convince himself.)
 ! set metGramps
@@ -782,7 +796,7 @@ haraboji: {네}?
 <- c1_gtalk.2
 === scene c1_gshow
 ~ He squints at the message.
-haraboji[surprised]: {진짜} {탈}... {오늘} {밤}... {다리}?!
+haraboji[surprised]: {진짜} {탈} {가져와}... {오늘} {밤}... {다리}?!
 (He looks down the river at the wooden bridge. The fishing rod slips out of his hands and clatters on the rock.)
 haraboji[worried]: {누구}{예요|이에요}? {누구}...?
 (He grips your arm. Then he lets out a long breath.)
@@ -791,6 +805,7 @@ haraboji[sad]: {할머니}{는|은/는}... {산}{에} {있어요}.
 haraboji: {산}{에} {절}{이|이/가} {있어요}. {절}{에} {있어요}. {빨리} {가요}!
 (He makes the shape of a little roof with his hands. A temple, up the mountain path.)
 ! set toldMountain
+~ As you stand up, you notice a man on the bridge downstream, leaning on the rope rail, looking at nothing in particular. When you glance back from the path, he's gone.
 
 === scene c1_ghub
 haraboji[worried]: {빨리}... {절}!
@@ -890,6 +905,8 @@ halmeoni[happy]: {할아버지}... {친구}{예요|이에요}. {좋은} {친구}
 ~ Then, on the dark mountain path, a light is coming up. Slowly. Someone is climbing.
 halmeoni[worried]: {누구}...? {불}...!
 (She grabs your sleeve and points at the light.)
+halmeoni[worried]: {학생}... {누구}{하고} {왔어요}?!
+(She stares at you. You came alone. Didn't you?)
 ~ The lantern on the temple eave is still burning. Anyone on the path can see it.
 * [Call out to the light] -> c1_jcall
 * [Blow out the lantern] -> c1_jdark
@@ -915,6 +932,7 @@ halmeoni[worried]: {숨어요}! {빨리}!
 stranger: ...{할머니}?
 (A man's voice. Calm. Too calm.)
 stranger: {진짜} {탈}... {주세요}.
+~ It isn't nine o'clock, and this isn't the bridge. He never meant to wait there. He followed you.
 ~ 할머니's hand finds yours in the dark and squeezes. Neither of you breathes.
 ! set hidden; toast One question left on your case board.
 

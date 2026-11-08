@@ -3,6 +3,7 @@
 # ===================================================================
 
 === meta
+lang ko
 start evening
 start-place night
 end-title 프롤로그 끝
@@ -19,7 +20,7 @@ if !talked: The restaurant owner sees everyone who walks past. Try talking to hi
 if !museumDone: She left on a bus. Her phone said where she was going. Listen for that stop.
 if !allSolved: Open the case board (the board button at the top) and work out what you can.
 if !ending: You've learned what you can at the museum. Take the bus home.
-if !solved_q5: Who wrote on the back of that photo in the workshop? What did 수진 just say?
+if !solved_p4: Who wrote on the back of that photo in the workshop? What did 수진 just say?
 The prologue is done. Look back through your notebook while you wait for Chapter 1.
 
 
@@ -193,8 +194,8 @@ me 18:30 {네}! {내일} {만나요}.
 name 010-4417-0923
 avatar ? #3a3f4a
 day {어제}
-them 23:51 {탈} {주세요}.
-them 23:58 {탈} {주세요}.
+them 23:51 {탈}. {어디}?
+them 23:58 {탈}.
 note No name. Twice, just before midnight. She never answered.
 
 # ------------------------------------------------------------ last night
@@ -523,7 +524,8 @@ bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
 * [Stay on] -> bend
 
 === scene bo_market
-~ You hop off into a crowded market. Fish, vegetables, grandmothers arguing over prices. None of them is yours. You catch the next bus and start over.
+~ You hop off into a crowded market. Fish, vegetables, grandmothers arguing over prices. At a paint stall, a woman in a flowered apron is wrapping a block of wood in newspaper for a customer who's already gone.
+~ You walk the aisles twice. No sign of her. She was supposed to be at the museum this morning, so you catch the next bus and start over.
 <- b0
 
 === scene bo_cinema
@@ -564,7 +566,7 @@ staff[surprised]: {네}?
 staff[surprised]: 김순자 {선생님}이요? {아니요}... {안} {왔어요}.
 (She checks her watch and frowns, then turns her monitor toward you: a calendar entry at 9:00, with 할머니's name on it.)
 staff[worried]: {이상해요}...
-(She dials a number and holds the phone to her ear. Far away, on a wooden step in a courtyard, a phone is ringing.)
+(She dials a number and holds the phone to her ear. In your pocket, 할머니's phone starts to buzz. She stares at your pocket, then at you, and slowly lowers her phone.)
 ! set museumDone
 ~ There's nothing more to learn here. Time to put the morning together on your case board.
 

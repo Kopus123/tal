@@ -21,7 +21,20 @@ A mystery game for learning Korean. Live at https://kopus123.github.io/tal/
 python tools/build_audio.py
 ```
 
-This records any new or changed lines and deletes clips nobody uses anymore. Then bump `VERSION` in `sw.js` and push, and the installed app updates itself the next time it opens with internet.
+This records any new or changed lines and deletes clips nobody uses anymore. Then check everything still works:
+
+```
+python tools/check_story.py
+python tools/playtest.py
+```
+
+`check_story.py` looks for broken jumps, words with no picture, flags that are never set, evidence nobody hands you, and lines with no recording. `playtest.py` plays each route in `tests/` (a full solution, **spoilers**) in a hidden Chrome window by pressing the real buttons, and says exactly where it got stuck if something broke.
+
+Then bump `VERSION` in `sw.js` and push, and the installed app updates itself the next time it opens with internet.
+
+## Saves
+
+Saves carry a format version (`SAVE_V` in `js/engine.js`). When the save format changes, bump it and add a step to `MIGRATE` so older saves upgrade instead of breaking.
 
 ## Try it locally
 

@@ -28,10 +28,11 @@ function parseStory(src,st){
     let m;
     switch(sec){
       case 'meta':{const i=line.indexOf(' ');st.meta[line.slice(0,i)]=line.slice(i+1).trim();break}
+      // every word and line carries a language (meta "lang", default ko); "who@ja: ..." overrides one line
       case 'cast':{const [k,n,c,v,look]=line.split('|').map(s=>s.trim());st.cast[k]={n,c,voice:!!v,look:look||''};break}
       case 'chapters':{const [id,t,sub,file,cont]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file,cont:!!cont});break}
       case 'map':{m=line.match(/^pin\s+(\S+)\s+([\d.]+)\s+([\d.]+)/);if(m)st.map.push({p:m[1],x:+m[2],y:+m[3]});break}
-      case 'words':{m=line.match(/^(.+?)\s*=\s*(.+)$/);if(m)st.words[m[1]]=m[2]==='(grammar)'?{g:1}:{p:m[2]};break}
+      case 'words':{m=line.match(/^(.+?)\s*=\s*(.+)$/);if(m)st.words[m[1]]=Object.assign(m[2]==='(grammar)'?{g:1}:{p:m[2]},{lang:st.meta.lang||'ko'});break}
       case 'grammar':{const i=line.indexOf('|');if(i>0)st.grammar[line.slice(0,i).trim()]=line.slice(i+1).trim();break}
       case 'endings':{const i=line.indexOf('|');if(i>0)st.endings.push({k:line.slice(0,i).trim(),d:line.slice(i+1).trim()});break}
       case 'hints':{m=line.match(/^if\s+(\S+):\s*(.+)$/);st.hints.push(m?{c:m[1],t:m[2]}:{t:line});break}
@@ -68,7 +69,7 @@ function parseStory(src,st){
         // "* label -> TARGET [if COND] [! effects]": the choice only shows when COND holds
         else if(m=line.match(/^\*\s+(.+?)\s+->\s+(.+?)(?:\s+if\s+(\S+))?(?:\s+!\s+(.+))?$/)){
           const lab=m[1],o={go:m[2],c:m[3],fx:m[4]?fx(m[4]):[]};
-          if(lab.startsWith('['))o.en=lab.replace(/^\[|\]$/g,'');else o.ko=lab;(last.ch=last.ch||[]).push(o)}
+          if(lab.startsWith('['))o.en=lab.replace(/^\[|\]$/g,'');else{o.ko=lab;o.lang=st.meta.lang||'ko'}(last.ch=last.ch||[]).push(o)}
         else if(m=line.match(/^->\s*(.+)$/)){if(last)last.next=m[1].trim()}
         else if(m=line.match(/^<-\s*(.+)$/)){if(last)last.rewind=m[1].trim()}
         else if(m=line.match(/^@build\s+(.+)$/))node({type:'build',en:m[1],tiles:[],ans:[]});
@@ -81,7 +82,7 @@ function parseStory(src,st){
         else if(m=line.match(/^@present\s+(.+)$/))node({type:'present',en:m[1],shows:[]});
         else if(m=line.match(/^show:\s*(\S+)\s+->\s+(.+)$/))last.shows.push([m[1],m[2].trim()]);
         else if(m=line.match(/^@card\s+(.+?)(?:\s*\|\s*(.+))?$/))node({type:'card',title:m[1],sub:m[2]||''});
-        else if(m=line.match(/^([a-z_]+)(?:\[(\w+)\])?:\s*(.+)$/))node({who:m[1],ex:m[2]||'neutral',ko:nl(m[3])});
+        else if(m=line.match(/^([a-z_]+)(?:\[(\w+)\])?(?:@([a-z]{2}))?:\s*(.+)$/))node({who:m[1],ex:m[2]||'neutral',ko:nl(m[4]),lang:m[3]||st.meta.lang||'ko'});
         else console.warn('story line not understood',ln+1,line);
         break}
     }
@@ -93,13 +94,24 @@ function parseStory(src,st){
 // Per-chapter progress lives in loc/node/F/cs/visited (swapped in and out of S.prog by chapter).
 // Everything else (notebook, map, settings, finished chapters) is shared.
 const KEY='tal-save-v2';
-const fresh=()=>({ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
+// Save format version. When the format changes: bump SAVE_V and add a step to MIGRATE that upgrades the old shape.
+const SAVE_V=3;
+const fresh=()=>({v:SAVE_V,m:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)
 function freshKeepNotes(){const old=S;const n=fresh();n.set=old.set;
-  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});return n}
+  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});n.m=old.m||{};return n}
 let S=fresh();
-function load(){try{const r=localStorage.getItem(KEY);if(r){S=Object.assign(fresh(),JSON.parse(r));S.set=Object.assign(fresh().set,S.set);return true}}catch(e){}return false}
+// MIGRATE[n] turns a version-n save into version n+1. They run in order, so any old save upgrades step by step.
+const MIGRATE={
+  1:s=>{ // saves from before chapters existed: they were all prologue
+    s.ch=WORLD.chapters[0].id;if(s.F&&s.F.solved_q5)(s.done=s.done||{})[s.ch]=1;
+    s.known=s.known||{};Object.keys(s.visited||{}).forEach(p=>s.known[p]=1);if(s.loc)s.known[s.loc]=1;return s},
+  2:s=>{ // word mastery starts from what the notebook already knows: how often each word was met
+    s.m={};Object.entries(s.w||{}).forEach(([id,r])=>{if(r)s.m[id]={s:r.n||0,u:0,x:0,t:0}});return s},
+};
+function migrate(s){let v=s.v||(s.ch?2:1);while(v<SAVE_V&&MIGRATE[v]){s=MIGRATE[v](s);v++}s.v=Math.max(v,s.v||0);return s}
+function load(){try{const r=localStorage.getItem(KEY);if(r){S=Object.assign(fresh(),migrate(JSON.parse(r)));S.set=Object.assign(fresh().set,S.set);return true}}catch(e){console.warn('save not loaded',e)}return false}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const F=new Proxy({},{get:(t,k)=>S.F[k],set:(t,k,v)=>{S.F[k]=v;return true}});
 // "allSolved" is worked out live: every case question you can currently see (except the last one) is answered
@@ -125,6 +137,15 @@ function lev(a,b){const d=Array.from({length:a.length+1},(_, i)=>[i]);for(let j=
   for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length]}
 const jamoDist=(a,b)=>lev(jamo(a),jamo(b));
 function wrec(id){return S.w[id]||(S.w[id]={ctx:[],note:''})}
+/* ---------- word mastery (quiet: nothing shows it yet; later phases read it) ----------
+   S.m[word] = {s: times seen in a line, u: times you used it right, x: times you used it wrong, t: day last seen} */
+const today=()=>Math.floor(Date.now()/864e5);
+const mast=id=>S.m[id]||(S.m[id]={s:0,u:0,x:0,t:0});
+function noteSeen(str){idsIn(str).forEach(id=>{if(!W[id])return;const m=mast(id);m.s++;m.t=today()})}
+function noteUsed(str,ok){idsIn(str).forEach(id=>{if(!W[id])return;const m=mast(id);ok?m.u++:m.x++;m.t=today()})}
+// does this answer play out and then rewind you (a wrong answer)?
+function leadsToRewind(t){let id=t,n=0;while(id&&n++<40){const nd=ST.nodes[tgt(id)];if(!nd)return false;if(nd.rewind)return true;
+  if(nd.ch||nd.ans||nd.shows||nd.type)return false;id=nd.next}return false}
 function see(id,line){if(!W[id])return;const r=wrec(id);if(!r.ctx.includes(line)){r.ctx.push(line);if(r.ctx.length>6)r.ctx.shift();r.n=(r.n||0)+1}}
 function status(id){const d=W[id];if(!d)return'seen';if(d.g)return'gram';const r=S.w[id];if(!r)return'new';
   if(r.note&&r.note.trim())return r.sure?'sure':'guess';return (r.n||0)<=1?'new':'seen'}
@@ -167,7 +188,7 @@ async function speakBuilt(tiles,line){
 }
 function tts(t,fin){
   if(!('speechSynthesis' in window)){fin&&fin();return}
-  const u=new SpeechSynthesisUtterance(t);u.lang='ko-KR';if(VOICE)u.voice=VOICE;
+  const u=new SpeechSynthesisUtterance(t);u.lang='ko-KR';if(VOICE)u.voice=VOICE; // other languages: pick by line lang once they exist
   if(fin){u.onend=fin;u.onerror=fin}u.rate=S.set.slow?.62:.88;speechSynthesis.speak(u);
 }
 
@@ -220,6 +241,7 @@ function go(id){
   if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
   S.node=id;bseq=[];TFB=null;tHint=0;runFx(nd.fx,replay);checkPattern();
+  if(nd.ko&&!replay)noteSeen(nd.ko);
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
   if(nd.ko||(nd.who==='narr'&&nd.en))logLine({who:nd.who,ex:nd.ex,ko:nd.ko,en:nd.en});
   save();render();
@@ -247,13 +269,14 @@ function rewindTo(t){
 function setBusy(b){busy=b;const f=$('#sf');if(f)f.style.opacity=b?.55:''}
 async function choose(c){
   if(busy)return;sfx('tap');setBusy(true);runFx(c.fx);
-  if(c.ko){ko(c.ko);logLine({who:'you',ko:c.ko});await speak(c.ko,'you');await new Promise(r=>setTimeout(r,250))}
+  if(c.ko){ko(c.ko);noteUsed(c.ko,!leadsToRewind(c.go));logLine({who:'you',ko:c.ko});await speak(c.ko,'you');await new Promise(r=>setTimeout(r,250))}
   setBusy(false);go(c.go);
 }
 async function say(nd){
   if(busy)return;sfx('tap');setBusy(true);
   const words=bseq.map(i=>nd.tiles[i]);const line=words.join(' ');ko(line);logLine({who:'you',ko:line});
   const hit=nd.ans.find(a=>a[0].length===words.length&&a[0].every((w,i)=>w===words[i]));
+  noteUsed(line,!!hit&&!leadsToRewind(hit[1]));
   await speakBuilt(words,line);await new Promise(r=>setTimeout(r,250));
   setBusy(false);go(hit?hit[1]:nd.miss);
 }
@@ -278,6 +301,7 @@ async function sayTyped(nd,val){
   sfx('tap');
   const scored=nd.ans.map(a=>({a,d:jamoDist(v,typedNorm(a[0])),n:jamo(typedNorm(a[0])).length})).sort((x,y)=>x.d-y.d);
   const best=scored[0],lim=best?Math.max(1,Math.floor(best.n*.15)):0;
+  if(best&&best.d<=lim)noteUsed(best.a[0],!leadsToRewind(best.a[1]));
   if(best&&best.d===0){ko(best.a[0]);logLine({who:'you',ko:best.a[0]});setBusy(true);await speak(best.a[0],'you');await new Promise(r=>setTimeout(r,250));setBusy(false);go(best.a[1]);return}
   if(best&&best.d<=lim){ko(best.a[0]);logLine({who:'you',ko:best.a[0]});TFB={html:diffHTML(val,plain(best.a[0])),target:best.a[1]};render();speak(best.a[0],'you');return}
   logLine({who:'you',ko:val});go(nd.miss);
@@ -373,7 +397,7 @@ function render(){
         <div class="talk"><div class="koline ${nd.who==='bus'?'led':''}">${ko(nd.ko)}</div><button class="say" data-say aria-label="Hear it again">▶ Again</button></div></div>
         ${nd.en?`<div class="en">${esc(nd.en)}</div>`:''}`;
     }
-    if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>!cond(x.c)?'':`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span>${ko(x.ko,false,false)}`:esc(x.en)}</button>`).join('')}</div>${backBtn?`<div class="controw">${backBtn}</div>`:''}`;
+    if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>!cond(x.c)?'':`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span><span>${ko(x.ko,false,false)}<span class="qm">”</span></span>`:esc(x.en)}</button>`).join('')}</div>${backBtn?`<div class="controw">${backBtn}</div>`:''}`;
     else foot=`${cont(nd.next||nd.rewind?'Continue':'Look around')}${devSkip}`;
   }
   sb.innerHTML=body;sf.innerHTML=foot;sb.scrollTop=0;setBusy(busy);
@@ -567,7 +591,7 @@ function caseBoard(tab){
     const f=FILL[q.id]||[];
     if(q.blanks.some((b,i)=>!f[i])){toast('Fill in every blank first.');return}
     if(q.blanks.every((b,i)=>b.split('/').some(a=>normAns(a)===normAns(f[i])))){
-      S.cs[q.id]=1;S.F['solved_'+q.id]=1;save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);draw();
+      S.cs[q.id]=1;S.F['solved_'+q.id]=1;q.blanks.forEach(b=>noteUsed('{'+b+'}',true));save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);draw();
       if(q.final)setTimeout(()=>{close(o);finale()},900);else if(caseReadyNow())toast('Everything you know fits together.');
     }else{sfx('wrong');buzz(60);miss=true;draw()}
   };
@@ -641,6 +665,7 @@ function openPhone(){
     o.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{sfx('tap');thread(ST.phones.find(t=>t.id===b.dataset.th))});
   };
   const thread=t=>{
+    const before=S.F['readn_'+t.id]||0;msgsOf(t).filter(m=>!m.d).slice(before).forEach(m=>noteSeen(m.ko));
     runFx(t.fx);S.F['read_'+t.id]=1;S.F['readn_'+t.id]=msgCount(t);const ms=msgsOf(t);
     o.querySelector('#phv').innerHTML=`<div class="ph-top"><button id="pb">‹ Back</button><b>${esc(t.name)}</b></div><div class="msgs">${ms.map((m,i)=>m.d?`<div class="day">${ko(m.d)}</div>`:m.sys?`<div class="bub sys">${esc(m.ko)}</div>`:`<div class="bub ${m.me?'me':''}" data-bi="${i}">${ko(m.ko)}<small>${m.t} · tap to hear</small></div>`).join('')}${t.note&&cond(t.noteC)?`<div class="ph-note">${esc(t.note)}</div>`:''}</div>`;
     o.querySelectorAll('[data-bi]').forEach(b=>b.onclick=()=>speak(ms[+b.dataset.bi].ko,'sign'));
@@ -680,9 +705,11 @@ function settings(){
       <div class="set-row"><span>Sound effects and vibration</span>${seg('sound',[[1,'On'],[0,'Off']])}</div>
       <div class="set-row"><span>Playtest tools (skip button)</span>${seg('dev',[[1,'On'],[0,'Off']])}</div>
       <button class="btn-ink" id="tv">▶ Test voice</button>
+      ${S.set.dev?`<div class="empty">Tracking ${Object.keys(S.m).length} words · save format ${S.v}</div><button class="btn-ink" id="cps">Copy save data</button>`:''}
       <button class="btn-ink" id="rs" style="color:#e59a87">${confirmReset?'Tap again to erase all progress':'Start over'}</button>`;
     o.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.set[b.dataset.k]=+b.dataset.v;save();sfx('tap');draw();document.documentElement.dataset.size=S.set.size});
     o.querySelector('#tv').onclick=()=>speak('{안녕하세요}!','sujin');
+    const cps=o.querySelector('#cps');if(cps)cps.onclick=()=>{try{navigator.clipboard.writeText(JSON.stringify(S));toast('Save data copied.')}catch(e){toast('Could not copy.')}};
     o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{S=freshKeepNotes();BACK=[];save();o.remove();title()}};
   };draw();
 }
@@ -832,10 +859,7 @@ async function boot(){
     return;
   }
   load();
-  if(!S.ch){ // saves from before chapters existed: they were all prologue
-    S.ch=WORLD.chapters[0].id;if(S.F.solved_q5)S.done[S.ch]=1;
-    Object.keys(S.visited||{}).forEach(p=>S.known[p]=1);if(S.loc)S.known[S.loc]=1;
-  }
+  if(!S.ch)S.ch=WORLD.chapters[0].id;
   if(!CH[S.ch])S.ch=WORLD.chapters[0].id;
   useChapter(S.ch);
   if(!S.loc||!ST.places[S.loc])S.loc=ST.meta['start-place'];

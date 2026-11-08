@@ -1,0 +1,127 @@
+# Chapter 1, start to finish (both story files: prologue.story then ch1.story).
+# SPOILERS: this is the whole solution.
+# Run with: python tools/playtest.py
+
+chapter prologue
+# --- the evening before
+choose Laugh with her
+# --- the next morning
+choose 아니요
+choose Start searching
+idle
+phone museum
+spot Workshop
+idle
+spot Old photo
+spot Back to the courtyard
+spot Front gate
+choose Take the phone
+camera
+choose 할머니
+choose 버스 정류장
+idle
+spot Right path
+idle
+spot Talk to the owner
+type 할머니 봤어요?
+choose 고마워요
+idle
+spot Bus stop
+spot Wait for the bus
+choose Stay on
+choose Stay on
+choose Press the stop
+type 김순자 선생님 봤어요?
+idle
+solve p1 박물관 | 9시 | 탈
+solve p2 버스
+solve p3 안 | 왔어요
+spot Take the bus home
+idle
+expect ending
+solve p4 엄마 | 찾지 마세요
+done prologue
+
+# --- the next day (ch1.story continues the same chapter)
+expect started
+idle
+spot The mask
+choose Pick it up
+idle
+expect sawFake&threatSent
+phone unknown
+expect read_threat
+spot Talk to 수진
+choose Show her something
+present threat
+idle
+spot Back wall
+spot Workshop
+spot Workbench
+spot Sketch on the wall
+spot Back to the courtyard
+spot Front gate
+spot The couple
+choose 네
+idle
+spot Right path
+choose Shake your head
+idle
+spot Talk to the owner
+type 누구 김밥이에요?
+choose 할아버지
+idle
+spot The menu
+build 김밥 | 주세요
+choose 맛있어요
+idle
+spot Bus stop
+spot Wait for the bus
+choose Press the stop
+idle
+spot The paint stall
+build 빨간 | 물감 | 주세요
+choose 1,000 won
+choose 할머니 봤어요
+choose 할아버지
+idle
+expect marketDone&knowRiver
+spot Take the bus back
+spot Wait for the bus
+choose Stay on
+choose Stay on
+choose Press the stop
+choose Shake your head
+idle
+spot The big glass case
+present photo79
+idle
+expect doubtMuseum
+spot Take the bus back
+spot Path behind the bus stop
+choose 학생이에요
+choose 할머니 봤어요
+present threat
+idle
+expect toldMountain
+spot The bridge
+idle
+solve d1 가짜 | 만들었어요 | 어제
+solve d2 진짜 | 다리 | 혼자
+solve dw 뒤에 | 산
+solve d3 시장 | 할아버지
+solve d4 나무 | 빨간 | 물감
+solve d5 남자 | 불 | 다리
+solve d6 가짜
+solve d7 절 | 산
+map golmok
+spot Left path
+spot Keep climbing
+present letter
+choose 괜찮아요
+choose Sit with her
+choose Blow out the lantern
+idle
+expect hidden
+solve d8 할머니 | 박물관 | 가짜
+done ch1

@@ -255,6 +255,7 @@ textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;bor
 .rv{animation:rv .38s ease both}
 @keyframes rv{from{opacity:0;transform:translateY(5px)}}
 .btn .qm{font-family:var(--f-ko);font-size:1.6rem;line-height:0;color:var(--cinnabar);margin-right:-2px}
+.btn .qm:last-child{margin-right:0;margin-left:2px}
 .btn.primary{letter-spacing:.02em}
 :root[data-size="0"] .koline{font-size:1.28rem}
 :root[data-size="2"] .koline{font-size:1.85rem}
@@ -411,3 +412,4 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 <script src="js/icons.js"></script>
 <script src="js/people.js"></script>
 <script src="js/engine.js"></script>
+<script>if(/[?&]autotest=/.test(location.search))document.write('<script src="js/autotest.js"><'+'/script>')</script>

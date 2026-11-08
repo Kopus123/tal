@@ -14,6 +14,7 @@
 #    === scene NAME        a block of lines; each line is one beat
 #    who: 한국어            someone speaks (who = a key from the cast)
 #    who[worried]: 한국어   ...with a face: neutral happy worried surprised sad
+#    who@ja: ...           a line in another language (default comes from meta "lang", which is ko)
 #    @card 제목 | 부제       full-screen title card (chapter openings)
 #    (English)             what you SEE them do, attached to the line above
 #    ~ English             narration beat
@@ -32,6 +33,7 @@
 # ===================================================================
 
 === meta
+lang ko
 title 탈
 village 청솔마을
 blurb A mystery in Korean. Nobody will translate for you. Tap any word to see a picture of it, and work out the rest from what people do.
@@ -181,6 +183,14 @@ sign       |               |          | SunHi  -10%  +0Hz
 편지 = letter
 비밀 = secret
 오세요 = come
+경찰 = police
+혼자 = alone
+가져와 = bring
+와 = come
+다음 = next
+와요 = come
+아들 = youngman
+매일 = calendar
 제 = me
 이에요 = (grammar)
 아니에요 = (grammar)
@@ -216,6 +226,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 -아요 / -어요 | Present tense, polite: 가요 = (I) go, 있어요 = there is.
 -았어요 / -었어요 | Past tense: it already happened. 있어요 → 있었어요. The ochre ↺ badge on a picture means this.
 -요? | The same ending, as a question. Just raise your voice at the end: 봤어요? = did you see?
+-아 / -어 (no 요) | Casual speech. Between friends it's warm; from a stranger it's rude, even threatening. 가져와 = bring it. 와 = come.
 -세요 | A polite request: 가져오세요 = please bring. 어서 오세요 = welcome (literally "come quickly").
 주세요 | "Please give" or "please do (for me)": 물 주세요 = water, please. 사진 찍어 주세요 = please take a photo.
 -지 마세요 | "Please don't": 찾지 마세요 = don't look for (me).

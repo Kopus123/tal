@@ -104,6 +104,28 @@ function artTemple(){
   s+=`<circle cx="46" cy="276" r="10" fill="url(#glowG)"/><circle cx="46" cy="276" r="2.2" fill="#fff4c8"/>`;
   return svg(s);
 }
+function artMarket(){
+  let s=`<rect width="400" height="300" fill="#d6c8ad"/><rect y="0" width="400" height="60" fill="#9aa3ab"/>`;
+  for(let i=0;i<8;i++)s+=`<rect x="${i*52}" y="8" width="44" height="10" fill="#eef0f1" opacity=".7"/>`;
+  // striped awnings
+  const awn=(x,w,c)=>{let a=`<path d="M${x},70 L${x+w},70 L${x+w+8},98 L${x-8},98Z" fill="#f4f1ea"/>`;for(let k=0;k<w;k+=16)a+=`<path d="M${x+k},70 L${x+k+8},70 L${x+k+10},98 L${x+k-2},98Z" fill="${c}"/>`;return a};
+  s+=awn(10,120,'#4f6ea8')+awn(200,170,'#b5412d');
+  // fish stall (left)
+  s+=`<rect x="6" y="150" width="130" height="70" fill="#8a5a34"/><rect x="10" y="140" width="122" height="16" fill="#dfeef3"/>`;
+  for(let i=0;i<6;i++)s+=`<path d="M${18+i*19},148 q8,-6 16,0 l4,-3 l0,6 l-4,-3 q-8,6 -16,0Z" fill="#9fb7c9" stroke="#2a231d" stroke-width=".6"/>`;
+  s+=person(70,150,{top:'#3b4a5a',bot:'#2a2a2a',hair:'#3a2a20',s:.9});
+  // cabbages
+  for(let i=0;i<7;i++)s+=`<circle cx="${146+i*8}" cy="${206-(i%2)*8}" r="9" fill="#a8c47a" stroke="#6f8a4a"/>`;
+  // paint and wood stall (right)
+  s+=`<rect x="200" y="150" width="180" height="70" fill="#6b4528"/><rect x="204" y="134" width="172" height="20" fill="#8a5a34"/>`;
+  const pots=['#b5412d','#d9a43d','#3f7f6e','#4f6ea8','#b5412d','#f4f1ea'];
+  pots.forEach((c,i)=>s+=`<rect x="${216+i*14}" y="120" width="11" height="15" rx="2" fill="${c}" stroke="#2a231d" stroke-width=".8"/>`);
+  for(let i=0;i<3;i++)s+=`<rect x="${300+i*22}" y="118" width="18" height="16" fill="#d9b98a" stroke="#8a5a34"/>`;
+  s+=person(264,152,{top:'#d9822b',bot:'#5a4038',bun:1,hair:'#3a2a20',apron:1,s:.95});
+  s+=`<rect y="220" width="400" height="80" fill="#9a958b"/>`;
+  for(let i=0;i<10;i++)s+=`<rect x="${i*42}" y="${232+(i%2)*20}" width="34" height="2" fill="#7d786f"/>`;
+  return svg(s);
+}
 function artMadang(eve){
   let s=`<rect width="400" height="300" fill="${eve?'#1c2238':'#bcd6df'}"/><rect y="90" width="400" height="80" fill="${eve?'#3c3352':'#f2dcc0'}" opacity=".7"/>`;
   s+=mountains(eve?'#2a3047':'#8aa79b',eve?'#232a3d':'#6f8f82');
@@ -256,6 +278,7 @@ function artMap(){
   s+=`<path d="M24,82 Q36,76 48,82 L45,82 L45,90 L27,90 L27,82Z" fill="#3b4048"/><rect x="29" y="84" width="14" height="6" fill="#f2c27a"/>`;
   s+=`<path d="M64,142 Q50,110 40,92" stroke="#b08b5e" stroke-width="2" fill="none" stroke-dasharray="2 5"/>`;
   s+=`<ellipse cx="318" cy="292" rx="9" ry="4" fill="#8d877b"/>`+road('M244,386 Q280,340 316,294','2 6');
+  s+=`<path d="M326,404 L346,404 L350,412 L322,412Z" fill="#b5412d"/><rect x="324" y="412" width="24" height="8" fill="#f4eedf" stroke="#6b4528"/>`+road('M298,214 Q340,320 336,404','8 6');
   // compass + title seal
   s+=`<g transform="translate(360,470)"><circle r="20" fill="#f6f0e0" stroke="#2a231d" stroke-width="1.5"/><path d="M0,-16 L5,0 L0,16 L-5,0Z" fill="#b5412d"/><path d="M0,0 L5,0 L0,16 L-5,0Z" fill="#2a231d"/><text y="-23" text-anchor="middle" font-family="Gowun Batang,serif" font-size="12" fill="#2a231d">북</text></g>`;
   s+=`<g transform="translate(20,20) rotate(-3)"><rect width="108" height="40" rx="3" fill="#b5412d"/><rect x="3" y="3" width="102" height="34" rx="2" fill="none" stroke="#f6e7d2" stroke-width="1"/><text x="54" y="29" text-anchor="middle" font-family="Nanum Brush Script,serif" font-size="28" fill="#fff4e6">청솔마을</text></g>`;
@@ -263,7 +286,7 @@ function artMap(){
 }
 
 const ART={
-  madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple,
+  madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
   jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate
 };

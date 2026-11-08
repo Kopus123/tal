@@ -52,6 +52,7 @@ pin jeong 61 74
 pin museum 86 30
 pin gang 79 55
 pin jeol 9 14
+pin sijang 84 79
 
 === cast
 # key      | name          | color    | voice  rate  pitch | look (see js/people.js)
@@ -61,6 +62,8 @@ yuna       | 유나          | #c26a86  | SunHi  +8%   +25Hz | hair=long hc=#3a2
 minsu      | 민수          | #4f6ea8  | InJoon +0%   +0Hz  | hair=short hc=#1f1a18 top=#9fb7d9 wear=hanbok
 ajeossi    | 식당 아저씨   | #8a5a34  | InJoon -6%   -18Hz | hair=short hc=#6f6a66 top=#7d8a96 wear=apron extra=stubble skin=#dcb08a
 staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz | hair=long hc=#1f1a18 top=#2d3f66 wear=blazer extra=glasses
+ajumma     | 시장 아주머니 | #b5653d  | SunHi  +4%   -6Hz  | hair=bun hc=#3a2a20 top=#d9822b wear=apron extra=wrinkles skin=#e0b98f
+stranger   | ???           | #2a2a2a  | InJoon -10%  -14Hz
 haraboji   | 할아버지      | #6b7a5a  | InJoon -12%  -26Hz | hair=short hc=#e4e0da top=#6b7a5a wear=plain extra=wrinkles,stubble skin=#d9b38e
 bus        | 안내 방송     | #2a2a2a  | Hyunsu -5%   +0Hz
 you        |               |          | Hyunsu -8%   +0Hz
@@ -157,6 +160,24 @@ sign       |               |          | SunHi  -10%  +0Hz
 손 = hand
 만들었어요 = make +past
 뒤에 = behind
+빨간 = red
+물감 = paint
+나무 = wood
+얼마예요 = howmuch
+천 원 = won
+아주머니 = ajumma
+아저씨 = ajeossi
+불 = light
+숨어요 = hide
+알아요 = know
+친구 = friend
+먹었어요 = eat +past
+안녕 = wave
+남자 = man
+집 = home
+좋은 = good
+물고기 = fish
+전화 = call
 이에요 = (grammar)
 아니에요 = (grammar)
 입니다 = (grammar)
@@ -168,6 +189,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 의 = (grammar)
 으로 = (grammar)
 하고 = (grammar)
+을/를 = (grammar)
 
 === grammar
 # piece | what it does (shown when you tap it)
@@ -182,6 +204,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 의 | Possessive, like 's: 할머니의 공방 = grandma's workshop.
 으로 | "toward" or "by way of": 오른쪽으로 가요 = go to the right. After a vowel it's just 로.
 하고 | "with" or "and" (casual): 친구하고 = with a friend. 누구하고? = with who?
+을/를 | Object marker. Sticks to the thing being done to: 물감을 샀어요 = bought paint. 을 after a consonant, 를 after a vowel.
 
 === endings
 # shown in the notebook's Grammar tab
@@ -206,3 +229,4 @@ need 3
 와요 > 왔어요
 보다 > 봤어요
 만들어요 > 만들었어요
+먹어요 > 먹었어요

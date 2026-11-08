@@ -60,8 +60,10 @@ function parseStory(src,st){
         if(line.startsWith('~'))node({who:'narr',en:line.slice(1).trim()});
         else if(m=line.match(/^\((.*)\)$/)){if(last)last.en=m[1]}
         else if(line.startsWith('!')){if(last)last.fx=(last.fx||[]).concat(fx(line.slice(1)))}
-        else if(m=line.match(/^\*\s+(.+?)\s+->\s+(.+?)(?:\s+!\s+(.+))?$/)){
-          const lab=m[1];(last.ch=last.ch||[]).push(lab.startsWith('[')?{en:lab.replace(/^\[|\]$/g,''),go:m[2],fx:m[3]?fx(m[3]):[]}:{ko:lab,go:m[2],fx:m[3]?fx(m[3]):[]})}
+        // "* label -> TARGET [if COND] [! effects]": the choice only shows when COND holds
+        else if(m=line.match(/^\*\s+(.+?)\s+->\s+(.+?)(?:\s+if\s+(\S+))?(?:\s+!\s+(.+))?$/)){
+          const lab=m[1],o={go:m[2],c:m[3],fx:m[4]?fx(m[4]):[]};
+          if(lab.startsWith('['))o.en=lab.replace(/^\[|\]$/g,'');else o.ko=lab;(last.ch=last.ch||[]).push(o)}
         else if(m=line.match(/^->\s*(.+)$/)){if(last)last.next=m[1].trim()}
         else if(m=line.match(/^<-\s*(.+)$/)){if(last)last.rewind=m[1].trim()}
         else if(m=line.match(/^@build\s+(.+)$/))node({type:'build',en:m[1],tiles:[],ans:[]});
@@ -319,7 +321,7 @@ function render(){
         <div class="talk"><div class="koline ${nd.who==='bus'?'led':''}">${ko(nd.ko)}</div><button class="say" data-say aria-label="Hear it again">▶ Again</button></div></div>
         ${nd.en?`<div class="en">${esc(nd.en)}</div>`:''}`;
     }
-    if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span>${ko(x.ko,false,false)}`:esc(x.en)}</button>`).join('')}</div>${backBtn?`<div class="controw">${backBtn}</div>`:''}`;
+    if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>!cond(x.c)?'':`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span>${ko(x.ko,false,false)}`:esc(x.en)}</button>`).join('')}</div>${backBtn?`<div class="controw">${backBtn}</div>`:''}`;
     else foot=`${cont(nd.next||nd.rewind?'Continue':'Look around')}${devSkip}`;
   }
   sb.innerHTML=body;sf.innerHTML=foot;sb.scrollTop=0;setBusy(busy);
@@ -484,7 +486,7 @@ function caseBoard(){
   o.querySelector('.x').onclick=()=>close(o);
   let filter='',miss=false;
   const tryAnswer=(q,val)=>{
-    if(normAns(val)===normAns(q.a)){S.cs[q.id]=1;S.F['solved_'+q.id]=1;save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);toast('Solved');draw();
+    if(q.a.split('/').some(a=>normAns(val)===normAns(a))){S.cs[q.id]=1;S.F['solved_'+q.id]=1;save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);toast('Solved');draw();
       if(q.final)setTimeout(()=>{close(o);finale()},700);else if(caseReadyNow())toast('Case notes done.');}
     else{sfx('wrong');buzz(60);miss=true;draw()}
   };
@@ -493,7 +495,7 @@ function caseBoard(){
     const cards=Object.keys(S.w).filter(id=>W[id]&&!W[id].g&&(!filter||id.includes(filter)||(S.w[id].note||'').toLowerCase().includes(filter.toLowerCase())));
     let h=qs.length?'<div class="empty">Answer each question with a word. Type it, or pick it from the words you\'ve seen.</div>':'<div class="empty">No questions yet. Look around and see what you can find.</div>';
     h+=qs.map(q=>{
-      if(S.cs[q.id])return`<div class="q solved"><div class="qt">${esc(q.q)}</div><div class="ans">${iconSVG(W[q.a]&&W[q.a].p)} ${esc(q.a)}</div><div class="why">${esc(q.why)}</div></div>`;
+      if(S.cs[q.id])return`<div class="q solved"><div class="qt">${esc(q.q)}</div><div class="ans">${iconSVG(W[q.a.split('/')[0]]&&W[q.a.split('/')[0]].p)} ${esc(q.a.split('/').join(' · '))}</div><div class="why">${esc(q.why)}</div></div>`;
       if(pickQ!==q.id)return`<div class="q"><div class="qt">${esc(q.q)}</div><button class="btn-ink" data-open="${q.id}">Answer</button></div>`;
       return`<div class="q"><div class="qt">${esc(q.q)}</div>
         <form class="typeans" id="ta"><input id="ti" lang="ko" autocomplete="off" placeholder="Type in Korean, or search your words" value="${esc(filter)}"><button class="btn-ink" type="submit">Answer</button></form>

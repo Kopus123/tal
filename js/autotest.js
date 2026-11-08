@@ -10,6 +10,7 @@
      type 한국어            type an answer and press Say it
      build a | b | c       press these sentence tiles in order, then Say it
      present ID            show this piece of evidence
+     contradict A + B      pick these two statements/evidence as the contradiction
      camera                aim the camera at the target and take the photo
      phone THREAD          open the phone and read this thread
      map PLACE             travel by the village map
@@ -55,6 +56,9 @@ const STEPS={
       if(!b)fail(`no tile "${w}"`);await clickEl(b)}
     await clickEl(document.querySelector('#bSay'))},
   async present(id){await clickEl(await until(()=>document.querySelector(`#sb [data-show="${id}"]`),`a chance to show "${id}"`))},
+  async contradict(a){const [x,y]=a.split('+').map(v=>v.trim());await until(()=>document.querySelector('#bClash'),'a contradiction');
+    for(const k of[x,y]){const b=document.querySelector(`#sb [data-cx="${k}"]`);if(!b)fail(`"${k}" isn't on the list to pick`);await clickEl(b)}
+    await clickEl(document.querySelector('#bClash'))},
   async camera(){const sh=await until(()=>document.querySelector('#bShut'),'the camera');const nd=ST.nodes[S.node];
     cam={x:Math.max(0,nd.tx-22),y:Math.max(0,nd.ty-26)};await clickEl(sh);await tick(600);await settle()},
   async phone(id){openPhone();await settle();const b=document.querySelector(`[data-th="${id}"]`);if(!b)fail(`no phone thread "${id}"`);

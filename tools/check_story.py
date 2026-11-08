@@ -35,7 +35,7 @@ def parse(path):
     """Mirror of parseStory() in js/engine.js, keeping line numbers."""
     d = dict(meta={}, cast={}, words={}, places={}, scenes={}, deduce=[], evidence={}, phones={},
              hints=[], chapters=[], pins=[], jumps=[], flags_set=[], flags_read=[], gives=[], shows=[],
-             speakers=[], tokens=[], placefx=[])
+             speakers=[], tokens=[], placefx=[], statements={}, pairs=[])
     sec = cur = scene = None
     count = 0
     def cond_flags(c, ln):
@@ -58,6 +58,9 @@ def parse(path):
             if k == "set": d["flags_set"] += [(v, ln) for v in vals]
             elif k in ("give", "have"): d["gives"] += [(v, ln) for v in vals]
             elif k == "place": d["placefx"].append((a.strip(), ln))
+            elif k == "statement":
+                if a.strip() in d["statements"]: err(path.name, ln, f"statement '{a.strip()}' saved twice")
+                d["statements"][a.strip()] = ln
             elif k in ("unset", "learn", "led", "toast"): pass
             else: err(path.name, ln, f"unknown effect '{k}'")
     def tokens(s, ln): d["tokens"] += [(t, ln) for t in ids_in(s)]
@@ -128,7 +131,9 @@ def parse(path):
                 if m.group(4): effects(m.group(4), ln)
                 if not m.group(1).startswith("["): tokens(m.group(1), ln)
             elif m := re.match(r"^(->|<-)\s*(.+)$", line): target(m.group(2), ln)
-            elif re.match(r"^@(build|type|camera|photo|present|card)\b", line): beat(ln)
+            elif re.match(r"^@(build|type|camera|photo|present|card|contradict)\b", line): beat(ln)
+            elif m := re.match(r"^pair:\s*(\S+)\s*\+\s*(\S+)\s+->\s+(.+)$", line):
+                d["pairs"] += [(m.group(1), ln), (m.group(2), ln)]; target(m.group(3), ln)
             elif m := re.match(r"^tiles:\s*(.+)$", line): tokens(m.group(1), ln)
             elif m := re.match(r"^answer:\s*(.+?)\s+->\s+(.+)$", line): tokens(m.group(1), ln); target(m.group(2), ln)
             elif m := re.match(r"^miss\s+->\s+(.+)$", line): target(m.group(1), ln)
@@ -203,6 +208,8 @@ def main():
             if who not in cast and who not in d["cast"]: err(fname, ln, f"speaker '{who}' isn't in the cast")
         # evidence
         given = {e for e, _ in d["gives"]}
+        for k, ln in d["pairs"]:
+            if k not in d["statements"] and k not in evidence: err(fname, ln, f"'{k}' is neither a statement nor evidence")
         for e, ln in d["gives"] + d["shows"]:
             if e not in evidence: err(fname, ln, f"unknown evidence '{e}'")
         for eid, e in d["evidence"].items():

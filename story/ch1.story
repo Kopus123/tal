@@ -18,6 +18,7 @@ if !talkedOwner: Two 김밥. Who was the second one for? The restaurant owner mi
 if !marketDone&!paid: The restaurant owner said the woman at the market knows. The bus stops at the market. Maybe buy something from her first.
 if !marketDone: She's ready to talk now. Ask her about 할머니.
 if !metGramps: The woman at the market told you where to find him. Try the path behind the bus stop.
+if metGramps&!caughtGramps: He says he doesn't know. Open your statements: who told you they saw him with 할머니?
 if !toldMountain: He won't talk. Maybe something you could show him would change his mind.
 if !solved_d7: Put what 할아버지 told you together on the case board before you set off.
 if !metHalmeoni: You worked out where she is. Up the mountain path, and keep climbing.
@@ -273,6 +274,7 @@ sujin[sad]: {몰라요}... {정말} {몰라요}.
 (She shakes her head slowly.)
 sujin[worried]: {어제} {밤}{에}... {마당}{에} {있었어요}. {할머니}{는|은/는}... {없어요}.
 (She points at the step where she sat. She waited out here all night, and never saw a thing.)
+! statement s_sujin
 -> c1_sjhub.2
 
 === scene c1_sjq2
@@ -416,6 +418,7 @@ yuna[surprised]: {아니요}? 아... {네}...
 === scene c1_o2
 minsu[worried]: {어제} {밤}{에}... {다리}{에} {남자}{가|이/가} {있었어요}.
 (He mimes holding something in front of him and sweeping it slowly left and right.)
+! statement s_couple
 yuna[worried]: {남자}... {불}{이|이/가} {있었어요}. {이거}!
 (She turns on her phone's flashlight and waves it around.)
 yuna[worried]: {이상해요}...
@@ -470,6 +473,7 @@ ajeossi[surprised]: {네}?
 === scene c1_kwho
 ajeossi[surprised]: {김밥} {두 개}? 아... {할아버지}! {할아버지} {김밥}{이에요}.
 (He snaps his fingers.)
+! statement s_kimbap
 ajeossi: {할아버지}{는|은/는} {할머니}{의} {친구}{예요|이에요}.
 (He holds two fingers side by side. Old friends.)
 * {할아버지}{는|은/는} {어디}{예요|이에요}? -> c1_kwhere
@@ -658,6 +662,7 @@ ajumma[surprised]: 순자 {할머니}? {네}! {어제} {아침}{에} {왔어요}
 (She points at the ground in front of her stall. Right here.)
 ajumma: {할아버지}{하고} {왔어요}. {김밥}{도} {먹었어요}. {여기}{에서}!
 (She mimes two people sitting on the low stools, eating.)
+! statement s_market
 ajumma: {할머니}{는|은/는} {나무}{하고} {빨간} {물감}{을|을/를} {샀어요}.
 (She taps a block of wood and a pot of red paint. The same paint you just bought.)
 ajumma[worried]: {이상해요}... {할머니}{는|은/는} {축제}{에} {안} {왔어요}.
@@ -701,11 +706,12 @@ staff[sad]: {선생님}... {괜찮아요}?
 ~ The big glass case. The old mask sits on its velvet stand: long eyebrows, a huge grin.
 staff[happy]: {진짜} {탈}{이에요}! 1650! {진짜}!
 (The woman from the desk has followed you. She says it proudly, tapping the glass.)
+! statement s_staff
 ~ You look closer. The left eyebrow is perfect. Not a chip anywhere.
 ! set sawMuseumCase
-@present Does anything you have not fit with what she's saying?
-show: photo79 -> c1_mudoubt
-show: fakemask -> c1_mufake
+@contradict Something here doesn't fit. Pick the two things that can't both be true.
+pair: s_staff + photo79 -> c1_mudoubt
+pair: s_staff + fakemask -> c1_mufake
 miss -> c1_munope
 
 === scene c1_mudoubt
@@ -722,6 +728,8 @@ staff[happy]: {가짜}? 하하. {아니요}! 1650! {진짜}!
 === scene c1_munope
 staff[happy]: {네}?
 (She smiles politely. It doesn't mean anything to her.)
+~ Those two don't clash. What does she say about this mask, and what do you have that shows otherwise?
+<- c1_mucase.4
 
 # ------------------------------------------------------------ river
 === scene c1_g1
@@ -764,7 +772,30 @@ haraboji[worried]: ...{몰라요}.
 ~ His trouser legs are soaked to the knee and stuck with pine needles, and his boots are caked in mountain mud. He hasn't been sitting here all morning.
 haraboji[worried]: {몰라요}. {몰라요}.
 (He says it again, quieter, like he's trying to convince himself.)
-! set metGramps
+! set metGramps; statement s_gramps
+-> c1_gcatch
+
+=== scene c1_gcatch
+@contradict He says he doesn't know anything. Has anyone said something that shows otherwise?
+pair: s_gramps + s_market -> c1_gcaught
+pair: s_gramps + s_kimbap -> c1_gcaught
+miss -> c1_gnot
+
+=== scene c1_gnot
+haraboji: {네}?
+(He glances at you, then back at the water. He doesn't see what that has to do with him.)
+~ Those two don't clash. What did people tell you about him and 할머니 yesterday?
+<- c1_gcatch
+
+=== scene c1_gcaught
+~ You bring up the market. Yesterday morning. 할머니, the 김밥, and him.
+haraboji[surprised]: ...{시장}...
+(His hands go still on the rod.)
+haraboji[sad]: {네}. {어제}... {할머니}{하고} {시장}{에} {있었어요}.
+(He admits that much. Then his mouth shuts tight again.)
+haraboji[worried]: {오늘}{은|은/는}... {몰라요}.
+(Today, he says, he doesn't know. He isn't a good liar.)
+! set caughtGramps
 -> c1_gtalk.2
 
 === scene c1_gtalk
@@ -875,6 +906,7 @@ halmeoni: {이거}{는|은/는} {진짜} {탈}{이에요}.
 (She runs her thumb along the old wood.)
 halmeoni[worried]: {박물관} {탈}... {가짜}{예요|이에요}.
 (She says it very quietly, as if it's dangerous to say out loud.)
+! statement s_halmeoni
 ! set metHalmeoni
 ~ You have so many questions.
 * {누구}{예요|이에요}? {핸드폰}... -> c1_jq1

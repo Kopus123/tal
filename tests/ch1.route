@@ -94,16 +94,21 @@ choose Press the stop
 choose Shake your head
 idle
 spot The big glass case
-present photo79
+contradict s_staff + fakemask
+expect !doubtMuseum
+spot The big glass case
+contradict s_staff + photo79
 idle
 expect doubtMuseum
 spot Take the bus back
 spot Path behind the bus stop
 choose 학생이에요
 choose 할머니 봤어요
+contradict s_gramps + s_couple
+contradict s_gramps + s_market
 present threat
 idle
-expect toldMountain
+expect toldMountain&caughtGramps
 spot The bridge
 idle
 solve d1 가짜 | 만들었어요 | 어제

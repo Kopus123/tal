@@ -8,7 +8,7 @@ let W={};             // every word in every chapter -> {p: picture spec, g: gra
 
 /* ---------- story parser ---------- */
 function parseStory(src,st){
-  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{}};
+  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{}};
   let sec=null,cur=null,scene=null,last=null,count=0;
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;
     if(last&&!last.next&&!last.rewind&&!last.ch&&!last.ans)last.next=id;
@@ -65,7 +65,8 @@ function parseStory(src,st){
       case 'scene':{
         if(line.startsWith('~'))node({who:'narr',en:line.slice(1).trim()});
         else if(m=line.match(/^\((.*)\)$/)){if(last)last.en=m[1]}
-        else if(line.startsWith('!')){if(last)last.fx=(last.fx||[]).concat(fx(line.slice(1)))}
+        else if(line.startsWith('!')){if(last){const f=fx(line.slice(1));last.fx=(last.fx||[]).concat(f);
+          f.filter(e=>e.k==='statement').forEach(e=>st.statements[e.a]={id:e.a,node:last.id})}}
         // "* label -> TARGET [if COND] [! effects]": the choice only shows when COND holds
         else if(m=line.match(/^\*\s+(.+?)\s+->\s+(.+?)(?:\s+if\s+(\S+))?(?:\s+!\s+(.+))?$/)){
           const lab=m[1],o={go:m[2],c:m[3],fx:m[4]?fx(m[4]):[]};
@@ -81,6 +82,9 @@ function parseStory(src,st){
         else if(m=line.match(/^@photo\s+(.+)$/))node({type:'photo',en:m[1]});
         else if(m=line.match(/^@present\s+(.+)$/))node({type:'present',en:m[1],shows:[]});
         else if(m=line.match(/^show:\s*(\S+)\s+->\s+(.+)$/))last.shows.push([m[1],m[2].trim()]);
+        // "@contradict prompt" then "pair: A + B -> TARGET" (A/B = statement or evidence ids, either order)
+        else if(m=line.match(/^@contradict\s+(.+)$/))node({type:'contradict',en:m[1],pairs:[]});
+        else if(m=line.match(/^pair:\s*(\S+)\s*\+\s*(\S+)\s+->\s+(.+)$/))last.pairs.push([[m[1],m[2]],m[3].trim()]);
         else if(m=line.match(/^@card\s+(.+?)(?:\s*\|\s*(.+))?$/))node({type:'card',title:m[1],sub:m[2]||''});
         else if(m=line.match(/^([a-z_]+)(?:\[(\w+)\])?(?:@([a-z]{2}))?:\s*(.+)$/))node({who:m[1],ex:m[2]||'neutral',ko:nl(m[4]),lang:m[3]||st.meta.lang||'ko'});
         else console.warn('story line not understood',ln+1,line);
@@ -226,6 +230,7 @@ function runFx(list,replay){(list||[]).forEach(e=>{if(e.c&&!cond(e.c))return;con
   else if(e.k==='place')S.loc=a;
   else if(e.k==='led')S.F.led=a;
   else if(e.k==='toast')toast(esc(a),5000);
+  else if(e.k==='statement'){if(!S.F['st_'+a]){S.F['st_'+a]=1;if(!replay)toast('Statement saved to your case board.',2600)}}
   else if(e.k==='have')a.split(',').forEach(x=>S.F['ev_'+x.trim()]=1); // evidence you already carry, no announcement
   else if(e.k==='give')a.split(',').forEach(x=>{x=x.trim();if(!S.F['ev_'+x]){S.F['ev_'+x]=1;const ev=ST.evidence[x];if(ev&&!replay)toast(`${iconSVG(ev.icon)} Evidence: <b>${ko(ev.label,false,false)}</b>`,3500)}});
 })}
@@ -240,7 +245,7 @@ function go(id){
   id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
   if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
-  S.node=id;bseq=[];TFB=null;tHint=0;runFx(nd.fx,replay);checkPattern();
+  S.node=id;bseq=[];TFB=null;tHint=0;CSEL=[];runFx(nd.fx,replay);checkPattern();
   if(nd.ko&&!replay)noteSeen(nd.ko);
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
   if(nd.ko||(nd.who==='narr'&&nd.en))logLine({who:nd.who,ex:nd.ex,ko:nd.ko,en:nd.en});
@@ -312,7 +317,7 @@ function spot(i){const x=ST.places[S.loc].spots[i];if(!x)return;sfx('tap');
 function skipAhead(){
   quiet=true;stopAudio();let n=0;
   while(S.node&&n++<60){const nd=ST.nodes[S.node];
-    if(nd.ch||nd.type==='build'||nd.type==='type'||nd.type==='present'||nd.type==='camera')break;
+    if(nd.ch||['build','type','present','camera','contradict'].includes(nd.type))break;
     if(nd.rewind){go(nd.rewind);continue}
     if(nd.next)go(nd.next);else{S.node=null;save();render();break}}
   quiet=false;
@@ -355,7 +360,7 @@ function render(){
   $('#fx').querySelectorAll('.hs').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
-  const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
+  const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
   const backBtn=nd&&BACK.length?`<button class="btn back" id="bBack" aria-label="Back one line">‹ Back</button>`:'';
   const cont=label=>`<div class="controw">${backBtn}<button class="btn primary" id="bNext">${label}</button></div>`;
   if(!nd){
@@ -379,6 +384,12 @@ function render(){
     const ev=owned();
     body=`<div class="en">${esc(nd.en)}</div>${ev.length?`<div class="evlist">${ev.map(e=>`<button class="evcard" data-show="${e.id}">${iconSVG(e.icon)}<span><b>${ko(e.label,false,false)}</b><small>${esc(e.desc)}</small></span></button>`).join('')}</div>`:'<div class="empty">You have nothing to show.</div>'}`;
     foot=`<div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
+  }else if(nd.type==='contradict'){
+    const sts=ownedSt(),ev=owned(),sel=k=>CSEL.includes(k)?'sel':'';
+    body=`<div class="en">${esc(nd.en)}</div>
+      ${sts.length?`<div class="label">Statements</div><div class="evlist">${sts.map(x=>stCard(x,`data-cx="${x.id}" class="evcard stcard ${sel(x.id)}"`)).join('')}</div>`:''}
+      ${ev.length?`<div class="label">Evidence</div><div class="evlist">${ev.map(e=>`<button class="evcard ${sel(e.id)}" data-cx="${e.id}">${iconSVG(e.icon)}<span><b>${ko(e.label,false,false)}</b><small>${esc(e.desc)}</small></span></button>`).join('')}</div>`:''}`;
+    foot=`<button class="btn primary" id="bClash" style="justify-content:center" ${CSEL.length===2?'':'disabled'}>${CSEL.length===2?'These two can\'t both be true':`Pick two (${CSEL.length}/2)`}</button><div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
   }else if(nd.type==='camera'){
     body=`<div class="narr">${esc(nd.en)}</div>`;foot=`<button class="shutter" id="bShut" aria-label="Take photo"></button>`;
   }else if(nd.type==='photo'){
@@ -411,6 +422,10 @@ function render(){
   if($('#bSkip'))$('#bSkip').onclick=skipAhead;
   if($('#bMap'))$('#bMap').onclick=openMap;
   sb.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>present(nd,b.dataset.show));
+  sb.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>{const k=b.dataset.cx;sfx('tap');
+    if(CSEL.includes(k))CSEL=CSEL.filter(x=>x!==k);else{CSEL.push(k);if(CSEL.length>2)CSEL.shift()}
+    const top=sb.scrollTop;render();sb.scrollTop=top});
+  if($('#bClash'))$('#bClash').onclick=()=>clash(nd);
   if($('#bBack'))$('#bBack').onclick=goBack;
   const bs=sb.querySelector('[data-say]');if(bs)bs.onclick=()=>{sfx('tap');speak(nd.ko,nd.who)};
   sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{sfx('tap');bseq.push(+b.dataset.t);speak(nd.tiles[+b.dataset.t],'you');render()});
@@ -564,6 +579,21 @@ function showLog(){
 let pickQ=null,FILL={},ACT=0,boardTab='ded';
 const normAns=s=>String(s).replace(/[\s.?!~,·]/g,'');
 const owned=()=>Object.values(ST.evidence||{}).filter(e=>S.F['ev_'+e.id]);
+// statements: lines people said that matter, saved by "! statement ID" in the story
+const ownedSt=()=>Object.values(ST.statements||{}).filter(x=>S.F['st_'+x.id]&&ST.nodes[x.node]);
+function stCard(x,attrs){const nd=ST.nodes[x.node],c=ST.cast[nd.who]||{};
+  const face=c.look?portrait(c.look,nd.ex):speakerGlyph();
+  return `<button ${attrs}><div class="pt sm" style="--cbg:${c.c||'#888'}">${face}</div><span><b>${ko(nd.ko,false,false)}</b><small>${esc(c.n||'')}</small></span></button>`}
+let CSEL=[];
+// a contradiction beat: the two things you picked either clash (one of the pairs) or they don't
+async function clash(nd){
+  if(busy||CSEL.length!==2)return;sfx('tap');
+  const hit=nd.pairs.find(p=>p[0].every(k=>CSEL.includes(k)));
+  const name=k=>ST.statements[k]?plain(ST.nodes[ST.statements[k].node].ko):plain((ST.evidence[k]||{}).label||k);
+  logLine({who:'narr',en:`You point out: ${name(CSEL[0])} / ${name(CSEL[1])}.`});
+  if(hit)CSEL.filter(k=>ST.statements[k]).forEach(k=>noteUsed(ST.nodes[ST.statements[k].node].ko,true));
+  go(hit?hit[1]:nd.miss);
+}
 // about 14 words to choose from: every blank on this chapter's board, plus a few others you've met. Typing searches everything.
 function shortlist(q,filter){
   const ok=id=>W[id]&&!W[id].g&&S.w[id];
@@ -598,9 +628,12 @@ function caseBoard(tab){
   const place=(q,word)=>{const f=FILL[q.id]=FILL[q.id]||[];f[ACT]=word;miss=false;sfx('tap');
     const nxt=q.blanks.findIndex((b,i)=>!f[i]);if(nxt>=0)ACT=nxt;filter='';draw()};
   const draw=()=>{
-    const tabs=`<div class="tabs"><button class="tab ${boardTab==='ded'?'on':''}" data-bt="ded">Deductions</button><button class="tab ${boardTab==='ev'?'on':''}" data-bt="ev">Evidence · ${owned().length}</button></div>`;
+    const tabs=`<div class="tabs"><button class="tab ${boardTab==='ded'?'on':''}" data-bt="ded">Deductions</button><button class="tab ${boardTab==='ev'?'on':''}" data-bt="ev">Evidence · ${owned().length}</button><button class="tab ${boardTab==='st'?'on':''}" data-bt="st">Statements · ${ownedSt().length}</button></div>`;
     let h=tabs;
-    if(boardTab==='ev'){
+    if(boardTab==='st'){
+      const sts=ownedSt();
+      h+=sts.length?`<div class="evlist">${sts.map(x=>stCard(x,`class="evcard stcard" data-sth="${x.id}"`)).join('')}</div>`:`<div class="empty">Nothing yet. When someone says something that matters, it's saved here.</div>`;
+    }else if(boardTab==='ev'){
       const ev=owned();
       h+=ev.length?`<div class="evlist">${ev.map(e=>`<button class="evcard" data-ev="${e.id}">${iconSVG(e.icon)}<span><b>${ko(e.label,false,false)}</b><small>${esc(e.desc)}</small></span></button>`).join('')}</div>`:`<div class="empty">Nothing yet. Things you find that matter will collect here.</div>`;
     }else{
@@ -619,6 +652,7 @@ function caseBoard(tab){
     o.querySelector('#cbb').innerHTML=h;
     o.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{boardTab=b.dataset.bt;sfx('tap');draw()});
     o.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>evidenceSheet(b.dataset.ev));
+    o.querySelectorAll('[data-sth]').forEach(b=>b.onclick=()=>{const nd=ST.nodes[ST.statements[b.dataset.sth].node];speak(nd.ko,nd.who)});
     o.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{sfx('tap');pickQ=b.dataset.open;FILL[pickQ]=FILL[pickQ]||[];ACT=Math.max(0,ST.cases.find(x=>x.id===pickQ).blanks.findIndex((x,i)=>!FILL[pickQ][i]));filter='';miss=false;draw()});
     const q=ST.cases.find(x=>x.id===pickQ);if(!q||boardTab!=='ded')return;
     o.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>{ACT=+b.dataset.slot;sfx('tap');draw()});
@@ -717,7 +751,7 @@ function settings(){
 /* ---------- chapters ---------- */
 function useChapter(id){
   const c=CH[id]||CH[WORLD.chapters[0].id];
-  ST={evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:c.nodes,cases:c.cases,phones:c.phones,hints:c.hints,
+  ST={statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:c.nodes,cases:c.cases,phones:c.phones,hints:c.hints,
     patterns:WORLD.patterns.concat(c.patterns),meta:Object.assign({},WORLD.meta,c.meta),map:WORLD.map,chapters:WORLD.chapters};
 }
 const chIndex=id=>WORLD.chapters.findIndex(c=>c.id===id);

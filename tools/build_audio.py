@@ -42,10 +42,15 @@ def collect():
             elif sec == "words":
                 m = re.match(r"^(.+?)\s*=", line)
                 if m: add("word", m.group(1))
+            elif sec == "evidence":
+                parts = [x.strip() for x in line.split("|")]
+                if len(parts) >= 5 and parts[4]: add("sign", parts[4])
             elif sec == "phone":
                 m = re.match(r"^(them|me)(?:@\S+)?\s+\S+\s+(.+)", line)
                 if m: add("sign", m.group(2))
             elif sec == "scene":
+                if line.startswith("show:"):
+                    continue
                 if m := re.match(r"^\*\s+(.+?)\s+->", line):
                     if not m.group(1).startswith("["): add("you", m.group(1))
                 elif m := re.match(r"^tiles:\s*(.+)", line):

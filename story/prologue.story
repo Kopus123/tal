@@ -17,19 +17,24 @@ if !talked&@golmok&heardDir: He said which way to go. Tap the couple if you want
 if !talked&@golmok: Ask the couple where the bus stop is.
 if !talked: The restaurant owner sees everyone who walks past. Try talking to him.
 if !museumDone: She left on a bus. Her phone said where she was going. Listen for that stop.
-if !allSolved: Open the case board (the board button at the top) and answer the questions you can see.
+if !allSolved: Open the case board (the board button at the top) and work out what you can.
 if !ending: You've learned what you can at the museum. Take the bus home.
 if !solved_q5: Who wrote on the back of that photo in the workshop? What did 수진 just say?
 The prologue is done. Look back through your notebook while you wait for Chapter 1.
 
 
-=== case
-q1 박물관 if read_museum | Where was 할머니 supposed to go this morning? | Her texts and her calendar both say the same place.
-q2 탈 if maskMissing&sawPhoto | What did she take with her? | The mask from the empty hook, wrapped in red cloth.
-q3 버스 if talked | How did she leave the village? | The restaurant owner watched her get on.
-q4 아니요 if museumDone | Did she make it to the museum? | The museum never saw her.
-q5 엄마 final if ending | Who is 할머니 to 수진? | Not just the village 할머니. Her mother.
+=== deduce
+p1 if read_museum&maskMissing | This morning 할머니 was supposed to meet the {박물관} at {9시}, and bring the {탈}. | Her texts, her calendar, and the empty hook all agree.
+p2 if talked&sawPhoto | She left the village by {버스}, carrying something wrapped in red cloth. | The restaurant owner saw her go, and the couple's photo shows the bundle.
+p3 if museumDone | But at the museum, she {안} {왔어요}. | She got on the bus and never arrived.
+p4 final if ending | 할머니 is 수진's {엄마}, and her note says: {찾지 마세요}. | Not just the village grandmother. Her mother. And she doesn't want to be found.
 
+=== evidence
+letter | {편지} | letter | 할머니's letter. The reason you came to 청솔마을. | {학생}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
+photo79 | {사진} · 1979 | photo | A faded photo from the workshop: a young woman with a grinning mask pushed up on her head. Look closely and the mask has a small chip in its left eyebrow. |
+museumtext | {박물관} · {핸드폰} | phone | The museum's text to 할머니, sent the evening before she vanished. | 김순자 {선생님}, {내일} {아침} {9시}, {박물관}{에서} {만나요}!
+couplephoto | {사진} · {버스 정류장} | photo | The couple's selfie at the bus stop. Behind them, a little blurry: 할머니, holding a bundle in red cloth. |
+note | {찾지 마세요} | letter | The note tucked into the mask on the gate. Shaky handwriting. | {찾지 마세요}.
 # ------------------------------------------------------------ places
 # spot "Label" X% Y% -> SCENE   (or => phone / => place NAME)   [if COND]
 # glow WORD X% Y% R%            the spot lights up when someone says WORD
@@ -179,7 +184,7 @@ sys 📞 ✖ 07:31
 === phone museum
 name 청솔 박물관
 avatar 박 #6a6f7d
-on-open toast New questions on your case board if !read_museum
+on-open give museumtext
 day {어제}
 them 18:02 김순자 {선생님}, {내일} {아침} {9시}, {박물관}{에서} {만나요}!
 me 18:30 {네}! {내일} {만나요}.
@@ -194,9 +199,13 @@ note No name. Twice, just before midnight. She never answered.
 
 # ------------------------------------------------------------ last night
 === scene evening
-@card 프롤로그 | 탈
-~ Cheongsol Village. Tiled roofs, stone walls, and a river that bends around the hills. People have lived here for six hundred years. These days, so do a lot of tourists.
-~ The last bus drops you at the edge of the village after dark. You find the guesthouse by its lanterns.
+@card 1장 | 탈
+~ Three weeks ago, a letter found you at the university. Thick paper, careful handwriting, almost all of it in Korean you could barely read.
+~ It was from 김순자, a mask carver in a village called 청솔. Months ago you had written to her for your research on traditional masks. You never expected an answer.
+sign: {학생}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
+(At the bottom of the letter, a little drawing: a mask with long eyebrows, a huge grin, and a tiny chip in one eyebrow.)
+! give letter
+~ So you came. The last bus drops you at the edge of the village after dark. You find the guesthouse by its lanterns.
 sujin[happy]: {안녕하세요}! {저}{는|은/는} 수진{이에요}.
 (A woman about your mom's age bows and takes your bag. She talks slowly, like she can tell you're still learning.)
 sujin: {여기}{는|은/는} {마당}{이에요}. {마당}.
@@ -204,16 +213,19 @@ sujin: {여기}{는|은/는} {마당}{이에요}. {마당}.
 sujin: {여기}{는|은/는} {방}{이에요}. {방}!
 (She slides open a paper door. Inside: a folded blanket, a low table, a lamp.)
 halmeoni[happy]: {안녕하세요}~
-(An old woman comes out of the workshop, brushing wood dust off her hands. She smiles with her whole face.)
+(An old woman comes out of the workshop, brushing wood dust off her hands.)
+halmeoni[surprised]: 아! {학생}! {편지}!
+(She points at the letter sticking out of your bag and beams. She's been waiting for you.)
 sujin: {할머니}{예요|이에요}.
 halmeoni: {이거} {탈}{이에요}. {탈}!
 (She holds up a wooden mask with long eyebrows and a huge grin and puts it over her face. Then she peeks out from behind it and laughs.)
 * {예뻐요}! -> evening2 ! learn 예뻐요
 * [Laugh with her] -> evening2
-
 === scene evening2
 halmeoni[happy]: {탈}... {예뻐요}! 하하.
 (She carries the mask back into the workshop and hangs it in the middle of the wall, very carefully, like it matters more than the others.)
+halmeoni[worried]: {내일}... {비밀}...
+(At the door she stops, glances at the gate, taps the mask, and puts a finger to her lips. Tomorrow.)
 sujin[happy]: {잘 자요}!
 (She points you to your room.)
 ~ You sleep well.
@@ -260,7 +272,8 @@ sujin[worried]: {아니요}, {아니요}! {같이} {찾아요}!
 -> m3.3
 
 === scene m6
-~ You nod. She looks relieved and presses 할머니's phone into your hands. It isn't locked.
+~ 할머니 invited you here. Today she was going to tell you her secret. Now she's gone.
+~ You nod. 수진 looks relieved and presses 할머니's phone into your hands. It isn't locked.
 ! set intro, hasPhone; toast 할머니's phone is in your pocket now. Tap the phone icon in the top-right corner, next to the notebook, to read it.
 
 === scene msj
@@ -290,6 +303,7 @@ sign: {오늘}: {축제} 🏮\n{9시} {박물관}
 === scene gp1
 ~ A faded photo by the door: a young woman in hanbok with a grinning mask pushed up on top of her head. Someone wrote on the back in crayon, a long time ago:
 sign: {엄마} ♡
+! give photo79
 
 # ------------------------------------------------------------ alley
 === scene o1
@@ -342,7 +356,7 @@ yuna[surprised]: {할머니}요? 음... 아! {네}! {아침}{에} {봤어요}!
 (She taps her boyfriend's arm.)
 yuna: {오빠}, {사진}! {그} {사진}!
 (He scrolls back through their camera roll.)
-! set sawPhoto
+! set sawPhoto; give couplephoto
 @photo A selfie of the two of them at a bus stop, grinning. Behind them, a little blurry: a small old woman holding a bundle wrapped in red cloth. It's 할머니.
 minsu: {버스 정류장}{이에요}. {식당} {옆에} {있어요}.
 (He points down the alley toward the fork.)
@@ -573,6 +587,7 @@ sign: {탈} · 1650
 ~ Hanging on the gate is a mask. Long eyebrows. A huge grin. The one from the empty hook. Tucked into its strap is a folded note.
 sign: {찾지 마세요}.
 (Shaky handwriting.)
+! give note
 sujin[sad]: {엄마}...
 (She presses the note to her chest. She isn't talking to you.)
 ~ One question left on your case board.

@@ -178,6 +178,10 @@ sign       |               |          | SunHi  -10%  +0Hz
 좋은 = good
 물고기 = fish
 전화 = call
+편지 = letter
+비밀 = secret
+오세요 = come
+제 = me
 이에요 = (grammar)
 아니에요 = (grammar)
 입니다 = (grammar)

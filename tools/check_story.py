@@ -35,7 +35,7 @@ def parse(path):
     """Mirror of parseStory() in js/engine.js, keeping line numbers."""
     d = dict(meta={}, cast={}, words={}, places={}, scenes={}, deduce=[], evidence={}, phones={},
              hints=[], chapters=[], pins=[], jumps=[], flags_set=[], flags_read=[], gives=[], shows=[],
-             speakers=[], tokens=[], placefx=[], statements={}, pairs=[])
+             speakers=[], tokens=[], placefx=[], statements={}, pairs=[], examines={}, exrefs=[])
     sec = cur = scene = None
     count = 0
     def cond_flags(c, ln):
@@ -83,6 +83,7 @@ def parse(path):
                 scene = arg; count = 0; d["scenes"][arg] = dict(ln=ln, beats=0)
             elif sec == "place": cur = d["places"][arg] = dict(ln=ln, spots=[], first=None, always=None, art=None)
             elif sec == "phone": cur = d["phones"][arg] = dict(ln=ln)
+            elif sec == "examine": cur = d["examines"][arg] = dict(ln=ln, art=None, keys=0)
             continue
         if sec == "meta":
             k, _, v = line.partition(" "); d["meta"][k] = (v.strip(), ln)
@@ -127,6 +128,16 @@ def parse(path):
             elif m := re.match(r"^(?:day|them|me|sys|note)(?:@(\S+))?\s+(.+)", line):
                 cond_flags(m.group(1), ln); tokens(m.group(2), ln)
             elif not re.match(r"^(name|avatar)\s", line): err(path.name, ln, "phone line not understood")
+        elif sec == "examine":
+            if m := re.match(r"^art\s+(\S+)", line):
+                cur["art"] = m.group(1)
+                if m.group(1) not in ARTS: err(path.name, ln, f"art '{m.group(1)}' isn't drawn in js/art.js")
+            elif re.match(r"^prompt\s", line): pass
+            elif m := re.match(r"^detail\s+(\w+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(\s+key)?\s*\|\s*(.+?)(?:\s+!\s+(.+))?$", line):
+                tokens(m.group(6), ln)
+                if m.group(5): cur["keys"] += 1
+                if m.group(7): effects(m.group(7), ln)
+            else: err(path.name, ln, "examine line not understood")
         elif sec == "pattern": pass
         elif sec in ("grammar", "endings"): pass
         elif sec == "scene":
@@ -139,6 +150,7 @@ def parse(path):
                 if m.group(4): effects(m.group(4), ln)
                 if not m.group(1).startswith("["): tokens(m.group(1), ln)
             elif m := re.match(r"^(->|<-)\s*(.+)$", line): target(m.group(2), ln)
+            elif m := re.match(r"^@examine\s+(\w+)$", line): beat(ln); d["exrefs"].append((m.group(1), ln))
             elif re.match(r"^@(build|type|camera|photo|present|card|contradict|number)\b", line): beat(ln)
             elif m := re.match(r"^pair:\s*(\S+)\s*\+\s*(\S+)\s+->\s+(.+)$", line):
                 d["pairs"] += [(m.group(1), ln), (m.group(2), ln)]; target(m.group(3), ln)
@@ -217,6 +229,8 @@ def main():
             if who not in cast and who not in d["cast"]: err(fname, ln, f"speaker '{who}' isn't in the cast")
         # evidence
         given = {e for e, _ in d["gives"]}
+        for k, ln in d["exrefs"]:
+            if k not in d["examines"]: err(fname, ln, f"no '=== examine {k}' in this file")
         for k, ln in d["pairs"]:
             if k not in d["statements"] and k not in evidence: err(fname, ln, f"'{k}' is neither a statement nor evidence")
         for e, ln in d["gives"] + d["shows"]:

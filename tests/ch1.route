@@ -47,6 +47,7 @@ expect started
 idle
 spot The mask
 choose Pick it up
+examine strap | eyebrow | paint
 idle
 expect sawFake&threatSent
 phone unknown
@@ -146,9 +147,10 @@ spot Left path
 spot Keep climbing
 present letter
 choose 괜찮아요
+examine chip
 choose Sit with her
 choose Blow out the lantern
 idle
 expect hidden
-solve d8 할머니 | 박물관 | 가짜
+solve d8 할머니 | 박물관 | 가짜 ; realchip + photo79
 done ch1

@@ -375,6 +375,14 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 .nk.ok{background:var(--paper-ink);color:var(--paper);font-size:1rem;font-weight:700}
 .nk:disabled{opacity:.4}
 .grow.tell b{color:#e59a87}
+.exlayer{position:absolute;inset:0;cursor:crosshair;touch-action:manipulation;pointer-events:auto}
+.exmark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid #ffd27a;box-shadow:0 0 10px #ffd27a;pointer-events:none}
+.exhint{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:2px dashed rgba(255,230,170,.75);animation:exh 1.6s ease-in-out infinite;pointer-events:none}
+@keyframes exh{50%{transform:scale(1.25);opacity:.35}}
+.exripple{position:absolute;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;border:2px solid rgba(255,255,255,.8);animation:exr .6s ease-out forwards;pointer-events:none}
+@keyframes exr{to{transform:scale(2.4);opacity:0}}
+.excount{font-size:.8rem;color:var(--paper-mute);text-align:right}
+.exnote{font-size:.95rem;line-height:1.45;padding:8px 10px;border-left:3px solid #d9a43d;background:#f6f0e0;border-radius:0 8px 8px 0}
 .proofrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}
 .proofrow .plabel{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);margin-right:2px}
 .pslot,.pp{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:4px 10px 4px 6px;border-radius:10px;border:1px dashed var(--ink-3);background:transparent;color:var(--mist);font-size:.85rem;max-width:100%}

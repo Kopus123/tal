@@ -285,8 +285,39 @@ function artMap(){
   return s;
 }
 
+
+/* close-ups for "=== examine": a mask held up in front of you. real = the old one, otherwise the fresh copy */
+function closeMask(real){
+  const wood=real?'#7a4a2a':'#e9c48e',edge=real?'#a8754a':'#c99a5e',ink='#1d1712';
+  const bg=real?`<rect width="400" height="300" fill="#7d1f1a"/><path d="M0 40 Q120 70 200 30 T400 50 M0 250 Q140 220 230 260 T400 240" stroke="#5e1512" stroke-width="10" fill="none" opacity=".6"/>`
+               :`<rect width="400" height="300" fill="url(#plank)"/>`;
+  let g=bg;
+  // strap
+  g+=real?`<path d="M106 150 Q60 140 20 160 M294 150 Q340 140 380 160" stroke="#cdbb9a" stroke-width="5" fill="none" stroke-dasharray="3 3"/>`
+         :`<path d="M106 150 Q60 140 20 160 M294 150 Q340 140 380 160" stroke="#f4f1e8" stroke-width="5" fill="none"/>`;
+  g+=`<ellipse cx="200" cy="152" rx="96" ry="122" fill="${wood}" stroke="${edge}" stroke-width="${real?7:3}"/>`;
+  if(real)g+=`<path d="M150 60 l6 14 M268 210 l-8 12 l4 10 M126 200 l10 6" stroke="#4a2a16" stroke-width="2" fill="none"/>`;
+  // eyebrows (the real one has a chip in the left one)
+  g+=real?`<path d="M118 98 Q132 86 146 84" stroke="${ink}" stroke-width="11" stroke-linecap="round" fill="none"/><path d="M158 82 Q172 80 186 86" stroke="${ink}" stroke-width="11" stroke-linecap="round" fill="none"/><path d="M146 80 l6 6 l5 -6" fill="#b88a5c"/>`
+         :`<path d="M118 98 Q150 78 186 86" stroke="${ink}" stroke-width="11" stroke-linecap="round" fill="none"/>`;
+  g+=`<path d="M214 86 Q250 78 282 98" stroke="${ink}" stroke-width="11" stroke-linecap="round" fill="none"/>`;
+  // smiling eye holes
+  const eye=(x)=>`<path d="M${x-22} 124 Q${x} 104 ${x+22} 124 Q${x} 116 ${x-22} 124Z" fill="#120d0a"/>`+(real?'':`<path d="M${x-22} 124 Q${x} 104 ${x+22} 124" stroke="#f6e2bd" stroke-width="2.5" fill="none"/>`);
+  g+=eye(160)+eye(240);
+  // nose
+  g+=`<path d="M200 128 Q190 160 196 168 Q204 172 210 166" stroke="${real?'#3e2414':'#a9773f'}" stroke-width="3" fill="none"/>`;
+  // cheeks
+  const cheek=(x)=>real?`<circle cx="${x}" cy="176" r="21" fill="#c98a7a" opacity=".8"/><path d="M${x-12} 170 l8 6 l-3 8 M${x+4} 168 l6 10" stroke="#6e3d2e" stroke-width="1.5" fill="none"/>`
+                       :`<circle cx="${x}" cy="176" r="21" fill="#d22f24"/><ellipse cx="${x-7}" cy="168" rx="7" ry="4" fill="#fff" opacity=".55"/>`;
+  g+=cheek(140)+cheek(260);
+  // the big grin
+  g+=`<path d="M136 200 Q200 270 264 200 Q200 226 136 200Z" fill="#160f0b"/><path d="M152 208 Q200 232 248 208" stroke="${real?'#d8c8a6':'#fffaf0'}" stroke-width="6" fill="none"/>`;
+  if(real)g+=`<text x="200" y="262" text-anchor="middle" font-size="10" fill="#3a2010" font-family="serif" opacity=".85">1650</text>`;
+  return `<svg class="art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${DEFS}${g}</svg>`;
+}
 const ART={
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
-  jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate
+  jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate,
+  mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true)
 };

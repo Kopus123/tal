@@ -30,7 +30,7 @@ if !solved_d8: What did 할머니 say about the mask in the museum?
 Chapter 1 is done. Look back through your notebook while you wait for Chapter 2.
 
 === deduce
-d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow. | needs fakemask + photo79
+d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow. | needs fakemask/nochip + photo79
 d2 if read_threat | Someone wants the {진짜} mask, at the {다리}, tonight at 9, and wants her to come {혼자}. | And somehow they know the one on the gate is fake.
 dw if sawWall&sawFake | 할머니 never used the front gate. She came and went over the wall {뒤에} the house, by the {산} path. | Red paint on the stones, the same red as the mask. That's how she got past 수진, who watched the courtyard all night. | needs wall + s_sujin
 d3 if marketDone | Yesterday she got off at the {시장}, not at the museum, and met {할아버지} there. | The second 김밥 was for him. They ate it together at the market. | needs s_kimbap + s_market
@@ -39,9 +39,12 @@ d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다
 d6 if doubtMuseum | The museum's mask has no chip in its eyebrow. Maybe it's {가짜} too. | Then which one is the real one?
 dt if doubtMuseum | The museum woman still says 진짜, but now she ends it with {는데요}. She isn't sure anymore. | Her words say yes. Her ending says "but..."
 d7 if toldMountain | 할머니 is hiding at the {절}, up on the {산}. | 할아버지 finally told you.
-d8 final if hidden | The real mask is with {할머니}. The one in the {박물관} is {가짜}. | And the man in the dark knows it.
+d8 final if hidden | The real mask is with {할머니}. The one in the {박물관} is {가짜}. | And the man in the dark knows it. | needs realchip + photo79
 
 === evidence
+nochip | {가짜} · {눈썹} | eyebrow | The copy's left eyebrow: one clean, unbroken line. No chip. |
+freshwood | {새} {나무} | wood | Inside the copy's eye holes, the wood is pale and raw. Cut yesterday. |
+realchip | {진짜} · {눈썹} | eyebrow | The old mask's left eyebrow: a small chip, exactly like in the 1979 photo. |
 letter | {편지} | letter | 할머니's letter. The reason you came to 청솔마을. | {학생}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
 photo79 | {사진} · 1979 | photo | A faded photo from the workshop: a young woman with a grinning mask pushed up on her head. Look closely and the mask has a small chip in its left eyebrow. |
 couplephoto | {사진} · {버스 정류장} | photo | The couple's selfie at the bus stop. Behind them, a little blurry: 할머니, holding a bundle in red cloth. |
@@ -216,6 +219,23 @@ glow 탈 58 70 7
 glow 절 50 38 22
 glow 불 12 92 10
 
+# ------------------------------------------------------------ close-ups
+=== examine fakemask
+art mask_fake
+prompt Look it over like a researcher. Tap anything that catches your eye.
+detail eyebrow 37 29 8 key | The left {눈썹} is one clean, unbroken line. The mask in the 1979 photo has a chip right here. ! give nochip
+detail paint 35 59 8 key | The red on the cheeks is still tacky. It comes off on your thumb. ! set paintWet
+detail eyes 60 39 7 | Inside the eye holes the wood is pale and raw: cut yesterday, not three hundred years ago. ! give freshwood
+detail strap 12 51 7 | The strap is brand-new cord, bright and stiff. Old masks were tied with cotton.
+
+=== examine realmask
+art mask_real
+prompt Hold it to the lantern light. What do you notice?
+detail chip 37 28 8 key | A small chip is missing from the left {눈썹}. The same chip as in the 1979 photo. ! give realchip
+detail cheek 65 59 8 | The red on the cheeks has faded almost to pink, and it's cracked like dry mud.
+detail edge 74 52 6 | The edges are worn smooth and dark by hundreds of years of hands.
+detail mark 50 87 7 | Carved small under the chin: 1650. ! set sawMark
+
 # ------------------------------------------------------------ phone
 === phone junho
 name 준호 💙
@@ -375,7 +395,9 @@ sujin: {네}...?
 ~ The paint has dried a little since this morning, but it still smells of fresh wood. No chip in the eyebrow. A good fake. A fast one.
 
 === scene c1_mask2
-~ It's lighter than you expected, and it smells strongly of fresh wood. When you put it down, there's a red smear across your fingers.
+~ It's lighter than you expected, and it smells strongly of fresh wood. You turn it over the way you were taught in the archive: slowly, edge by edge.
+@examine fakemask
+~ When you put it down, there's a red smear across your fingers.
 sujin[surprised]: 어? {손}! {손}!
 (She grabs your hand and turns it over. Red paint. Thick old-fashioned paint, still tacky a whole day later.)
 sujin[surprised]: {새} {탈}{이에요}! {새} {탈}!
@@ -977,7 +999,8 @@ halmeoni[sad]: {아니요}... {네}...
 -> c1_j3
 
 === scene c1_j3
-~ She unwraps the red cloth. Long eyebrows, a huge grin, and a small chip missing from the left eyebrow.
+~ She unwraps the red cloth and holds the mask out to you with both hands, the way you'd hand someone a baby.
+@examine realmask
 halmeoni: {이거}{는|은/는} {진짜} {탈}{이에요}.
 (She runs her thumb along the old wood.)
 halmeoni[worried]: {박물관} {탈}... {가짜}{예요|이에요}.

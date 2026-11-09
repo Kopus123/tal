@@ -8,7 +8,7 @@ let W={};             // every word in every chapter -> {p: picture spec, g: gra
 
 /* ---------- story parser ---------- */
 function parseStory(src,st){
-  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{}};
+  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{}};
   let sec=null,cur=null,scene=null,last=null,count=0;
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;
     if(last&&!last.next&&!last.rewind&&!last.ch&&!last.ans)last.next=id;
@@ -24,6 +24,7 @@ function parseStory(src,st){
       else if(sec==='place')cur=st.places[arg]={id:arg,spots:[],glow:[],desc:[]};
       else if(sec==='phone'){cur={id:arg,m:[],fx:[]};st.phones.push(cur)}
       else if(sec==='pattern'){cur={id:arg,pairs:[],need:3};st.patterns.push(cur)}
+      else if(sec==='examine')cur=st.examines[arg]={id:arg,details:[]};
       return}
     let m;
     switch(sec){
@@ -47,6 +48,12 @@ function parseStory(src,st){
       case 'evidence':{const [id,label,icon,desc,kor]=line.split('|').map(x=>(x||'').trim());st.evidence[id]={id,label,icon,desc,ko:kor};break}
       case 'case':{m=line.match(/^(\w+)\s+(\S+)(\s+final)?\s+if\s+(\S+)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
         if(m)st.cases.push({id:m[1],a:m[2],final:!!m[3],c:m[4],q:m[5],why:m[6]});break}
+      // examine: art KEY / prompt TEXT / detail ID X% Y% R [key] | what you notice ! effects
+      case 'examine':{
+        if(m=line.match(/^(art|prompt)\s+(.+)$/))cur[m[1]]=m[2];
+        else if(m=line.match(/^detail\s+(\w+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(\s+key)?\s*\|\s*(.+?)(?:\s+!\s+(.+))?$/))
+          cur.details.push({id:m[1],x:+m[2],y:+m[3],r:+m[4],key:!!m[5],t:m[6],fx:m[7]?fx(m[7]):[]});
+        break}
       case 'pattern':{if(m=line.match(/^title\s+(.+)/))cur.title=m[1];else if(m=line.match(/^note\s+(.+)/))cur.note=m[1];
         else if(m=line.match(/^need\s+(\d+)/))cur.need=+m[1];else if(m=line.match(/^(.+?)\s*>\s*(.+)$/))cur.pairs.push([m[1],m[2]]);break}
       case 'place':{
@@ -91,6 +98,7 @@ function parseStory(src,st){
         else if(m=line.match(/^@present\s+(.+)$/))node({type:'present',en:m[1],shows:[]});
         else if(m=line.match(/^show:\s*(\S+)\s+->\s+(.+)$/))last.shows.push([m[1],m[2].trim()]);
         // "@contradict prompt" then "pair: A + B -> TARGET" (A/B = statement or evidence ids, either order)
+        else if(m=line.match(/^@examine\s+(\w+)$/))node({type:'examine',exam:m[1]});
         else if(m=line.match(/^@contradict\s+(.+)$/))node({type:'contradict',en:m[1],pairs:[]});
         else if(m=line.match(/^pair:\s*(\S+)\s*\+\s*(\S+)\s+->\s+(.+)$/))last.pairs.push([[m[1],m[2]],m[3].trim()]);
         else if(m=line.match(/^@card\s+(.+?)(?:\s*\|\s*(.+))?$/))node({type:'card',title:m[1],sub:m[2]||''});
@@ -259,7 +267,7 @@ function go(id){
   id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
   if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
-  S.node=id;bseq=[];TFB=null;tHint=0;CSEL=[];NUMV='';runFx(nd.fx,replay);checkPattern();
+  S.node=id;bseq=[];TFB=null;tHint=0;CSEL=[];NUMV='';EXMISS=0;runFx(nd.fx,replay);checkPattern();
   if(nd.ko&&!replay)noteSeen(nd.ko);
   if(nd.audio)HEARD[id]=(HEARD[id]||0)+1;
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
@@ -332,7 +340,7 @@ function spot(i){const x=ST.places[S.loc].spots[i];if(!x)return;sfx('tap');revea
 function skipAhead(){
   quiet=true;stopAudio();let n=0;
   while(S.node&&n++<60){const nd=ST.nodes[S.node];
-    if(nd.ch||['build','type','present','camera','contradict','number'].includes(nd.type))break;
+    if(nd.ch||['build','type','present','camera','contradict','number','examine'].includes(nd.type))break;
     if(nd.rewind){go(nd.rewind);continue}
     if(nd.next)go(nd.next);else{S.node=null;save();render();break}}
   quiet=false;
@@ -360,11 +368,15 @@ function render(){
   $('#locKo').textContent=l.name||'';$('#locSub').textContent=l.sub||'';
   if(S.loc)S.known[S.loc]=1;
   $('#bPhone').hidden=!hasPhone();
-  const ak=l.art+(l.art==='bus'?'|'+(S.F.led||''):'');
-  if(ak!==artKey){const w=$('#art');w.innerHTML=(ART[l.art]||ART.madang)();w.classList.remove('in');void w.offsetWidth;w.classList.add('in');artKey=ak}
-  const amb=l.ambient||'none';if(amb!==ambKey){$('#amb').innerHTML=ambientHTML(amb);ambKey=amb}
+  const exam=nd&&nd.type==='examine'?ST.examines[nd.exam]:null;   // a close-up takes over the picture window
+  const artName=exam?exam.art:l.art;
+  const ak=artName+(artName==='bus'?'|'+(S.F.led||''):'');
+  if(ak!==artKey){const w=$('#art');w.innerHTML=(ART[artName]||ART.madang)();w.classList.remove('in');void w.offsetWidth;w.classList.add('in');artKey=ak}
+  const amb=exam?'none':l.ambient||'none';if(amb!==ambKey){$('#amb').innerHTML=ambientHTML(amb);ambKey=amb}
   let h='';
   if(nd&&nd.type==='camera')h+=`<div class="vf" id="vf" style="left:${cam.x}%;top:${cam.y}%"><span>Drag me</span></div>`;
+  if(exam){const got=d=>S.F['ex_'+exam.id+'_'+d.id];
+    h+=`<div class="exlayer" id="exam">${exam.details.map(d=>got(d)?`<span class="exmark" style="left:${d.x}%;top:${d.y}%"></span>`:EXMISS>=4?`<span class="exhint" style="left:${d.x}%;top:${d.y}%"></span>`:'').join('')}</div>`}
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
   if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
   if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
@@ -375,7 +387,7 @@ function render(){
   $('#fx').querySelectorAll('.hs').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
-  const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict','number'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
+  const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict','number','examine'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
   const backBtn=nd&&BACK.length?`<button class="btn back" id="bBack" aria-label="Back one line">‹ Back</button>`:'';
   const cont=label=>`<div class="controw">${backBtn}<button class="btn primary" id="bNext">${label}</button></div>`;
   if(!nd){
@@ -399,6 +411,12 @@ function render(){
     const ev=owned();
     body=`<div class="en">${esc(nd.en)}</div>${ev.length?`<div class="evlist">${ev.map(e=>`<button class="evcard" data-show="${e.id}">${iconSVG(e.icon)}<span><b>${ko(e.label,false,false)}</b><small>${esc(e.desc)}</small></span></button>`).join('')}</div>`:'<div class="empty">You have nothing to show.</div>'}`;
     foot=`<div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
+  }else if(nd.type==='examine'){
+    const x=ST.examines[nd.exam],got=d=>S.F['ex_'+x.id+'_'+d.id],keysLeft=x.details.filter(d=>d.key&&!got(d)).length;
+    body=`<div class="en">${esc(x.prompt||'Look closely. Tap anything that catches your eye.')} <b>Tap the picture above.</b></div>
+      <div class="excount">Noticed ${x.details.filter(got).length} of ${x.details.length}</div>
+      ${x.details.filter(got).reverse().map(d=>`<div class="exnote">${ko(d.t,true,true)}</div>`).join('')}`;
+    foot=`<div class="controw">${backBtn}<button class="btn primary" id="bNext" ${keysLeft?'disabled':''}>${keysLeft?'Keep looking':'Done looking'}</button></div>`;
   }else if(nd.type==='number'){
     const keys=['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
     body=`<div class="en">${esc(nd.en)}</div><div class="numdisp ${NUMV?'':'ph'}">${NUMV?esc(fmtNum(NUMV,nd.kind)):({time:'_ : _ _',won:'0 원',phone:'010-____-____'}[nd.kind]||'_')}</div>
@@ -446,6 +464,7 @@ function render(){
     if(CSEL.includes(k))CSEL=CSEL.filter(x=>x!==k);else{CSEL.push(k);if(CSEL.length>2)CSEL.shift()}
     const top=sb.scrollTop;render();sb.scrollTop=top});
   if($('#bClash'))$('#bClash').onclick=()=>clash(nd);
+  const ex=$('#exam');if(ex)ex.onclick=e=>{const r=ex.getBoundingClientRect();examTap(nd,(e.clientX-r.left)/r.width*100,(e.clientY-r.top)/r.height*100)};
   sb.querySelectorAll('[data-nk]').forEach(b=>b.onclick=()=>{const k=b.dataset.nk;sfx('tap');
     if(k==='✓'){sayNumber(nd);return}if(k==='⌫')NUMV=NUMV.slice(0,-1);else if(NUMV.length<11)NUMV+=k;render()});
   if($('#bBack'))$('#bBack').onclick=goBack;
@@ -459,6 +478,19 @@ function render(){
 }
 // a line you only hear: a listen button, and pictures for the words you've already looked up (no text)
 const HEARD={}; // how many times each sound-only line has played this session
+/* ---------- examining an object: tap the details you notice ---------- */
+let EXMISS=0;
+function examTap(nd,px,py){
+  const x=ST.examines[nd.exam];const ex=$('#exam');const ratio=ex?ex.clientHeight/ex.clientWidth:.75;
+  const d=x.details.find(d=>!S.F['ex_'+x.id+'_'+d.id]&&Math.hypot(px-d.x,(py-d.y)*ratio)<=d.r)
+    ||x.details.find(d=>Math.hypot(px-d.x,(py-d.y)*ratio)<=d.r);
+  if(!d){EXMISS++;sfx('tap');if(ex){const p=document.createElement('span');p.className='exripple';p.style.left=px+'%';p.style.top=py+'%';ex.appendChild(p);setTimeout(()=>p.remove(),600)}
+    if(EXMISS===4)render();return}
+  if(S.F['ex_'+x.id+'_'+d.id])return;
+  S.F['ex_'+x.id+'_'+d.id]=1;sfx('learn');buzz(20);runFx(d.fx);logLine({who:'narr',en:plain(d.t)});noteSeen(d.t);
+  const top=$('#sb').scrollTop;render();$('#sb').scrollTop=top;
+}
+
 /* ---------- number answers ---------- */
 let NUMV='';
 const digits=s=>String(s).replace(/\D/g,'');
@@ -828,7 +860,7 @@ function settings(){
 /* ---------- chapters ---------- */
 function useChapter(id){
   const c=CH[id]||CH[WORLD.chapters[0].id];
-  ST={statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:c.nodes,cases:c.cases,phones:c.phones,hints:c.hints,
+  ST={examines:Object.assign({},c.examines),statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:c.nodes,cases:c.cases,phones:c.phones,hints:c.hints,
     patterns:WORLD.patterns.concat(c.patterns),meta:Object.assign({},WORLD.meta,c.meta),map:WORLD.map,chapters:WORLD.chapters};
 }
 const chIndex=id=>WORLD.chapters.findIndex(c=>c.id===id);

@@ -12,6 +12,7 @@
      present ID            show this piece of evidence
      number 9:00           press these digits on the number pad, then Say it
      contradict A + B      pick these two statements/evidence as the contradiction
+     examine a | b         tap these details in a close-up, then Done looking
      camera                aim the camera at the target and take the photo
      phone THREAD          open the phone and read this thread
      map PLACE             travel by the village map
@@ -82,6 +83,12 @@ const STEPS={
   async number(v){await until(()=>document.querySelector('#sb .numpad'),'a number pad');
     for(const k of v.replace(/\D/g,'')){const b=document.querySelector(`#sb [data-nk="${k}"]`);await clickEl(b)}
     await clickEl(document.querySelector('#sb [data-nk="✓"]'))},
+  async examine(a){await until(()=>document.querySelector('#exam'),'a close-up');const x=ST.examines[ST.nodes[S.node].exam];
+    for(const id of a.split('|').map(v=>v.trim())){const d=x.details.find(d=>d.id===id);if(!d)fail(`no detail "${id}"`);
+      const ex=document.querySelector('#exam'),r=ex.getBoundingClientRect();
+      ex.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+r.width*d.x/100,clientY:r.top+r.height*d.y/100}));await settle();
+      if(!S.F['ex_'+x.id+'_'+id])fail(`tapping "${id}" didn't find it`)}
+    const b=document.querySelector('#bNext');if(!b||b.disabled)fail('the close-up still wants more details');await clickEl(b)},
   async camera(){const sh=await until(()=>document.querySelector('#bShut'),'the camera');const nd=ST.nodes[S.node];
     cam={x:Math.max(0,nd.tx-22),y:Math.max(0,nd.ty-26)};await clickEl(sh);await tick(600);await settle()},
   async phone(id){openPhone();await settle();const b=document.querySelector(`[data-th="${id}"]`);if(!b)fail(`no phone thread "${id}"`);

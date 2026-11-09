@@ -184,6 +184,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 편지 = letter
 비밀 = secret
 오세요 = come
+눈썹 = eyebrow
 하나 = nat1
 한 = nat1
 둘 = nat2

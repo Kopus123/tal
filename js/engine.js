@@ -78,7 +78,9 @@ function parseStory(src,st){
         else if(m=line.match(/^@build\s+(.+)$/))node({type:'build',en:m[1],tiles:[],ans:[]});
         else if(m=line.match(/^tiles:\s*(.+)$/))last.tiles=m[1].split('|').map(s=>s.trim());
         else if(m=line.match(/^@type\s+(.+)$/))node({type:'type',en:m[1],ans:[]});
-        else if(m=line.match(/^answer:\s*(.+?)\s+->\s+(.+)$/))last.ans.push([last.type==='type'?m[1].trim():m[1].split('|').map(s=>s.trim()),m[2].trim()]);
+        // "@number prompt | time|won|phone|count": a number pad; answers are compared digit by digit
+        else if(m=line.match(/^@number\s+(.+?)(?:\s*\|\s*(time|won|phone|count))?$/))node({type:'number',en:m[1],kind:m[2]||'count',ans:[]});
+        else if(m=line.match(/^answer:\s*(.+?)\s+->\s+(.+)$/))last.ans.push([last.type==='type'||last.type==='number'?m[1].trim():m[1].split('|').map(s=>s.trim()),m[2].trim()]);
         else if(m=line.match(/^miss\s+->\s+(.+)$/))last.miss=m[1].trim();
         else if(m=line.match(/^@camera\s+(?:([\d.]+)\s+([\d.]+)\s*\|\s*)?(.+)$/))node({type:'camera',tx:+(m[1]||50),ty:+(m[2]||50),en:m[3]});
         else if(m=line.match(/^@photo\s+(.+)$/))node({type:'photo',en:m[1]});
@@ -251,7 +253,7 @@ function go(id){
   id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
   if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
-  S.node=id;bseq=[];TFB=null;tHint=0;CSEL=[];runFx(nd.fx,replay);checkPattern();
+  S.node=id;bseq=[];TFB=null;tHint=0;CSEL=[];NUMV='';runFx(nd.fx,replay);checkPattern();
   if(nd.ko&&!replay)noteSeen(nd.ko);
   if(nd.audio)HEARD[id]=(HEARD[id]||0)+1;
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
@@ -324,7 +326,7 @@ function spot(i){const x=ST.places[S.loc].spots[i];if(!x)return;sfx('tap');revea
 function skipAhead(){
   quiet=true;stopAudio();let n=0;
   while(S.node&&n++<60){const nd=ST.nodes[S.node];
-    if(nd.ch||['build','type','present','camera','contradict'].includes(nd.type))break;
+    if(nd.ch||['build','type','present','camera','contradict','number'].includes(nd.type))break;
     if(nd.rewind){go(nd.rewind);continue}
     if(nd.next)go(nd.next);else{S.node=null;save();render();break}}
   quiet=false;
@@ -367,7 +369,7 @@ function render(){
   $('#fx').querySelectorAll('.hs').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
-  const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
+  const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict','number'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
   const backBtn=nd&&BACK.length?`<button class="btn back" id="bBack" aria-label="Back one line">‹ Back</button>`:'';
   const cont=label=>`<div class="controw">${backBtn}<button class="btn primary" id="bNext">${label}</button></div>`;
   if(!nd){
@@ -390,6 +392,11 @@ function render(){
   }else if(nd.type==='present'){
     const ev=owned();
     body=`<div class="en">${esc(nd.en)}</div>${ev.length?`<div class="evlist">${ev.map(e=>`<button class="evcard" data-show="${e.id}">${iconSVG(e.icon)}<span><b>${ko(e.label,false,false)}</b><small>${esc(e.desc)}</small></span></button>`).join('')}</div>`:'<div class="empty">You have nothing to show.</div>'}`;
+    foot=`<div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
+  }else if(nd.type==='number'){
+    const keys=['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
+    body=`<div class="en">${esc(nd.en)}</div><div class="numdisp ${NUMV?'':'ph'}">${NUMV?esc(fmtNum(NUMV,nd.kind)):({time:'_ : _ _',won:'0 원',phone:'010-____-____'}[nd.kind]||'_')}</div>
+      <div class="numpad">${keys.map(k=>`<button class="nk ${k==='✓'?'ok':''}" data-nk="${k}" ${k==='✓'&&!NUMV?'disabled':''}>${k==='✓'?'Say it':k}</button>`).join('')}</div>`;
     foot=`<div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
   }else if(nd.type==='contradict'){
     const sts=ownedSt(),ev=owned(),sel=k=>CSEL.includes(k)?'sel':'';
@@ -433,6 +440,8 @@ function render(){
     if(CSEL.includes(k))CSEL=CSEL.filter(x=>x!==k);else{CSEL.push(k);if(CSEL.length>2)CSEL.shift()}
     const top=sb.scrollTop;render();sb.scrollTop=top});
   if($('#bClash'))$('#bClash').onclick=()=>clash(nd);
+  sb.querySelectorAll('[data-nk]').forEach(b=>b.onclick=()=>{const k=b.dataset.nk;sfx('tap');
+    if(k==='✓'){sayNumber(nd);return}if(k==='⌫')NUMV=NUMV.slice(0,-1);else if(NUMV.length<11)NUMV+=k;render()});
   if($('#bBack'))$('#bBack').onclick=goBack;
   const bs=sb.querySelector('[data-say]');if(bs)bs.onclick=()=>{sfx('tap');speak(nd.ko,nd.who)};
   sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{sfx('tap');bseq.push(+b.dataset.t);speak(nd.tiles[+b.dataset.t],'you');render()});
@@ -444,6 +453,20 @@ function render(){
 }
 // a line you only hear: a listen button, and pictures for the words you've already looked up (no text)
 const HEARD={}; // how many times each sound-only line has played this session
+/* ---------- number answers ---------- */
+let NUMV='';
+const digits=s=>String(s).replace(/\D/g,'');
+function fmtNum(v,kind){
+  if(kind==='time'){const d=v.slice(0,4);return d.length<=2?d:d.slice(0,d.length-2)+':'+d.slice(-2)}
+  if(kind==='won')return (+v).toLocaleString('en-US')+' 원';
+  if(kind==='phone'){const d=v;return d.length<=3?d:d.length<=7?d.slice(0,3)+'-'+d.slice(3):d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7)}
+  return v}
+async function sayNumber(nd){
+  if(busy||!NUMV)return;revealHeard();
+  const said=fmtNum(NUMV,nd.kind);logLine({who:'you',ko:said});
+  const hit=nd.ans.find(a=>digits(a[0])===NUMV.replace(/^0+(?=\d)/,nd.kind==='phone'?'0':''));
+  go(hit?hit[1]:nd.miss);
+}
 function heardHTML(nd){
   const pics=(HEARD[nd.id]||0)<2?'':idsIn(nd.ko).filter((id,i,a)=>a.indexOf(id)===i&&W[id]&&!W[id].g&&S.nb[id]).map(id=>iconSVG(W[id].p,'hicon')).join('');
   return `<div class="heardbox"><button class="listen" data-say aria-label="Listen again">🔊 Listen again</button>${pics?`<div class="heardpics">${pics}</div>`:''}<div class="heardnote">${pics?'Pictures for the words you know.':'You only heard this. It gets written down once you act on it.'}</div></div>`}
@@ -549,12 +572,19 @@ function notebook(){
     const by=s=>vocab.filter(id=>status(id)===s);
     const list=nbTab==='all'?vocab:nbTab==='todo'?vocab.filter(id=>['new','seen'].includes(status(id))):nbTab==='guess'?by('guess'):by('sure');
     const pat=ST.patterns[0];
-    const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['sym','Symbols']];
+    const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],['sym','Symbols']];
     let inner=`<div class="tabs">${tabs.map(([k,t])=>`<button class="tab ${nbTab===k?'on':''}" data-tab="${k}">${t}</button>`).join('')}</div>`;
     if(['all','todo','guess','sure'].includes(nbTab))inner+=`<div class="label">${by('sure').length} sure · ${by('guess').length} guesses · ${vocab.length} seen</div>`;
     if(nbTab==='gram'){
       inner+=`<div class="label">Little pieces that stick to words</div>`+(gram.length?`<div class="glist">${gram.map(id=>`<button class="grow" data-w="${esc(id)}"><b>${esc(id)}</b><span>${esc(WORLD.grammar[id]||'')}</span></button>`).join('')}</div>`:`<div class="empty">The ones you run into will collect here.</div>`);
       inner+=`<div class="label">Endings</div><div class="glist">${WORLD.endings.map(e=>`<div class="grow"><b>${esc(e.k)}</b><span>${esc(e.d)}</span></div>`).join('')}</div>`;
+    }
+    else if(nbTab==='num'){
+      const cell=(k,n)=>`<button class="numcell ${S.w[k]?'met':''}" data-w="${esc(k)}"><b>${esc(k)}</b><span>${n}</span></button>`;
+      inner+=`<div class="numintro">Korean has two sets of numbers. <b>Native</b> numbers (green circles) count hours and things: 아홉 시 = 9 o'clock, 두 개 = two of them. <b>Sino-Korean</b> numbers (ochre squares) are for money, minutes and phone numbers: 천 원 = 1,000 won, 삼십 분 = 30 minutes. So 9:30 is 아홉 시 삼십 분.</div>
+        <div class="label">Native · hours, counting</div><div class="numgrid">${[['하나 / 한',1],['둘 / 두',2],['셋 / 세',3],['넷 / 네',4],['다섯',5],['여섯',6],['일곱',7],['여덟',8],['아홉',9],['열',10],['열한',11],['열두',12]].map(([k,n])=>cell(k.split(' / ')[0],n).replace(`<b>${esc(k.split(' / ')[0])}</b>`,`<b>${esc(k)}</b>`)).join('')}</div>
+        <div class="label">Sino-Korean · money, minutes, phones</div><div class="numgrid">${[['공',0],['일',1],['이',2],['삼',3],['사',4],['오',5],['육',6],['칠',7],['팔',8],['구',9],['십',10],['백',100],['천','1,000'],['만','10,000']].map(([k,n])=>cell(k,n)).join('')}</div>
+        <div class="empty">Brighter ones are numbers you've heard in the story. Tap any to hear it.</div>`;
     }
     else if(nbTab==='pat'){
       if(!pat||!F.pattern)inner+=`<div class="empty">Nothing yet. Keep listening to how people talk about what already happened.</div>`;

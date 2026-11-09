@@ -81,7 +81,8 @@ choose Press the stop
 idle
 spot The paint stall
 build 빨간 | 물감 | 주세요
-choose 1,000 won
+number 10000
+number 1000
 choose 할머니 봤어요
 choose 할아버지
 choose 산에
@@ -114,6 +115,15 @@ idle
 expect toldMountain&caughtGramps
 spot The bridge
 idle
+map madang
+spot Talk to 수진
+choose 준호
+number 800
+choose 준호
+number 900
+choose Leave her be
+idle
+expect knowJunhoTime
 solve d1 가짜 | 만들었어요 | 어제
 solve d2 진짜 | 다리 | 혼자
 solve dw 뒤에 | 산

@@ -133,7 +133,7 @@ def parse(path):
                 if m.group(4): effects(m.group(4), ln)
                 if not m.group(1).startswith("["): tokens(m.group(1), ln)
             elif m := re.match(r"^(->|<-)\s*(.+)$", line): target(m.group(2), ln)
-            elif re.match(r"^@(build|type|camera|photo|present|card|contradict)\b", line): beat(ln)
+            elif re.match(r"^@(build|type|camera|photo|present|card|contradict|number)\b", line): beat(ln)
             elif m := re.match(r"^pair:\s*(\S+)\s*\+\s*(\S+)\s+->\s+(.+)$", line):
                 d["pairs"] += [(m.group(1), ln), (m.group(2), ln)]; target(m.group(3), ln)
             elif m := re.match(r"^tiles:\s*(.+)$", line): tokens(m.group(1), ln)
@@ -220,7 +220,7 @@ def main():
             if eid not in given: warn(fname, e["ln"], f"evidence '{eid}' is never handed to you")
         # flags
         auto = {"started"} | {f"solved_{q['id']}" for q in d["deduce"]} | {f"read_{p}" for p in d["phones"]} \
-             | {f"readn_{p}" for p in d["phones"]} | {f"ev_{e}" for e in evidence}
+             | {f"readn_{p}" for p in d["phones"]} | {f"vm_{p}" for p in d["phones"]} | {f"ev_{e}" for e in evidence}
         setf = {f for f, _ in d["flags_set"]} | auto
         for f, ln in d["flags_read"]:
             if f not in setf: err(fname, ln, f"flag '{f}' is checked but never set, so this can never happen")

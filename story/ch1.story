@@ -224,7 +224,7 @@ sys 📞 ✖ 07:31
 them@threatSent 09:40 {할머니}... {괜찮아요}?
 them@marketDone 13:05 {할머니}!! {전화} {주세요}!!
 sys@marketDone 📞 ✖ 13:06
-voice@marketDone 13:07 junho {할머니}, 준호{예요|이에요}. {내일} {아침}{에} {가요}. {전화} {주세요}.
+voice@marketDone 13:07 junho {할머니}, 준호{예요|이에요}. {내일} {아침} {아홉} {시}{에} {가요}. {전화} {주세요}.
 
 === phone museum
 name 청솔 박물관
@@ -265,7 +265,7 @@ sujin: {네}?
 * {탈}{이에요}? -> sawFake ? c1_sjq2b : c1_sjq2
 * {괜찮아요}? -> c1_sjq3
 * {경찰}...? -> c1_sjpolice
-* 준호{는|은/는} {누구}{예요|이에요}? -> c1_sjjunho if read_junho
+* 준호{는|은/는} {누구}{예요|이에요}? -> c1_sjjunho if vm_junho
 * {김밥} {두 개}... {누구}{예요|이에요}? -> c1_sjq4 if showed
 * [Show her something] -> c1_sjshow
 * [Leave her be] -> c1_sjbye
@@ -307,7 +307,23 @@ sujin: 준호요?
 (For the first time this morning, something like a smile.)
 sujin[happy]: {제} {아들}{이에요}.
 (She holds her hand up high above her own head. Taller than her, apparently.)
-sujin[worried]: {내일} {와요}.
+sujin[worried]: {내일} {와요}. {몇} {시}{에} {와요}?
+(She looks at the phone in your hand. She hasn't heard his message.)
+@number What time did 준호 say he's coming? | time
+answer: 9:00 -> c1_sjtimeok
+answer: 21:00 -> c1_sjtimeok
+miss -> c1_sjtimeno
+
+=== scene c1_sjtimeok
+sujin[happy]: {아홉} {시}... {네}. {고마워요}.
+(She nods, and for a second she looks a little less alone.)
+! set knowJunhoTime
+-> c1_sjhub.2
+
+=== scene c1_sjtimeno
+sujin[surprised]: {네}? {그} {시}{에}...?
+(She frowns. That doesn't sound like her son.)
+~ That's not what he said. Listen to his voicemail on the phone again.
 -> c1_sjhub.2
 
 === scene c1_sjq4
@@ -619,26 +635,34 @@ ajumma[surprised]: {네}?
 
 === scene c1_mhow
 ajumma: {천 원}{이에요}. {천 원}!
-(She holds up one finger, then taps the price card: 1,000.)
+(She taps the price card. It's so smeared with paint you can't read it.)
 <- c1_mbuy
 
 === scene c1_mprice
 ajumma[happy]: {네}! {천 원}{이에요}.
-(She holds up one finger.)
-* [Hand her a 10,000 won bill] -> c1_mbig
-* [Hand her a 1,000 won bill] -> c1_mpaid
-* [Hand her a 100 won coin] -> c1_msmall
+(She holds out her hand and waits.)
+@number How much did she say? Pay her. | won
+answer: 1000 -> c1_mpaid
+answer: 10000 -> c1_mbig
+answer: 100 -> c1_msmall
+miss -> c1_mwrongamt
+
+=== scene c1_mwrongamt
+ajumma[surprised]: {아니요}, {아니요}! {천 원}!
+(She shakes her head and pushes the money back.)
+~ That's not what she said. Listen to the price again.
+<- c1_mprice
 
 === scene c1_mbig
 ajumma[surprised]: 만 원? 아이고...
 (She digs through her cash box for change, sighing dramatically, then looks at the line of customers behind you.)
-~ She said 천 원. One finger, one thousand. Try the right bill.
+~ That's 만 원. She said 천 원.
 <- c1_mprice
 
 === scene c1_msmall
 ajumma[surprised]: 백 원? {아니요}, {아니요}! {천 원}!
 (She laughs and holds up one finger again.)
-~ That's a hundred. She asked for a thousand.
+~ That's 백 원. She said 천 원.
 <- c1_mprice
 
 === scene c1_mpaid

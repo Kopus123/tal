@@ -26,6 +26,9 @@ function fig(x,y,s,body,hair,o={}){
 }
 const arrowR=(x1,y,x2,w=4)=>P(`M${x1},${y} L${x2},${y} M${x2-8},${y-8} L${x2},${y} L${x2-8},${y+8}`,'none',w);
 
+// numbers: native Korean (하나, 둘... for hours and counting) = green circle; Sino-Korean (일, 이... for money, minutes, phones) = ochre square
+const NUM=(t,native)=>{const sz=t.length>3?13:t.length>2?17:t.length>1?21:26;
+  return native?Ci(32,32,25,'#dcefe8')+Tx(32,32+sz*.36,t,sz,IG):Re(7,7,50,50,7,'#f7e7c4')+Tx(32,32+sz*.36,t,sz,IW)};
 const ICON={
   grandma:()=>fig(32,34,1.25,'#8a6a9a','#d8d4ce',{bun:1}),
   woman:()=>fig(32,34,1.25,'#c26a86','#2a1d18',{long:1}),
@@ -129,6 +132,35 @@ const ICON={
   alone:()=>fig(32,36,1.1,IG,'#2a1d18')+`<g opacity=".35">`+P('M4,58 Q5,44 12,42 M60,58 Q59,44 52,42','none',2.5)+Ci(10,32,5,'none',2)+Ci(54,32,5,'none',2)+`</g>`+Tx(54,16,'1',16,IR),
   bring:()=>Re(6,22,24,20,2,IW)+P('M6,30 H30','none',2)+P('M36,32 H56 M48,24 L56,32 L48,40','none',4)+fig(56,48,.55,IG,'#2a1d18'),
   next:()=>Ci(10,32,5,IK)+Ci(24,32,5,IK)+arrowR(32,32,50,4)+Ci(56,32,6,IO),
+  nat1:()=>NUM('1',1),
+  nat2:()=>NUM('2',1),
+  nat3:()=>NUM('3',1),
+  nat4:()=>NUM('4',1),
+  nat5:()=>NUM('5',1),
+  nat6:()=>NUM('6',1),
+  nat7:()=>NUM('7',1),
+  nat8:()=>NUM('8',1),
+  nat9:()=>NUM('9',1),
+  nat10:()=>NUM('10',1),
+  nat11:()=>NUM('11',1),
+  nat12:()=>NUM('12',1),
+  sino0:()=>NUM('0',0),
+  sino1:()=>NUM('1',0),
+  sino2:()=>NUM('2',0),
+  sino3:()=>NUM('3',0),
+  sino4:()=>NUM('4',0),
+  sino5:()=>NUM('5',0),
+  sino6:()=>NUM('6',0),
+  sino7:()=>NUM('7',0),
+  sino8:()=>NUM('8',0),
+  sino9:()=>NUM('9',0),
+  sino10:()=>NUM('10',0),
+  sino100:()=>NUM('100',0),
+  sino1000:()=>NUM('1,000',0),
+  sino10000:()=>NUM('10,000',0),
+  howmany:()=>Ci(32,32,25,'#dcefe8')+Tx(32,41,'?',26,IG),
+  half:()=>Ci(32,32,24,IP)+P('M32,8 A24,24 0 0 1 32,56Z','#d9a43d',0)+Ci(32,32,24,'none'),
+  minute:()=>Ci(32,32,24,IP)+P('M32,32 V12','none',2.5)+P('M32,32 L46,40','none',4)+[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>{const a=i*Math.PI/6;return `<line x1="${32+20*Math.sin(a)}" y1="${32-20*Math.cos(a)}" x2="${32+23*Math.sin(a)}" y2="${32-23*Math.cos(a)}" stroke="${IK}" stroke-width="2"/>`}).join(''),
   man:()=>fig(32,34,1.25,'#3b4048','#1f1a18'),
   home:()=>P('M6,30 Q20,26 32,12 Q44,26 58,30 L52,30 L52,56 L12,56 L12,30Z','#3b4048')+Re(16,32,32,24,1,'#f2c27a')+Re(27,40,10,16,1,'#8a5a34',2),
   good:()=>P('M18,56 V30 L28,10 Q32,8 34,12 L32,26 H48 Q54,26 52,32 L48,52 Q46,56 40,56Z',IS,2.5)+Re(8,30,10,26,2,IG,2.5),

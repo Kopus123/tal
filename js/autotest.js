@@ -10,6 +10,7 @@
      type 한국어            type an answer and press Say it
      build a | b | c       press these sentence tiles in order, then Say it
      present ID            show this piece of evidence
+     number 9:00           press these digits on the number pad, then Say it
      contradict A + B      pick these two statements/evidence as the contradiction
      camera                aim the camera at the target and take the photo
      phone THREAD          open the phone and read this thread
@@ -59,10 +60,13 @@ const STEPS={
   async contradict(a){const [x,y]=a.split('+').map(v=>v.trim());await until(()=>document.querySelector('#bClash'),'a contradiction');
     for(const k of[x,y]){const b=document.querySelector(`#sb [data-cx="${k}"]`);if(!b)fail(`"${k}" isn't on the list to pick`);await clickEl(b)}
     await clickEl(document.querySelector('#bClash'))},
+  async number(v){await until(()=>document.querySelector('#sb .numpad'),'a number pad');
+    for(const k of v.replace(/\D/g,'')){const b=document.querySelector(`#sb [data-nk="${k}"]`);await clickEl(b)}
+    await clickEl(document.querySelector('#sb [data-nk="✓"]'))},
   async camera(){const sh=await until(()=>document.querySelector('#bShut'),'the camera');const nd=ST.nodes[S.node];
     cam={x:Math.max(0,nd.tx-22),y:Math.max(0,nd.ty-26)};await clickEl(sh);await tick(600);await settle()},
   async phone(id){openPhone();await settle();const b=document.querySelector(`[data-th="${id}"]`);if(!b)fail(`no phone thread "${id}"`);
-    b.click();await settle();closeTop();await settle()},
+    b.click();await settle();document.querySelectorAll('[data-vm]').forEach(v=>v.click());await settle();closeTop();await settle()},
   async map(p){await idle();openMap();await settle();const b=document.querySelector(`[data-pin="${p}"]`);
     if(!b){closeTop();fail(`"${p}" isn't on the map yet`)}b.click();await settle();
     if(S.loc!==p){closeTop();fail(`map didn't go to ${p}`)}},

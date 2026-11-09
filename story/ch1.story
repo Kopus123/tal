@@ -223,7 +223,8 @@ them 07:30 {할머니}?? {어디}{예요|이에요}?
 sys 📞 ✖ 07:31
 them@threatSent 09:40 {할머니}... {괜찮아요}?
 them@marketDone 13:05 {할머니}!! {전화} {주세요}!!
-them@marketDone 13:06 {내일} {가요}!
+sys@marketDone 📞 ✖ 13:06
+voice@marketDone 13:07 junho {할머니}, 준호{예요|이에요}. {내일} {아침}{에} {가요}. {전화} {주세요}.
 
 === phone museum
 name 청솔 박물관
@@ -670,7 +671,22 @@ ajumma[worried]: {이상해요}... {할머니}{는|은/는} {축제}{에} {안} 
 * {할아버지}{는|은/는} {어디}{예요|이에요}? -> c1_m3
 
 === scene c1_m3
-ajumma: {할아버지}? {강}! {매일} {강}{에} {있어요}.
+~ Behind you, a delivery truck starts reversing into the alley, beeping. She has to shout over it.
+ajumma[audio]: {할아버지}? {강}! {매일} {강}{에} {있어요}.
+(She waves past you, already turning to the next customer.)
+~ Where did she say he is?
+* {강}{에} {있어요}? -> c1_m3ok
+* {산}{에} {있어요}? -> c1_m3wrong
+* {시장}{에} {있어요}? -> c1_m3wrong
+
+=== scene c1_m3wrong
+ajumma[surprised]: {아니요}, {아니요}!
+(She shakes her head and cups a hand to her mouth to try again.)
+~ Not that. Listen again.
+<- c1_m3.2
+
+=== scene c1_m3ok
+ajumma[happy]: {네}! {강}!
 (She mimes casting a fishing line. Every single day. Yesterday was the first time in years he came to the market instead.)
 ajumma: {강}{은|은/는} {버스 정류장} {뒤에} {있어요}.
 (She draws in the air: the bus stop, and a little path going down behind it.)
@@ -961,9 +977,9 @@ halmeoni[worried]: {아니요}...
 halmeoni[worried]: {숨어요}! {빨리}!
 (She pulls you behind the temple, into the pines.)
 ~ The light reaches the top of the path. It sweeps across the empty step, the dark doorway, the pines. It stops right next to your hiding place.
-stranger: ...{할머니}?
-(A man's voice. Calm. Too calm.)
-stranger: {진짜} {탈}... {주세요}.
+stranger[audio]: ...{할머니}?
+(A man's voice in the dark. Calm. Too calm.)
+stranger[audio]: {진짜} {탈}... {주세요}.
 ~ It isn't nine o'clock, and this isn't the bridge. He never meant to wait there. He followed you.
 ~ 할머니's hand finds yours in the dark and squeezes. Neither of you breathes.
 ! set hidden; toast One question left on your case board.

@@ -60,6 +60,8 @@ function parseStory(src,st){
         else if(m=line.match(/^day(?:@(\S+))?\s+(.+)/))cur.m.push({d:m[2],c:m[1]});
         else if(m=line.match(/^(them|me)(?:@(\S+))?\s+(\S+)\s+(.+)/))cur.m.push({me:m[1]==='me',c:m[2],t:m[3],ko:m[4]});
         else if(m=line.match(/^sys(?:@(\S+))?\s+(.+)/))cur.m.push({sys:1,c:m[1],ko:m[2]});
+        // "voice@FLAG 13:20 who 한국어" = a voicemail: sound only
+        else if(m=line.match(/^voice(?:@(\S+))?\s+(\S+)\s+([a-z_]+)\s+(.+)/))cur.m.push({vm:1,c:m[1],t:m[2],who:m[3],ko:m[4]});
         else if(m=line.match(/^note(?:@(\S+))?\s+(.+)/)){cur.note=m[2];cur.noteC=m[1]}
         break}
       case 'scene':{
@@ -86,7 +88,9 @@ function parseStory(src,st){
         else if(m=line.match(/^@contradict\s+(.+)$/))node({type:'contradict',en:m[1],pairs:[]});
         else if(m=line.match(/^pair:\s*(\S+)\s*\+\s*(\S+)\s+->\s+(.+)$/))last.pairs.push([[m[1],m[2]],m[3].trim()]);
         else if(m=line.match(/^@card\s+(.+?)(?:\s*\|\s*(.+))?$/))node({type:'card',title:m[1],sub:m[2]||''});
-        else if(m=line.match(/^([a-z_]+)(?:\[(\w+)\])?(?:@([a-z]{2}))?:\s*(.+)$/))node({who:m[1],ex:m[2]||'neutral',ko:nl(m[4]),lang:m[3]||st.meta.lang||'ko'});
+        // "who[audio]: ..." = you only hear it: no text until you've acted on it ("who[sad audio]" works too)
+        else if(m=line.match(/^([a-z_]+)(?:\[([\w ]+)\])?(?:@([a-z]{2}))?:\s*(.+)$/)){const tags=(m[2]||'').split(/\s+/).filter(Boolean);
+          node({who:m[1],ex:tags.find(t=>t!=='audio')||'neutral',audio:tags.includes('audio'),ko:nl(m[4]),lang:m[3]||st.meta.lang||'ko'})}
         else console.warn('story line not understood',ln+1,line);
         break}
     }
@@ -235,6 +239,8 @@ function runFx(list,replay){(list||[]).forEach(e=>{if(e.c&&!cond(e.c))return;con
   else if(e.k==='give')a.split(',').forEach(x=>{x=x.trim();if(!S.F['ev_'+x]){S.F['ev_'+x]=1;const ev=ST.evidence[x];if(ev&&!replay)toast(`${iconSVG(ev.icon)} Evidence: <b>${ko(ev.label,false,false)}</b>`,3500)}});
 })}
 function logLine(e){S.log.push(e);if(S.log.length>80)S.log.shift()}
+// lines you only heard get written down once you've acted on them (any decision or move)
+function revealHeard(){S.log.forEach(e=>{if(e.heard){e.heard=0;if(e.ko)ko(e.ko)}})}
 function enter(place){
   S.loc=place;const l=ST.places[place];S.node=null;BACK=[];
   if(l.always){go(l.always);return}
@@ -247,10 +253,11 @@ function go(id){
   const replay=SEEN.has(id);SEEN.add(id);
   S.node=id;bseq=[];TFB=null;tHint=0;CSEL=[];runFx(nd.fx,replay);checkPattern();
   if(nd.ko&&!replay)noteSeen(nd.ko);
+  if(nd.audio)HEARD[id]=(HEARD[id]||0)+1;
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
-  if(nd.ko||(nd.who==='narr'&&nd.en))logLine({who:nd.who,ex:nd.ex,ko:nd.ko,en:nd.en});
+  if(nd.ko||(nd.who==='narr'&&nd.en))logLine({who:nd.who,ex:nd.ex,ko:nd.ko,en:nd.en,heard:nd.audio?1:0});
   save();render();
-  if(S.set.auto&&nd.ko&&!quiet)speak(nd.ko,nd.who);
+  if((S.set.auto||nd.audio)&&nd.ko&&!quiet)speak(nd.ko,nd.who);
 }
 function next(){
   sfx('page');const nd=ST.nodes[S.node];
@@ -261,7 +268,7 @@ function next(){
 function goBack(){
   if(busy||!BACK.length)return;const p=BACK.pop();stopAudio();sfx('page');
   S.node=p.id;S.loc=p.loc;bseq=[];revealFor=p.id;glowFor=p.id;save();render();
-  const nd=ST.nodes[p.id];if(S.set.auto&&nd&&nd.ko)speak(nd.ko,nd.who);
+  const nd=ST.nodes[p.id];if((S.set.auto||nd&&nd.audio)&&nd&&nd.ko)speak(nd.ko,nd.who);
 }
 // wrong turns: play the rewind effect, then put you back at the decision
 function rewindTo(t){
@@ -273,12 +280,12 @@ function rewindTo(t){
 }
 function setBusy(b){busy=b;const f=$('#sf');if(f)f.style.opacity=b?.55:''}
 async function choose(c){
-  if(busy)return;sfx('tap');setBusy(true);runFx(c.fx);
+  if(busy)return;sfx('tap');setBusy(true);revealHeard();runFx(c.fx);
   if(c.ko){ko(c.ko);noteUsed(c.ko,!leadsToRewind(c.go));logLine({who:'you',ko:c.ko});await speak(c.ko,'you');await new Promise(r=>setTimeout(r,250))}
   setBusy(false);go(c.go);
 }
 async function say(nd){
-  if(busy)return;sfx('tap');setBusy(true);
+  if(busy)return;sfx('tap');setBusy(true);revealHeard();
   const words=bseq.map(i=>nd.tiles[i]);const line=words.join(' ');ko(line);logLine({who:'you',ko:line});
   const hit=nd.ans.find(a=>a[0].length===words.length&&a[0].every((w,i)=>w===words[i]));
   noteUsed(line,!!hit&&!leadsToRewind(hit[1]));
@@ -302,7 +309,7 @@ function diffHTML(user,correct){
   return `<div class="tfb"><div class="label">Close enough! Watch the highlighted parts.</div><div class="tfrow"><span>You wrote</span><b>${yours}</b></div><div class="tfrow"><span>Correct</span><b>${fixed}</b></div></div>`;
 }
 async function sayTyped(nd,val){
-  if(busy)return;const v=typedNorm(val);if(!v){toast('Type something first.');return}
+  if(busy)return;const v=typedNorm(val);if(!v){toast('Type something first.');return}revealHeard();
   sfx('tap');
   const scored=nd.ans.map(a=>({a,d:jamoDist(v,typedNorm(a[0])),n:jamo(typedNorm(a[0])).length})).sort((x,y)=>x.d-y.d);
   const best=scored[0],lim=best?Math.max(1,Math.floor(best.n*.15)):0;
@@ -311,7 +318,7 @@ async function sayTyped(nd,val){
   if(best&&best.d<=lim){ko(best.a[0]);logLine({who:'you',ko:best.a[0]});TFB={html:diffHTML(val,plain(best.a[0])),target:best.a[1]};render();speak(best.a[0],'you');return}
   logLine({who:'you',ko:val});go(nd.miss);
 }
-function spot(i){const x=ST.places[S.loc].spots[i];if(!x)return;sfx('tap');
+function spot(i){const x=ST.places[S.loc].spots[i];if(!x)return;sfx('tap');revealHeard();
   if(x.kind==='->')go(x.t);else if(x.t==='phone')openPhone();else{const m=x.t.match(/^place\s+(\S+)/);if(m)enter(m[1])}}
 // playtest: jump ahead to the next decision without the voices
 function skipAhead(){
@@ -352,7 +359,7 @@ function render(){
   if(nd&&nd.type==='camera')h+=`<div class="vf" id="vf" style="left:${cam.x}%;top:${cam.y}%"><span>Drag me</span></div>`;
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
   if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
-  if(nd&&nd.ko&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
+  if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
   if(S.loc!==lastLoc&&!(nd&&nd.type==='card'))h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
   lastLoc=S.loc;
   h+=`<div class="flash" id="flash"></div>`;
@@ -405,7 +412,7 @@ function render(){
       const face=c.look?portrait(c.look,nd.ex):speakerGlyph();
       const anim=revealFor!==S.node?nd.ex:'';
       body=`<div class="line"><div class="spk"><div class="pt ${anim}" style="--cbg:${c.c||'#888'}">${face}</div><div class="seal">${esc(c.n||'')}</div></div>
-        <div class="talk"><div class="koline ${nd.who==='bus'?'led':''}">${ko(nd.ko)}</div><button class="say" data-say aria-label="Hear it again">▶ Again</button></div></div>
+        <div class="talk">${nd.audio?heardHTML(nd):`<div class="koline ${nd.who==='bus'?'led':''}">${ko(nd.ko)}</div><button class="say" data-say aria-label="Hear it again">▶ Again</button>`}</div></div>
         ${nd.en?`<div class="en">${esc(nd.en)}</div>`:''}`;
     }
     if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>!cond(x.c)?'':`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span><span>${ko(x.ko,false,false)}<span class="qm">”</span></span>`:esc(x.en)}</button>`).join('')}</div>${backBtn?`<div class="controw">${backBtn}</div>`:''}`;
@@ -435,6 +442,11 @@ function render(){
   if($('#bShut'))$('#bShut').onclick=()=>shoot(nd);
   dots();save();
 }
+// a line you only hear: a listen button, and pictures for the words you've already looked up (no text)
+const HEARD={}; // how many times each sound-only line has played this session
+function heardHTML(nd){
+  const pics=(HEARD[nd.id]||0)<2?'':idsIn(nd.ko).filter((id,i,a)=>a.indexOf(id)===i&&W[id]&&!W[id].g&&S.nb[id]).map(id=>iconSVG(W[id].p,'hicon')).join('');
+  return `<div class="heardbox"><button class="listen" data-say aria-label="Listen again">🔊 Listen again</button>${pics?`<div class="heardpics">${pics}</div>`:''}<div class="heardnote">${pics?'Pictures for the words you know.':'You only heard this. It gets written down once you act on it.'}</div></div>`}
 function reveal(el){
   if(!el)return 0;let i=0;const step=55;
   [...el.childNodes].forEach(n=>{
@@ -564,6 +576,7 @@ function showLog(){
   const rows=S.log.map((e,i)=>{
     if(e.who==='narr')return`<div class="hl narr-row">${esc(e.en)}</div>`;
     const c=ST.cast[e.who]||{};const you=e.who==='you';
+    if(e.heard)return`<div class="hl"><div style="min-width:0;flex:1"><div class="hn">${esc(c.n||'')}</div><div class="hk heardrow">🔊 Heard, not written down yet</div></div><button class="say" data-hi="${i}" aria-label="Hear it">▶</button></div>`;
     const face=you?'':c.look?portrait(c.look,e.ex):e.who==='sign'?'':speakerGlyph();
     return`<div class="hl ${you?'you':''}">${face?`<div class="pt sm" style="--cbg:${c.c||'#888'}">${face}</div>`:''}<div style="min-width:0;flex:1">
       <div class="hn">${esc(you?'You':e.who==='sign'?'Written':c.n||'')}</div><div class="hk">${ko(e.ko,true,false)}</div>${e.en?`<div class="en">${esc(e.en)}</div>`:''}</div>
@@ -587,7 +600,7 @@ function stCard(x,attrs){const nd=ST.nodes[x.node],c=ST.cast[nd.who]||{};
 let CSEL=[];
 // a contradiction beat: the two things you picked either clash (one of the pairs) or they don't
 async function clash(nd){
-  if(busy||CSEL.length!==2)return;sfx('tap');
+  if(busy||CSEL.length!==2)return;sfx('tap');revealHeard();
   const hit=nd.pairs.find(p=>p[0].every(k=>CSEL.includes(k)));
   const name=k=>ST.statements[k]?plain(ST.nodes[ST.statements[k].node].ko):plain((ST.evidence[k]||{}).label||k);
   logLine({who:'narr',en:`You point out: ${name(CSEL[0])} / ${name(CSEL[1])}.`});
@@ -682,7 +695,7 @@ function evidenceSheet(id){
 }
 // a "present evidence" beat: pick something you've found to show them
 async function present(nd,id){
-  if(busy)return;sfx('tap');const hit=nd.shows.find(s=>s[0]===id);
+  if(busy)return;sfx('tap');revealHeard();const hit=nd.shows.find(s=>s[0]===id);
   const e=ST.evidence[id];logLine({who:'narr',en:'You show them: '+plain(e.label)+'.'});
   go(hit?hit[1]:nd.miss);
 }
@@ -694,16 +707,18 @@ function openPhone(){
   const o=overlay(`<div class="phone" role="dialog" aria-label="Phone"><div class="ph-status"><span>08:47</span><span>▂▄▆ 42%</span></div><div id="phv" style="flex:1;display:flex;flex-direction:column;min-height:0"></div></div>`,'center');
   const list=()=>{
     stopAudio();
-    o.querySelector('#phv').innerHTML=`<div class="ph-top"><b>메시지</b><button id="pc">Close</button></div><div class="ph-list">${ST.phones.map(t=>`<button class="thr" data-th="${t.id}"><span class="av" style="background:${t.c}">${esc(t.av)}</span><span style="min-width:0;flex:1"><div class="nm">${esc(t.name)}</div><div class="pv">${esc(plain((msgsOf(t).filter(m=>m.ko).pop()||{}).ko||''))}</div></span>${unread(t)?'<span class="new"></span>':''}</button>`).join('')}</div>`;
+    o.querySelector('#phv').innerHTML=`<div class="ph-top"><b>메시지</b><button id="pc">Close</button></div><div class="ph-list">${ST.phones.map(t=>`<button class="thr" data-th="${t.id}"><span class="av" style="background:${t.c}">${esc(t.av)}</span><span style="min-width:0;flex:1"><div class="nm">${esc(t.name)}</div><div class="pv">${(()=>{const m=msgsOf(t).filter(m=>m.ko).pop()||{};return m.vm?'🔊 음성 메시지':esc(plain(m.ko||''))})()}</div></span>${unread(t)?'<span class="new"></span>':''}</button>`).join('')}</div>`;
     o.querySelector('#pc').onclick=()=>close(o);
     o.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{sfx('tap');thread(ST.phones.find(t=>t.id===b.dataset.th))});
   };
   const thread=t=>{
     const before=S.F['readn_'+t.id]||0;msgsOf(t).filter(m=>!m.d).slice(before).forEach(m=>noteSeen(m.ko));
     runFx(t.fx);S.F['read_'+t.id]=1;S.F['readn_'+t.id]=msgCount(t);const ms=msgsOf(t);
-    o.querySelector('#phv').innerHTML=`<div class="ph-top"><button id="pb">‹ Back</button><b>${esc(t.name)}</b></div><div class="msgs">${ms.map((m,i)=>m.d?`<div class="day">${ko(m.d)}</div>`:m.sys?`<div class="bub sys">${esc(m.ko)}</div>`:`<div class="bub ${m.me?'me':''}" data-bi="${i}">${ko(m.ko)}<small>${m.t} · tap to hear</small></div>`).join('')}${t.note&&cond(t.noteC)?`<div class="ph-note">${esc(t.note)}</div>`:''}</div>`;
+    o.querySelector('#phv').innerHTML=`<div class="ph-top"><button id="pb">‹ Back</button><b>${esc(t.name)}</b></div><div class="msgs">${ms.map((m,i)=>m.d?`<div class="day">${ko(m.d)}</div>`:m.sys?`<div class="bub sys">${esc(m.ko)}</div>`:m.vm?`<button class="bub vm" data-vm="${i}"><span class="vmplay">▶</span> 음성 메시지<small>${m.t} · tap to listen</small></button>`:`<div class="bub ${m.me?'me':''}" data-bi="${i}">${ko(m.ko)}<small>${m.t} · tap to hear</small></div>`).join('')}${t.note&&cond(t.noteC)?`<div class="ph-note">${esc(t.note)}</div>`:''}</div>`;
     o.querySelectorAll('[data-bi]').forEach(b=>b.onclick=()=>speak(ms[+b.dataset.bi].ko,'sign'));
+    o.querySelectorAll('[data-vm]').forEach(b=>b.onclick=()=>{const m=ms[+b.dataset.vm];S.F['vm_'+t.id]=1;speak(m.ko,m.who)});
     o.querySelector('#pb').onclick=list;save();dots();
+    const mm=o.querySelector('.msgs');if(mm)mm.scrollTop=mm.scrollHeight;
   };
   list();
 }

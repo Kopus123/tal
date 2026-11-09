@@ -66,6 +66,7 @@ ajeossi    | 식당 아저씨   | #8a5a34  | InJoon -6%   -18Hz | hair=short hc=
 staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz | hair=long hc=#1f1a18 top=#2d3f66 wear=blazer extra=glasses
 ajumma     | 시장 아주머니 | #b5653d  | SunHi  +4%   -6Hz  | hair=bun hc=#3a2a20 top=#d9822b wear=apron extra=wrinkles skin=#e0b98f
 stranger   | ???           | #2a2a2a  | InJoon -10%  -14Hz
+junho      | 준호          | #4f6ea8  | InJoon +6%   +12Hz
 haraboji   | 할아버지      | #6b7a5a  | InJoon -12%  -26Hz | hair=short hc=#e4e0da top=#6b7a5a wear=plain extra=wrinkles,stubble skin=#d9b38e
 bus        | 안내 방송     | #2a2a2a  | Hyunsu -5%   +0Hz
 you        |               |          | Hyunsu -8%   +0Hz

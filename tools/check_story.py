@@ -116,6 +116,8 @@ def parse(path):
             else: err(path.name, ln, "place line not understood")
         elif sec == "phone":
             if m := re.match(r"^on-open\s+(.+)", line): effects(m.group(1), ln)
+            elif m := re.match(r"^voice(?:@(\S+))?\s+\S+\s+([a-z_]+)\s+(.+)", line):
+                cond_flags(m.group(1), ln); d["speakers"].append((m.group(2), ln)); tokens(m.group(3), ln)
             elif m := re.match(r"^(?:day|them|me|sys|note)(?:@(\S+))?\s+(.+)", line):
                 cond_flags(m.group(1), ln); tokens(m.group(2), ln)
             elif not re.match(r"^(name|avatar)\s", line): err(path.name, ln, "phone line not understood")
@@ -138,10 +140,11 @@ def parse(path):
             elif m := re.match(r"^answer:\s*(.+?)\s+->\s+(.+)$", line): tokens(m.group(1), ln); target(m.group(2), ln)
             elif m := re.match(r"^miss\s+->\s+(.+)$", line): target(m.group(1), ln)
             elif m := re.match(r"^show:\s*(\S+)\s+->\s+(.+)$", line): d["shows"].append((m.group(1), ln)); target(m.group(2), ln)
-            elif m := re.match(r"^([a-z_]+)(?:\[(\w+)\])?(?:@([a-z]{2}))?:\s*(.+)$", line):
+            elif m := re.match(r"^([a-z_]+)(?:\[([\w ]+)\])?(?:@([a-z]{2}))?:\s*(.+)$", line):
                 beat(ln); d["speakers"].append((m.group(1), ln)); tokens(m.group(4), ln)
-                if m.group(2) and m.group(2) not in ("neutral", "happy", "worried", "surprised", "sad"):
-                    err(path.name, ln, f"unknown expression '{m.group(2)}'")
+                for tag in (m.group(2) or "").split():
+                    if tag not in ("neutral", "happy", "worried", "surprised", "sad", "audio"):
+                        err(path.name, ln, f"unknown expression '{tag}'")
             else: err(path.name, ln, "scene line not understood")
     return d
 

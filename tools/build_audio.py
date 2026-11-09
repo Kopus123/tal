@@ -48,6 +48,8 @@ def collect():
             elif sec == "phone":
                 m = re.match(r"^(them|me)(?:@\S+)?\s+\S+\s+(.+)", line)
                 if m: add("sign", m.group(2))
+                if m := re.match(r"^voice(?:@\S+)?\s+\S+\s+([a-z_]+)\s+(.+)", line):
+                    add(m.group(1) if m.group(1) in cast else "sign", m.group(2))
             elif sec == "scene":
                 if line.startswith("show:"):
                     continue
@@ -57,7 +59,7 @@ def collect():
                     for t in m.group(1).split("|"): add("you", t)
                 elif m := re.match(r"^answer:\s*(.+?)\s+->", line):
                     add("you", " ".join(t.strip() for t in m.group(1).split("|")))
-                elif m := re.match(r"^([a-z_]+)(?:\[\w+\])?(?:@[a-z]{2})?:\s*(.+)", line):
+                elif m := re.match(r"^([a-z_]+)(?:\[[\w ]+\])?(?:@[a-z]{2})?:\s*(.+)", line):
                     who = m.group(1)
                     add(who if who in cast else "sign", m.group(2))
     add("sujin", "{안녕하세요}!")  # settings voice test

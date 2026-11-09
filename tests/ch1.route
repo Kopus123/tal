@@ -84,8 +84,11 @@ build 빨간 | 물감 | 주세요
 choose 1,000 won
 choose 할머니 봤어요
 choose 할아버지
+choose 산에
+choose 강에
 idle
 expect marketDone&knowRiver
+phone junho
 spot Take the bus back
 spot Wait for the bus
 choose Stay on

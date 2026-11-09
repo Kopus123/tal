@@ -168,6 +168,8 @@ textarea{width:100%;box-sizing:border-box;min-height:64px;border-radius:10px;bor
 .day{align-self:center;font-size:.8rem;color:#8b93a3;font-family:var(--f-ko);padding:6px 0}
 .day .w{border-bottom-color:#6e5a32}
 .bub{max-width:82%;padding:9px 12px;border-radius:16px;font-family:var(--f-ko);font-size:1.12rem;line-height:1.5;color:#e9edf3;background:#252c39;align-self:flex-start;border-bottom-left-radius:4px}
+.bub.vm{border:0;text-align:left;font-size:1rem;cursor:pointer}
+.bub.vm .vmplay{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#3f8b77;color:#fff;font-size:.8rem;margin-right:6px}
 .bub.me{align-self:flex-end;background:#2f6f61;border-radius:16px;border-bottom-right-radius:4px}
 .bub small{display:block;font-family:var(--f-ui);font-size:.68rem;color:#9aa3b3;margin-top:2px}
 .bub .w{border-bottom-color:#b88a3a}
@@ -366,6 +368,12 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 .evcard small{display:block;color:var(--mist);font-size:.82rem;line-height:1.35;margin-top:2px}
 #sb .evcard{background:#f6f0e0;border-color:#cbbf9f;color:var(--paper-ink)}
 #sb .evcard small{color:var(--paper-mute)}
+.heardbox{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.listen{font-family:var(--f-ui);font-size:1.05rem;padding:10px 16px;border-radius:99px;border:1.5px solid var(--paper-ink);background:#f6f0e0;color:var(--paper-ink)}
+.heardpics{display:flex;gap:6px;flex-wrap:wrap}
+.heardpics svg{width:40px;height:40px;background:#f6f0e0;border-radius:8px;border:1px solid #cbbf9f}
+.heardnote{font-size:.8rem;color:var(--paper-mute)}
+.heardrow{color:var(--mist);font-family:var(--f-ui);font-size:.95rem}
 .evcard.sel{outline:3px solid var(--cinnabar);outline-offset:-1px}
 .stcard .pt.sm{width:46px;height:46px;flex:0 0 auto}
 .stcard b{font-size:1rem!important;line-height:1.4}

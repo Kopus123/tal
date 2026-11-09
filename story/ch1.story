@@ -80,7 +80,7 @@ spot "Workshop" 82 46 => place gongbang
 spot "Front gate" 10 84 => place golmok
 glow 탈 58 70 7
 glow 손 30 64 8
-glow 집 50 45 20
+glow 집 50 44 40 22
 
 === place gongbang
 name 공방

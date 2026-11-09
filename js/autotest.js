@@ -51,14 +51,14 @@ async function solveIt(a,expectFail){
   const [wpart,ppart]=a.split(';');const [id,...rest]=wpart.trim().split(/\s+/);const words=rest.join(' ').split('|').map(x=>x.trim()).filter(Boolean);
   const proofs=ppart?ppart.split('+').map(x=>x.trim()):[];
   const q=ST.cases.find(x=>x.id===id);if(!q)fail(`no deduction ${id}`);if(!cond(q.c))fail(`deduction ${id} isn't on the board yet`);
-  const wasFinal=q.final;document.querySelector('#bCase').click();await settle();   // the real top-bar button
+  const wasFinal=q.final,chBefore=S.ch;document.querySelector('#bCase').click();await settle();   // the real top-bar button
   const open=document.querySelector(`[data-open="${id}"]`);if(open){open.click();await settle()}else if(pickQ!==id)fail(`deduction ${id} can't be opened`);
   for(const w of words){const ti=document.querySelector('#ti');ti.value=w;ti.dispatchEvent(new Event('input'));
     document.querySelector('#ta').dispatchEvent(new Event('submit',{cancelable:true}));await settle()}
   for(let i=0;i<proofs.length;i++){const s=document.querySelector(`[data-ps="${i}"]`);if(!s)fail(`deduction ${id} has no proof slot ${i+1}`);if(!s.classList.contains('active')){s.click();await settle()}
     const b=document.querySelector(`[data-pp="${proofs[i]}"]`);if(!b)fail(`"${proofs[i]}" isn't available as proof`);b.click();await settle()}
   document.querySelector(`[data-check="${id}"]`).click();await settle();
-  const ok=S.cs[id]||(wasFinal&&S.done[S.ch]);
+  const ok=S.cs[id]||(wasFinal&&S.done[chBefore]);
   if(expectFail){if(ok)fail(`deduction ${id} was accepted but shouldn't be`);document.querySelector(`[data-clear="${id}"]`).click();await settle()}
   else if(!ok){const m=document.querySelector('#cbb .miss');closeTop();fail(`deduction ${id} not accepted${m?' (Something doesn\'t follow)':''}`)}
   if(wasFinal&&!expectFail){await tick(1200);await settle()}
@@ -103,10 +103,13 @@ const STEPS={
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},
 };
 
-async function run(name){
+let JUMPING=false;
+async function run(name,stopAt){
   const r=await fetch(`tests/${name}.route`,{cache:'no-cache'});if(!r.ok){log(`FAIL ${name}: no route file`);failed=true;return}
   const lines=(await r.text()).split(/\r?\n/);let n=0;const t0=Date.now();
-  for(let i=0;i<lines.length;i++){const line=lines[i].trim();if(!line||line.startsWith('#'))continue;
+  for(let i=0;i<lines.length;i++){const line=lines[i].trim();
+    if(stopAt&&line.startsWith('#@')&&line.slice(2).trim()===stopAt)return 'stopped';
+    if(!line||line.startsWith('#'))continue;
     const [cmd,...rest]=line.split(/\s+/);const arg=rest.join(' ');
     if(!STEPS[cmd]){log(`FAIL ${name}.route:${i+1}: unknown step "${cmd}"`);failed=true;return}
     try{await STEPS[cmd](arg);n++}
@@ -114,8 +117,25 @@ async function run(name){
   }
   log(`ok   ${name}: ${n} steps`);
 }
+const REAL={};
+function silence(){['speak','speakBuilt','sfx','buzz','toast'].forEach(k=>REAL[k]=window[k]);
+  window.speak=async()=>{};window.speakBuilt=async()=>{};window.sfx=()=>{};window.buzz=()=>{}}
+function unsilence(){Object.assign(window,REAL)}
+// playtest: play the route up to a '#@ label' checkpoint, then hand the game back (notebook as it was)
+async function jump(route,label){
+  const keep=JSON.parse(JSON.stringify({set:S.set,w:S.w,nb:S.nb,m:S.m,tl:S.tl,mx:S.mx}));
+  silence();window.toast=()=>{};JUMPING=true;out.length=0;failed=false;
+  const realST=window.setTimeout;window.setTimeout=(f,ms,...x)=>realST(f,Math.min(ms||0,4),...x); // pauses become instant while jumping
+  const veil=document.createElement('div');veil.className='ov center';veil.innerHTML='<div class="panel paper" style="padding:20px;text-align:center">Jumping ahead…</div>';document.body.appendChild(veil);
+  let r;try{r=await run(route,label)}catch(e){out.push(String(e))}
+  window.setTimeout=realST;veil.remove();unsilence();JUMPING=false;
+  while(document.querySelector('#ovs .ov'))closeTop();
+  Object.assign(S,keep);save();lastLoc=null;render();
+  if(r==='stopped')toast('Jumped to: '+esc(label),3500);else toast('Jump failed: '+esc(out.join(' ')).slice(0,300),9000);
+}
+window.TAL_TEST={jump};
 async function main(){
-  window.speak=async()=>{};window.speakBuilt=async()=>{};window.sfx=()=>{};window.buzz=()=>{}; // silent and instant
+  silence(); // silent and instant
   const errs=[];window.addEventListener('error',e=>errs.push(e.message));
   for(let i=0;i<400&&document.querySelector('#boot');i++)await tick(25);
   if(document.querySelector('#boot')){log('FAIL: the game never finished loading');failed=true}
@@ -125,5 +145,5 @@ async function main(){
   pre.style.cssText='position:fixed;inset:auto 0 0 0;z-index:9999;background:#000c;color:#fff;font:12px monospace;padding:8px;margin:0;white-space:pre-wrap';
   document.body.appendChild(pre);document.title=failed?'FAIL':'PASS';
 }
-main();
+if(/[?&]autotest=/.test(location.search))main();
 })();

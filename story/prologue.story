@@ -46,7 +46,7 @@ name 마당
 sub The courtyard, last night
 art madang_eve
 ambient motes
-glow 마당 50 86 20
+glow 마당 50 88 46 10
 glow 방 45 52 12
 glow 할머니 75 70 9
 glow 탈 75 62 7
@@ -63,7 +63,7 @@ spot "Clay jars" 89 83 -> jars
 spot "Front gate" 10 84 => place golmok
 glow 핸드폰 52 71 6
 glow 방 45 52 12
-glow 마당 50 88 20
+glow 마당 50 88 46 10
 
 === place gongbang
 name 공방

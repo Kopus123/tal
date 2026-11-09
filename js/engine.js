@@ -61,7 +61,8 @@ function parseStory(src,st){
         else if(m=line.match(/^desc\s+(?:if\s+(\S+):\s*)?(.+)$/))cur.desc.push({c:m[1],t:m[2]});
         else if(m=line.match(/^spot\s+"([^"]+)"\s+([\d.]+)\s+([\d.]+)\s+(->|=>)\s+(.+?)(?:\s+if\s+(\S+))?$/))
           cur.spots.push({l:m[1],x:+m[2],y:+m[3],kind:m[4],t:m[5],c:m[6]});
-        else if(m=line.match(/^glow\s+(.+?)\s+([\d.]+)\s+([\d.]+)(?:\s+([\d.]+))?$/))cur.glow.push({w:m[1],x:+m[2],y:+m[3],r:+(m[4]||8)});
+        // glow WORD X Y [R] [H]: a circle of radius R% of the width, or an ellipse R wide and H tall (% of the height)
+        else if(m=line.match(/^glow\s+(.+?)\s+([\d.]+)\s+([\d.]+)(?:\s+([\d.]+))?(?:\s+([\d.]+))?$/))cur.glow.push({w:m[1],x:+m[2],y:+m[3],r:+(m[4]||8),h:m[5]?+m[5]:0});
         break}
       case 'phone':{
         if(m=line.match(/^name\s+(.+)/))cur.name=m[1];
@@ -351,7 +352,7 @@ function skipAhead(){
 /* ---------- scene layers: art, ambience, hints ---------- */
 function glowHTML(ids){
   if(!S.set.glow)return'';const l=ST.places[S.loc];if(!l)return'';
-  return l.glow.filter(g=>ids.includes(g.w)).map(g=>`<div class="glow" style="left:${g.x}%;top:${g.y}%;width:${g.r*2}%"></div>`).join('');
+  return l.glow.filter(g=>ids.includes(g.w)).map(g=>`<div class="glow" style="left:${g.x}%;top:${g.y}%;width:${g.r*2}%${g.h?`;height:${g.h*2}%;aspect-ratio:auto`:''}"></div>`).join('');
 }
 function flashGlow(id){const h=glowHTML([id]);if(!h)return;const fx=$('#fx');fx.querySelectorAll('.glow').forEach(e=>e.remove());fx.insertAdjacentHTML('beforeend',h)}
 const AMB_N={leaves:12,petals:12,motes:16,dust:14,snow:26,rain:44};
@@ -826,6 +827,7 @@ function menu(){
     <button class="mi" id="mLog"><span class="mic">💬</span><span><b>What was said</b><small>Scroll back through every line</small></span></button>
     <button class="mi" id="mMap"><span class="mic">🗺️</span><span><b>Village map</b><small>Places you've been</small></span></button>
     <button class="mi" id="mCh"><span class="mic">📖</span><span><b>Chapters</b><small>Continue, replay</small></span></button>
+    ${S.set.dev?`<button class="mi" id="mJump"><span class="mic">⏩</span><span><b>Jump ahead</b><small>Playtest: skip to a point in the story</small></span></button><div class="jumplist" id="jumplist" hidden></div>`:''}
     <button class="mi" id="mSet"><span class="mic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span><b>Settings</b><small>Voice, text size, sounds</small></span></button>
   </div></div></div>`);
   o.querySelector('.x').onclick=()=>close(o);
@@ -834,8 +836,20 @@ function menu(){
   o.querySelector('#mMap').onclick=()=>{o.remove();openMap()};
   o.querySelector('#mCh').onclick=()=>{o.remove();chapterList()};
   o.querySelector('#mSet').onclick=()=>{o.remove();settings()};
+  const mj=o.querySelector('#mJump');if(mj)mj.onclick=async()=>{sfx('tap');const box=o.querySelector('#jumplist');box.hidden=false;box.textContent='Loading…';
+    try{const r=await fetch('tests/ch1.route',{cache:'no-cache'});const marks=(await r.text()).split(/\r?\n/).filter(l=>l.startsWith('#@')).map(l=>l.slice(2).trim());
+      box.innerHTML=marks.map((m,i)=>`<button class="btn-ink" data-jump="${i}">${esc(m)}</button>`).join('')+'<div class="empty">Plays the story up to there in a few seconds. Your notebook stays as it is.</div>';
+      box.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{o.remove();jumpTo(marks[+b.dataset.jump])});
+    }catch(e){box.textContent='Could not load the jump list.'}};
 }
 
+// playtest: replay the solution route up to a checkpoint (js/autotest.js does the playing)
+function jumpTo(label){
+  document.querySelectorAll('.title').forEach(t=>t.remove());
+  const go=()=>window.TAL_TEST.jump('ch1',label);
+  if(window.TAL_TEST){go();return}
+  const sc=document.createElement('script');sc.src='js/autotest.js';sc.onload=go;sc.onerror=()=>toast('Could not load the playtest tools.');document.body.appendChild(sc);
+}
 function settings(){
   const o=overlay(`<div class="panel">${head('설정')}<div class="ph-body" id="stb"></div></div>`);
   o.querySelector('.x').onclick=()=>close(o);
@@ -876,7 +890,8 @@ const chStarted=id=>id===S.ch?!!S.F.started:!!(S.prog[id]&&S.prog[id].F&&S.prog[
 function stash(){if(S.ch)S.prog[S.ch]=JSON.parse(JSON.stringify(Object.fromEntries(CH_FIELDS.map(k=>[k,S[k]]))))}
 function startChapter(id,restart){
   stash();const p=!restart&&S.prog[id];
-  S.ch=id;useChapter(id);artKey=null;ambKey=null;lastLoc=null;BACK=[];if(restart)SEEN.clear();
+  S.ch=id;useChapter(id);artKey=null;ambKey=null;lastLoc=null;BACK=[];
+  if(restart){SEEN.clear();FILL={};PROOF={};pickQ=null;PMODE=null;for(const k in HEARD)delete HEARD[k]} // half-filled answers don't carry into a fresh start
   if(p&&p.F&&p.F.started){
     CH_FIELDS.forEach(k=>S[k]=p[k]);
     if(!ST.places[S.loc])S.loc=ST.meta['start-place'];if(S.node&&!ST.nodes[S.node])S.node=null;

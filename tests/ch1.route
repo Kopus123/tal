@@ -1,6 +1,7 @@
 # Chapter 1, start to finish (both story files: prologue.story then ch1.story).
 # SPOILERS: this is the whole solution.
 # Run with: python tools/playtest.py
+# '#@ Label' lines are checkpoints for Menu > Jump ahead (Playtest tools on). Put them where you're free to look around.
 
 chapter prologue
 # --- the evening before
@@ -14,6 +15,7 @@ spot Workshop
 idle
 spot Old photo
 spot Back to the courtyard
+#@ Day 1 · leaving the house
 spot Front gate
 choose Take the phone
 camera
@@ -26,6 +28,7 @@ spot Talk to the owner
 type 할머니 봤어요?
 choose 고마워요
 idle
+#@ Day 1 · the bus
 spot Bus stop
 spot Wait for the bus
 choose Stay on
@@ -33,6 +36,7 @@ choose Stay on
 choose Press the stop
 type 김순자 선생님 봤어요?
 idle
+#@ Day 1 · the museum, case board
 solve p1 박물관 | 9시 | 탈
 solve p2 버스
 solve p3 안 | 왔어요
@@ -43,6 +47,7 @@ solve p4 엄마 | 찾지 마세요
 done prologue
 
 # --- the next day (ch1.story continues the same chapter)
+#@ Day 2 · the morning
 expect started
 idle
 spot The mask
@@ -80,6 +85,7 @@ spot The menu
 build 김밥 | 주세요
 choose 맛있어요
 idle
+#@ Day 2 · the market
 spot Bus stop
 spot Wait for the bus
 choose Press the stop
@@ -95,6 +101,7 @@ choose 강에
 idle
 expect marketDone&knowRiver
 phone junho
+#@ Day 2 · leaving the market
 spot Take the bus back
 spot Wait for the bus
 choose Stay on
@@ -112,6 +119,7 @@ spot Front desk
 idle
 expect gotCard
 expect doubtMuseum
+#@ Day 2 · leaving the museum
 spot Take the bus back
 spot Path behind the bus stop
 choose 학생이에요
@@ -139,6 +147,7 @@ number 900
 choose Leave her be
 idle
 expect knowJunhoTime
+#@ Day 2 · case board before the climb
 nosolve d1 가짜 | 만들었어요 | 어제 ; fakemask + sketch
 solve d1 가짜 | 만들었어요 | 어제 ; photo79 + fakemask
 solve d2 진짜 | 다리 | 혼자
@@ -152,6 +161,7 @@ solve d7 절 | 산
 solve dg 장화 ; gramboots + bootprint
 solve do 아들 ; s_junho + s_ownercall
 solve dc 서울 ; threat + card
+#@ Day 2 · the mountain
 map golmok
 spot Left path
 spot Keep climbing
@@ -168,6 +178,7 @@ choose Sit with her
 choose Blow out the lantern
 idle
 expect hidden
+#@ Day 2 · the last deductions
 solve d8 할머니 | 박물관 | 가짜 ; realchip + photo79
 solve d9 바꿨어요 | 마을 | 서울 ; s_reason + ticket
 done ch1

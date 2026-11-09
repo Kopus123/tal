@@ -1,6 +1,6 @@
 // Offline support. Game code and story: network first (so updates arrive), cache as offline fallback.
 // Audio clips, icons, fonts: cache first (they never change once recorded).
-const VERSION = 'tal-v24';
+const VERSION = 'tal-v25';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './audio/clips.js', './js/art.js', './js/icons.js', './js/people.js', './js/engine.js',
   './story/world.story', './story/prologue.story', './story/ch1.story', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -17,7 +17,7 @@ const put = (req, r) => { const copy = r.clone(); caches.open(VERSION).then(c =>
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  const fresh = url.origin === location.origin && (e.request.mode === 'navigate' || /\.(js|story|html|webmanifest)$/.test(url.pathname) || url.pathname.endsWith('/'));
+  const fresh = url.origin === location.origin && (e.request.mode === 'navigate' || /\.(js|story|html|webmanifest|route)$/.test(url.pathname) || url.pathname.endsWith('/'));
   if (fresh) {
     // no-cache: always ask the server whether the file changed, so code and story never mix versions
     const req = e.request.mode === 'navigate' ? e.request : new Request(e.request.url, { cache: 'no-cache' });

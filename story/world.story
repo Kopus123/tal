@@ -239,6 +239,9 @@ sign       |               |          | SunHi  -10%  +0Hz
 으로 = (grammar)
 하고 = (grammar)
 을/를 = (grammar)
+는데요 = (grammar)
+거든요 = (grammar)
+낚시 = fish
 
 === grammar
 # piece | what it does (shown when you tap it)
@@ -254,6 +257,13 @@ sign       |               |          | SunHi  -10%  +0Hz
 으로 | "toward" or "by way of": 오른쪽으로 가요 = go to the right. After a vowel it's just 로.
 하고 | "with" or "and" (casual): 친구하고 = with a friend. 누구하고? = with who?
 을/를 | Object marker. Sticks to the thing being done to: 물감을 샀어요 = bought paint. 을 after a consonant, 를 after a vowel.
+는데요 | "...but" / "well...". A soft ending that trails off and leaves something unsaid: 아는데요... = I do know, but... After a noun it's 인데요: 진짜인데요 = it's real, but...
+거든요 | "You see," / "because". Gives a reason, often one nobody asked for: 바쁘거든요 = I'm busy, you see.
+
+=== tells
+# piece | what it gives away (appears in the notebook once you catch it on the case board)
+는데요 | Trailing off. The words say yes, the ending says "but...". When someone is sure, they don't need it.
+거든요 | An excuse nobody asked for. People explain themselves like this when they're covering for something.
 
 === endings
 # shown in the notebook's Grammar tab

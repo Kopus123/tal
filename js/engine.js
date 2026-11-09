@@ -8,7 +8,7 @@ let W={};             // every word in every chapter -> {p: picture spec, g: gra
 
 /* ---------- story parser ---------- */
 function parseStory(src,st){
-  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{}};
+  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{}};
   let sec=null,cur=null,scene=null,last=null,count=0;
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;
     if(last&&!last.next&&!last.rewind&&!last.ch&&!last.ans)last.next=id;
@@ -34,6 +34,8 @@ function parseStory(src,st){
       case 'map':{m=line.match(/^pin\s+(\S+)\s+([\d.]+)\s+([\d.]+)/);if(m)st.map.push({p:m[1],x:+m[2],y:+m[3]});break}
       case 'words':{m=line.match(/^(.+?)\s*=\s*(.+)$/);if(m)st.words[m[1]]=Object.assign(m[2]==='(grammar)'?{g:1}:{p:m[2]},{lang:st.meta.lang||'ko'});break}
       case 'grammar':{const i=line.indexOf('|');if(i>0)st.grammar[line.slice(0,i).trim()]=line.slice(i+1).trim();break}
+      // tells: grammar that gives people away. "piece | what it gives away" (shown once you've caught one)
+      case 'tells':{const i=line.indexOf('|');if(i>0)st.tells[line.slice(0,i).trim()]=line.slice(i+1).trim();break}
       case 'endings':{const i=line.indexOf('|');if(i>0)st.endings.push({k:line.slice(0,i).trim(),d:line.slice(i+1).trim()});break}
       case 'hints':{m=line.match(/^if\s+(\S+):\s*(.+)$/);st.hints.push(m?{c:m[1],t:m[2]}:{t:line});break}
       // deduction: ID [final] if COND | sentence with {blank} words | what it means once solved
@@ -106,11 +108,11 @@ function parseStory(src,st){
 const KEY='tal-save-v2';
 // Save format version. When the format changes: bump SAVE_V and add a step to MIGRATE that upgrades the old shape.
 const SAVE_V=3;
-const fresh=()=>({v:SAVE_V,m:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
+const fresh=()=>({v:SAVE_V,m:{},tl:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)
 function freshKeepNotes(){const old=S;const n=fresh();n.set=old.set;
-  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});n.m=old.m||{};return n}
+  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});n.m=old.m||{};n.tl=old.tl||{};return n}
 let S=fresh();
 // MIGRATE[n] turns a version-n save into version n+1. They run in order, so any old save upgrades step by step.
 const MIGRATE={
@@ -577,6 +579,8 @@ function notebook(){
     if(['all','todo','guess','sure'].includes(nbTab))inner+=`<div class="label">${by('sure').length} sure · ${by('guess').length} guesses · ${vocab.length} seen</div>`;
     if(nbTab==='gram'){
       inner+=`<div class="label">Little pieces that stick to words</div>`+(gram.length?`<div class="glist">${gram.map(id=>`<button class="grow" data-w="${esc(id)}"><b>${esc(id)}</b><span>${esc(WORLD.grammar[id]||'')}</span></button>`).join('')}</div>`:`<div class="empty">The ones you run into will collect here.</div>`);
+      const tl=Object.keys(WORLD.tells),caught=tl.filter(k=>S.tl[k]);
+      inner+=`<div class="label">Tells · ${caught.length} of ${tl.length} caught</div><div class="glist">${caught.map(k=>`<button class="grow tell" data-w="${esc(k)}"><b>${esc(k)}</b><span>${esc(WORLD.tells[k])}</span></button>`).join('')}${tl.length>caught.length?`<div class="grow"><b>?</b><span>How people say things can give them away. Catch it on the case board to add it here.</span></div>`:''}</div>`;
       inner+=`<div class="label">Endings</div><div class="glist">${WORLD.endings.map(e=>`<div class="grow"><b>${esc(e.k)}</b><span>${esc(e.d)}</span></div>`).join('')}</div>`;
     }
     else if(nbTab==='num'){
@@ -645,6 +649,7 @@ function shortlist(q,filter){
   const rnd=()=>{h=(h*1103515245+12345)>>>0;return h/4294967296};
   const mix=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
   const pool=new Set();ST.cases.forEach(c=>c.blanks.forEach(a=>{if(W[a])pool.add(a)}));
+  if(q.blanks.some(b=>W[b]&&W[b].g))Object.keys(WORLD.tells).concat(['이에요','아니에요']).filter(id=>W[id]).forEach(id=>pool.add(id));
   mix(Object.keys(S.w).filter(id=>ok(id)&&W[id].p&&!pool.has(id))).slice(0,Math.max(0,16-pool.size)).forEach(x=>pool.add(x));
   return mix([...pool]);
 }
@@ -664,7 +669,8 @@ function caseBoard(tab){
     const f=FILL[q.id]||[];
     if(q.blanks.some((b,i)=>!f[i])){toast('Fill in every blank first.');return}
     if(q.blanks.every((b,i)=>b.split('/').some(a=>normAns(a)===normAns(f[i])))){
-      S.cs[q.id]=1;S.F['solved_'+q.id]=1;q.blanks.forEach(b=>noteUsed('{'+b+'}',true));save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);draw();
+      S.cs[q.id]=1;S.F['solved_'+q.id]=1;q.blanks.forEach(b=>noteUsed('{'+b+'}',true));
+      q.blanks.filter(b=>WORLD.tells[b]&&!S.tl[b]).forEach(b=>{S.tl[b]=1;setTimeout(()=>toast(`New tell in your notebook: <b>${esc(b)}</b>`,4000),400)});save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);draw();
       if(q.final)setTimeout(()=>{close(o);finale()},900);else if(caseReadyNow())toast('Everything you know fits together.');
     }else{sfx('wrong');buzz(60);miss=true;draw()}
   };
@@ -706,7 +712,7 @@ function caseBoard(tab){
       const pk=o.querySelector('.pick');pk.innerHTML=shortlist(q,filter).map(id=>`<button class="w ${status(id)}" data-pk="${esc(id)}" data-w="">${esc(id)}</button>`).join('')||'<span class="empty">No matching words.</span>';
       pk.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>place(q,b.dataset.pk))}}
     const ta=o.querySelector('#ta');if(ta)ta.onsubmit=e=>{e.preventDefault();const v=normAns(o.querySelector('#ti').value);if(!v)return;
-      const ids=Object.keys(W).filter(id=>!W[id].g);
+      const ids=Object.keys(W);
       const hit=ids.find(id=>normAns(id)===v)||ids.find(id=>jamoDist(normAns(id),v)<=1);
       if(!hit){toast('That isn\'t a word you\'ve met yet.');return}
       if(normAns(hit)!==v)toast('Close! It\'s spelled <b>'+esc(hit)+'</b>',4000);

@@ -35,6 +35,7 @@ d3 if marketDone | Yesterday she got off at the {시장}, not at the museum, and
 d4 if marketDone&sawBag | She bought {나무} and {빨간} {물감} there, to make the copy. | The bag under her workbench came from that same stall.
 d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다리}. | Maybe the same person who sent the message.
 d6 if doubtMuseum | The museum's mask has no chip in its eyebrow. Maybe it's {가짜} too. | Then which one is the real one?
+dt if doubtMuseum | The museum woman still says 진짜, but now she ends it with {는데요}. She isn't sure anymore. | Her words say yes. Her ending says "but..."
 d7 if toldMountain | 할머니 is hiding at the {절}, up on the {산}. | 할아버지 finally told you.
 d8 final if hidden | The real mask is with {할머니}. The one in the {박물관} is {가짜}. | And the man in the dark knows it.
 
@@ -757,9 +758,9 @@ miss -> c1_munope
 === scene c1_mudoubt
 staff[surprised]: 어?
 (She takes the old photo and holds it up next to the glass. The chip in the eyebrow in 1979. No chip now.)
-staff[worried]: {이상해요}... {진짜}... {진짜}{예요|이에요}...
-(She says it again, but quieter, and she doesn't give the photo back right away.)
-! set doubtMuseum
+staff[worried]: {이상해요}... {진짜}... {진짜}{인데요|는데요}...
+(She doesn't give the photo back right away.)
+! set doubtMuseum; statement s_staff2
 
 === scene c1_mufake
 staff[happy]: {가짜}? 하하. {아니요}! 1650! {진짜}!
@@ -833,8 +834,8 @@ haraboji[surprised]: ...{시장}...
 (His hands go still on the rod.)
 haraboji[sad]: {네}. {어제}... {할머니}{하고} {시장}{에} {있었어요}.
 (He admits that much. Then his mouth shuts tight again.)
-haraboji[worried]: {오늘}{은|은/는}... {몰라요}.
-(Today, he says, he doesn't know. He isn't a good liar.)
+haraboji[worried]: {오늘}{은|은/는}... {몰라요}. {낚시}{하거든요|거든요}.
+(He turns back to his line, very busy all of a sudden. He isn't a good liar.)
 ! set caughtGramps
 -> c1_gtalk.2
 

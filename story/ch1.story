@@ -19,6 +19,7 @@ if !marketDone&!paid: The restaurant owner said the woman at the market knows. T
 if !marketDone: She's ready to talk now. Ask her about 할머니.
 if !metGramps: The woman at the market told you where to find him. Try the path behind the bus stop.
 if metGramps&!caughtGramps: He says he doesn't know. Open your statements: who told you they saw him with 할머니?
+if misheard&!toldMountain: Go back to the river and ask him again. Listen closely this time.
 if !toldMountain: He won't talk. Maybe something you could show him would change his mind.
 if !solved_d7: Put what 할아버지 told you together on the case board before you set off.
 if !metHalmeoni: You worked out where she is. Up the mountain path, and keep climbing.
@@ -189,9 +190,11 @@ sub The river
 art river
 ambient leaves
 first c1_g1
+desc if grampsLeft: The river. Reeds, flat stones, the wooden bridge further down. His rock is empty now.
 desc The river. Reeds, flat stones, and the wooden bridge further down. The old man is still fishing.
-spot "The old man" 64 60 -> c1_ghub if toldMountain
-spot "The old man" 64 60 -> c1_gtalk if !toldMountain
+spot "The old man" 64 60 -> c1_ghub if toldMountain&!grampsLeft
+spot "The old man" 64 60 -> c1_gagain if misheard&!toldMountain
+spot "The old man" 64 60 -> c1_gtalk if !toldMountain&!misheard
 spot "The bridge" 82 40 -> c1_bridge
 spot "Back to the bus stop" 12 88 => place jeong
 glow 강 50 74 22
@@ -872,12 +875,43 @@ haraboji[surprised]: {진짜} {탈} {가져와}... {오늘} {밤}... {다리}?!
 (He looks down the river at the wooden bridge. The fishing rod slips out of his hands and clatters on the rock.)
 haraboji[worried]: {누구}{예요|이에요}? {누구}...?
 (He grips your arm. Then he lets out a long breath.)
-haraboji[sad]: {할머니}{는|은/는}... {산}{에} {있어요}.
-(He points up at the mountain behind the village.)
-haraboji: {산}{에} {절}{이|이/가} {있어요}. {절}{에} {있어요}. {빨리} {가요}!
-(He makes the shape of a little roof with his hands. A temple, up the mountain path.)
+haraboji[audio]: {할머니}{는|은/는}... {절}{에} {있어요}. {빨리} {가요}.
+(He leans in and barely whispers it, eyes on the bridge downstream.)
+~ Where did he say she is?
+* {절}{에} {있어요}? -> c1_gright
+* {집}{에} {있어요}? -> c1_gmis
+* {강}{에} {있어요}? -> c1_gnotriver
+
+=== scene c1_gnotriver
+haraboji[worried]: {아니요}...
+(He shakes his head and glances at the bridge again. He doesn't want to say it any louder.)
+~ Not the river. Listen again.
+<- c1_gshow.4
+
+=== scene c1_gright
+haraboji[sad]: {네}. {산}{에} {절}{이|이/가} {있어요}.
+(He points up at the mountain behind the village, then makes the shape of a little roof with his hands. A temple, up the mountain path.)
 ! set toldMountain
+-> c1_gbridgeman
+
+=== scene c1_gbridgeman
 ~ As you stand up, you notice a man on the bridge downstream, leaning on the rope rail, looking at nothing in particular. When you glance back from the path, he's gone.
+
+=== scene c1_gmis
+~ 집. Home? She went home? You thank him and run all the way back.
+! place madang; set misheard
+sujin[surprised]: {할머니}? {집}{에}? {아니요}... {없어요}.
+(She stares at you. She's been sitting right here all day.)
+~ Not home, then. He whispered it. What if it wasn't 집 at all?
+! mixup 절 / 집
+~ You'll have to go back to the river and ask him again.
+
+=== scene c1_gagain
+haraboji[worried]: {학생}! {절}! {절}{이에요}! {산}{에}!
+(He's packing up his rod. He jabs a finger at the mountain, half angry and half frightened, and says it far too loudly.)
+! set toldMountain, grampsLeft
+~ Then he picks up his bucket and stumps off up the path toward the village without another word. Whatever else he knows, you won't hear it today.
+-> c1_gbridgeman
 
 === scene c1_ghub
 haraboji[worried]: {빨리}... {절}!

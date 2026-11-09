@@ -61,6 +61,10 @@ def parse(path):
             elif k == "statement":
                 if a.strip() in d["statements"]: err(path.name, ln, f"statement '{a.strip()}' saved twice")
                 d["statements"][a.strip()] = ln
+            elif k == "mixup":
+                parts = [x.strip() for x in a.split("/")]
+                if len(parts) != 2: err(path.name, ln, "mixup needs RIGHT / HEARD")
+                d["tokens"] += [(x, ln) for x in parts]
             elif k in ("unset", "learn", "led", "toast"): pass
             else: err(path.name, ln, f"unknown effect '{k}'")
     def tokens(s, ln): d["tokens"] += [(t, ln) for t in ids_in(s)]

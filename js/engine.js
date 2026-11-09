@@ -108,11 +108,11 @@ function parseStory(src,st){
 const KEY='tal-save-v2';
 // Save format version. When the format changes: bump SAVE_V and add a step to MIGRATE that upgrades the old shape.
 const SAVE_V=3;
-const fresh=()=>({v:SAVE_V,m:{},tl:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
+const fresh=()=>({v:SAVE_V,m:{},tl:{},mx:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)
 function freshKeepNotes(){const old=S;const n=fresh();n.set=old.set;
-  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});n.m=old.m||{};n.tl=old.tl||{};return n}
+  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});n.m=old.m||{};n.tl=old.tl||{};n.mx=old.mx||{};return n}
 let S=fresh();
 // MIGRATE[n] turns a version-n save into version n+1. They run in order, so any old save upgrades step by step.
 const MIGRATE={
@@ -238,6 +238,8 @@ function runFx(list,replay){(list||[]).forEach(e=>{if(e.c&&!cond(e.c))return;con
   else if(e.k==='place')S.loc=a;
   else if(e.k==='led')S.F.led=a;
   else if(e.k==='toast')toast(esc(a),5000);
+  else if(e.k==='mixup'){const [r,h]=a.split('/').map(x=>x.trim());const k=r+'/'+h;
+    if(!replay){S.mx[k]=(S.mx[k]||0)+1;noteUsed('{'+r+'}',false);toast(`Mix-up saved to your notebook: <b>${esc(r)}</b> / <b>${esc(h)}</b>`,4000)}}
   else if(e.k==='statement'){if(!S.F['st_'+a]){S.F['st_'+a]=1;if(!replay)toast('Statement saved to your case board.',2600)}}
   else if(e.k==='have')a.split(',').forEach(x=>S.F['ev_'+x.trim()]=1); // evidence you already carry, no announcement
   else if(e.k==='give')a.split(',').forEach(x=>{x=x.trim();if(!S.F['ev_'+x]){S.F['ev_'+x]=1;const ev=ST.evidence[x];if(ev&&!replay)toast(`${iconSVG(ev.icon)} Evidence: <b>${ko(ev.label,false,false)}</b>`,3500)}});
@@ -574,7 +576,7 @@ function notebook(){
     const by=s=>vocab.filter(id=>status(id)===s);
     const list=nbTab==='all'?vocab:nbTab==='todo'?vocab.filter(id=>['new','seen'].includes(status(id))):nbTab==='guess'?by('guess'):by('sure');
     const pat=ST.patterns[0];
-    const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],['sym','Symbols']];
+    const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],['mix','Mix-ups'],['sym','Symbols']];
     let inner=`<div class="tabs">${tabs.map(([k,t])=>`<button class="tab ${nbTab===k?'on':''}" data-tab="${k}">${t}</button>`).join('')}</div>`;
     if(['all','todo','guess','sure'].includes(nbTab))inner+=`<div class="label">${by('sure').length} sure · ${by('guess').length} guesses · ${vocab.length} seen</div>`;
     if(nbTab==='gram'){
@@ -582,6 +584,13 @@ function notebook(){
       const tl=Object.keys(WORLD.tells),caught=tl.filter(k=>S.tl[k]);
       inner+=`<div class="label">Tells · ${caught.length} of ${tl.length} caught</div><div class="glist">${caught.map(k=>`<button class="grow tell" data-w="${esc(k)}"><b>${esc(k)}</b><span>${esc(WORLD.tells[k])}</span></button>`).join('')}${tl.length>caught.length?`<div class="grow"><b>?</b><span>How people say things can give them away. Catch it on the case board to add it here.</span></div>`:''}</div>`;
       inner+=`<div class="label">Endings</div><div class="glist">${WORLD.endings.map(e=>`<div class="grow"><b>${esc(e.k)}</b><span>${esc(e.d)}</span></div>`).join('')}</div>`;
+    }
+    else if(nbTab==='mix'){
+      const pairs=Object.entries(S.mx||{});
+      inner+=pairs.length?`<div class="empty">Words you heard wrong, next to what was really said. Tap each to hear the difference.</div><div class="glist">${pairs.map(([k,n])=>{const [r,h]=k.split('/');
+        const side=(id,lab)=>`<button class="mixw" data-w="${esc(id)}">${W[id]&&W[id].p?iconSVG(W[id].p):''}<b>${esc(id)}</b><small>${lab}</small></button>`;
+        return `<div class="mixrow">${side(r,'what they said')}<span class="mixvs">≠</span>${side(h,'what you heard')}${n>1?`<span class="mixn">×${n}</span>`:''}</div>`}).join('')}</div>`
+        :`<div class="empty">Nothing yet. When you mishear a word, it goes here next to what was really said.</div>`;
     }
     else if(nbTab==='num'){
       const cell=(k,n)=>`<button class="numcell ${S.w[k]?'met':''}" data-w="${esc(k)}"><b>${esc(k)}</b><span>${n}</span></button>`;

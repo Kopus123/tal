@@ -111,8 +111,14 @@ choose 할머니 봤어요
 contradict s_gramps + s_couple
 contradict s_gramps + s_market
 present threat
+choose 강에
+choose 집에
 idle
-expect toldMountain&caughtGramps
+expect misheard&!toldMountain
+map gang
+spot The old man
+idle
+expect toldMountain&caughtGramps&grampsLeft
 spot The bridge
 idle
 map madang

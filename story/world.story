@@ -184,6 +184,17 @@ sign       |               |          | SunHi  -10%  +0Hz
 편지 = letter
 비밀 = secret
 오세요 = come
+명함 = card
+서울 = city
+바꿨어요 = swap +past
+장화 = boots
+기차표 = ticket
+마을 = village
+옛날 = clock +past
+나쁜 = good +not
+사람 = youngman
+받아요 = call
+팔아요 = won
 눈썹 = eyebrow
 하나 = nat1
 한 = nat1

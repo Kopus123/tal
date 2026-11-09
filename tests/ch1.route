@@ -73,6 +73,9 @@ spot Talk to the owner
 type 누구 김밥이에요?
 choose 할아버지
 idle
+spot Talk to the owner
+choose 전화
+idle
 spot The menu
 build 김밥 | 주세요
 choose 맛있어요
@@ -105,6 +108,9 @@ expect !doubtMuseum
 spot The big glass case
 contradict s_staff + photo79
 idle
+spot Front desk
+idle
+expect gotCard
 expect doubtMuseum
 spot Take the bus back
 spot Path behind the bus stop
@@ -122,6 +128,7 @@ spot The old man
 idle
 expect toldMountain&caughtGramps&grampsLeft
 spot The bridge
+examine ticket | tread | ring
 idle
 map madang
 spot Talk to 수진
@@ -142,9 +149,18 @@ solve d5 남자 | 불 | 다리 ; bootprint + s_couple
 solve d6 가짜
 solve dt 는데요
 solve d7 절 | 산
+solve dg 장화 ; gramboots + bootprint
+solve do 아들 ; s_junho + s_ownercall
+solve dc 서울 ; threat + card
 map golmok
 spot Left path
 spot Keep climbing
+present letter
+choose 괜찮아요
+examine chip
+choose 서울
+choose Sit with her
+choose Call out
 present letter
 choose 괜찮아요
 examine chip
@@ -153,4 +169,5 @@ choose Blow out the lantern
 idle
 expect hidden
 solve d8 할머니 | 박물관 | 가짜 ; realchip + photo79
+solve d9 바꿨어요 | 마을 | 서울 ; s_reason + ticket
 done ch1

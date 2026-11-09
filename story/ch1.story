@@ -15,6 +15,8 @@ if !sawFake: Look closely at the mask on the courtyard floor.
 if !read_threat: 할머니's phone just buzzed. Tap the phone icon in the top-right corner.
 if !showed: 수진 should see what came in on 할머니's phone. Talk to her and show her.
 if sawWall&sawFake&!st_s_sujin: Someone got in over the back wall. Ask 수진 where she was last night.
+if talkedOwner&st_s_ownercall&!clearedOwner&marketDone: The owner was on the phone when you walked in. Who was he talking to? Ask him.
+if doubtMuseum&!gotCard: The museum woman isn't so sure anymore. Talk to her at the front desk.
 if !talkedOwner: Two 김밥. Who was the second one for? The restaurant owner might remember.
 if !marketDone&!paid: The restaurant owner said the woman at the market knows. The bus stops at the market. Maybe buy something from her first.
 if !marketDone: She's ready to talk now. Ask her about 할머니.
@@ -24,7 +26,7 @@ if misheard&!toldMountain: Go back to the river and ask him again. Listen closel
 if !toldMountain: He won't talk. Maybe something you could show him would change his mind.
 if !solved_d7: Put what 할아버지 told you together on the case board before you set off.
 if !metHalmeoni: You worked out where she is. Up the mountain path, and keep climbing.
-if !hidden: Someone with a light is coming. Don't let them see you.
+if !hidden: Someone with a light is coming. Don't let them see you, and don't let them find her.
 if !allSolved: Open the case board (the board button at the top) and answer the questions you can see.
 if !solved_d8: What did 할머니 say about the mask in the museum?
 Chapter 1 is done. Look back through your notebook while you wait for Chapter 2.
@@ -39,9 +41,17 @@ d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다
 d6 if doubtMuseum | The museum's mask has no chip in its eyebrow. Maybe it's {가짜} too. | Then which one is the real one?
 dt if doubtMuseum | The museum woman still says 진짜, but now she ends it with {는데요}. She isn't sure anymore. | Her words say yes. Her ending says "but..."
 d7 if toldMountain | 할머니 is hiding at the {절}, up on the {산}. | 할아버지 finally told you.
-d8 final if hidden | The real mask is with {할머니}. The one in the {박물관} is {가짜}. | And the man in the dark knows it. | needs realchip + photo79
+d8 if hidden | The real mask is with {할머니}. The one in the {박물관} is {가짜}. | And the man in the dark knows it. | needs realchip + photo79
+
+dg if metGramps&ev_bootprint | The man on the bridge wasn't 할아버지. He wears smooth {장화}, and the print is a new hiking boot. | Muddy, yes. But mountain mud, and the wrong boots. | needs bootprint + gramboots
+do if clearedOwner | The restaurant owner's phone call was nothing. He was talking to 수진's {아들}. | "Tonight" just meant he'd call back tonight. | needs s_ownercall + s_junho
+dc if gotCard&read_threat | The messages to 할머니 came from the phone of the man from {서울}. | Every digit matches, up to where the ink smudged. | needs card + threat
+d9 final if hidden&st_s_reason | Long ago, 할머니 {바꿨어요} the masks. The real one belongs to the {마을}, and she's hiding it from the man from {서울}. | That's why she ran. That's who is out there in the dark. | needs s_reason + card/ticket
 
 === evidence
+gramboots | {장화} | boots | 할아버지's rubber boots: smooth soles, caked with mountain mud. |
+ticket | {기차표} · {서울} | ticket | Found in the reeds by the bridge: a train ticket from Seoul, dated yesterday. | {서울} → 청솔
+card | {명함} · {서울} | card | A business card from a mask appraiser in Seoul. Black ink is smeared over the end of the phone number. | 010-4417-09··
 nochip | {가짜} · {눈썹} | eyebrow | The copy's left eyebrow: one clean, unbroken line. No chip. |
 freshwood | {새} {나무} | wood | Inside the copy's eye holes, the wood is pale and raw. Cut yesterday. |
 realchip | {진짜} · {눈썹} | eyebrow | The old mask's left eyebrow: a small chip, exactly like in the 1979 photo. |
@@ -184,7 +194,9 @@ travel no
 first c1_mu1
 desc The museum, quiet as ever. The big glass case glows at the far wall.
 spot "The big glass case" 24 42 -> c1_mucase
-spot "Front desk" 66 62 -> c1_mudesk
+spot "Front desk" 66 62 -> c1_mualibi if doubtMuseum&!gotCard
+spot "Front desk" 66 62 -> c1_mudesk if gotCard
+spot "Front desk" 66 62 -> c1_mudesk if !doubtMuseum
 spot "Take the bus back" 78 88 -> c1_mback
 glow 탈 24 42 16
 
@@ -228,6 +240,13 @@ detail paint 35 59 8 key | The red on the cheeks is still tacky. It comes off on
 detail eyes 60 39 7 | Inside the eye holes the wood is pale and raw: cut yesterday, not three hundred years ago. ! give freshwood
 detail strap 12 51 7 | The strap is brand-new cord, bright and stiff. Old masks were tied with cotton.
 
+=== examine bridgemud
+art mud
+prompt Mud, reeds, footprints. What do you notice?
+detail tread 45 53 10 key | A deep bootprint with a sharp zigzag tread. New hiking boots, much bigger than yours. ! give bootprint
+detail ring 72 37 8 key | A perfect ring pressed into the mud: a heavy flashlight, stood on its end while someone waited.
+detail ticket 76 77 8 | Half-buried in the reeds: a train ticket from {서울}, dated yesterday. ! give ticket
+
 === examine realmask
 art mask_real
 prompt Hold it to the lantern light. What do you notice?
@@ -256,6 +275,7 @@ name 청솔 박물관
 avatar 박 #6a6f7d
 day {어제}
 them 18:02 김순자 {선생님}, {내일} {아침} {9시}, {박물관}{에서} {만나요}!
+them 18:05 {서울} {선생님}{도} {와요}.
 me 18:30 {네}! {내일} {만나요}.
 day@threatSent {오늘}
 them@threatSent 10:20 {선생님}, {괜찮아요}? {박물관}{에} {안} {왔어요}...
@@ -480,6 +500,10 @@ sign: ↑ {산} 1.2km · {절}
 
 # ------------------------------------------------------------ restaurant
 === scene c1_k1
+~ As you push the door open, you hear the owner behind the kitchen curtain, on the phone, keeping his voice down.
+ajeossi[audio]: {네}... {할머니}{는|은/는} {없어요}. {오늘} {밤}{에}... {전화} {주세요}.
+! statement s_ownercall
+~ He comes out, sees you, and hangs up fast.
 ajeossi[surprised]: {어서 오세요}! 아... {할머니}{는|은/는}...?
 (He looks past you, at the door, hoping.)
 * [Shake your head] -> c1_k2
@@ -490,7 +514,7 @@ ajeossi[happy]: {네}?! {할머니}! {어디}{예요|이에요}? {어디}?
 (He drops his cloth and hurries to the door. There's nobody there.)
 ajeossi[sad]: ...{아니요}?
 ~ That was cruel. He really thought she was back.
-<- c1_k1
+<- c1_k1.4
 
 === scene c1_k2
 ajeossi[sad]: {아니요}...?
@@ -533,6 +557,20 @@ ajeossi: {시장} {아주머니}{는|은/는} {알아요}. {시장}! {아주머�
 === scene c1_kafter
 ajeossi: {시장}! {시장} {아주머니}{는|은/는} {알아요}.
 (He points at the bus stop again.)
+* {전화}... {누구}{예요|이에요}? -> c1_kcall if !clearedOwner
+* [Leave him be] -> c1_kbye
+
+=== scene c1_kbye
+~ You leave him to his counter.
+
+=== scene c1_kcall
+ajeossi[surprised]: {전화}요? 아...
+(He rubs the back of his neck, embarrassed to have been overheard.)
+ajeossi: 준호{예요|이에요}. 수진{의} {아들}.
+(He holds a hand up high for someone tall, then mimes a phone at his ear.)
+! statement s_junho; set clearedOwner
+ajeossi[worried]: 준호{는|은/는} {서울}{에} {있어요}. {할머니}{가|이/가} {전화}{를|을/를} {안} {받아요}...
+(He shrugs helplessly. The boy is worried sick.)
 
 === scene c1_kfeed
 ajeossi[worried]: {먹었어요}?
@@ -765,6 +803,16 @@ staff[surprised]: 아! {안녕하세요}... 김순자 {선생님}{은|은/는}..
 staff[sad]: {아니요}...? {선생님}...
 (She sits back down slowly and looks at the glass case at the far wall.)
 
+=== scene c1_mualibi
+staff[worried]: {사진}... {이상해요}...
+(She's still holding the old photo. She glances at the glass case, then leans across the desk and lowers her voice.)
+staff: {어제} {밤}{에}... {서울} {선생님}{하고} {여기} {있었어요}. {탈}{을|을/를} {봤어요}.
+(Someone from Seoul came to see the mask last night, after closing. She stayed late to let him in.)
+! statement s_alibi
+staff[worried]: {이거}... {서울} {선생님}{의} {명함}{이에요}.
+(She slides a business card across the desk. A thumb of black ink has smeared over the end of the phone number.)
+! give card; set gotCard
+
 === scene c1_mudesk
 staff[sad]: {선생님}... {괜찮아요}?
 (She asks it softly, mostly to herself.)
@@ -836,10 +884,10 @@ haraboji[happy]: {물고기}? {아니요}. 하하.
 === scene c1_g3
 haraboji[worried]: ...{몰라요}.
 (He doesn't look at you. His hands tighten on the rod.)
-~ His trouser legs are soaked to the knee and stuck with pine needles, and his boots are caked in mountain mud. He hasn't been sitting here all morning.
+~ His trouser legs are soaked to the knee and stuck with pine needles, and his rubber boots are caked in mountain mud. He hasn't been sitting here all morning.
 haraboji[worried]: {몰라요}. {몰라요}.
 (He says it again, quieter, like he's trying to convince himself.)
-! set metGramps; statement s_gramps
+! set metGramps; statement s_gramps; give gramboots
 -> c1_gcatch
 
 === scene c1_gcatch
@@ -967,8 +1015,8 @@ haraboji: {빨리} {가요}.
 
 === scene c1_bridge
 ~ You walk down to the wooden bridge. In the morning light it's just a bridge: old planks, a rope rail, ducks underneath.
-~ In the mud by the first post, though: a bootprint, bigger than yours, and the round mark of something set down. The kind of mark a heavy flashlight makes when you stand it on its end.
-! give bootprint
+~ But the mud by the first post has been churned up. You crouch down.
+@examine bridgemud
 
 # ------------------------------------------------------------ temple
 === scene c1_j1
@@ -1006,8 +1054,16 @@ halmeoni: {이거}{는|은/는} {진짜} {탈}{이에요}.
 halmeoni[worried]: {박물관} {탈}... {가짜}{예요|이에요}.
 (She says it very quietly, as if it's dangerous to say out loud.)
 ! statement s_halmeoni
-! set metHalmeoni
+halmeoni[sad]: {제}{가|이/가} {바꿨어요}. {옛날}{에}.
+(She holds up two fingers side by side, then swaps them.)
+halmeoni: {이거}{는|은/는} {마을}{의} {탈}{이에요}. {박물관}{의} {탈}{이|이/가} {아니에요}.
+(She taps the old wood, then points down at the village lights. It belongs down there, in the festival, not behind glass.)
+! statement s_reason; set metHalmeoni
+-> c1_jmenu
+
+=== scene c1_jmenu
 ~ You have so many questions.
+* {서울} {선생님}...? -> c1_jq4 if gotCard
 * {누구}{예요|이에요}? {핸드폰}... -> c1_jq1
 * {집}{에} {가요}! -> c1_jq2
 * {할아버지}{는|은/는}... -> c1_jq3
@@ -1018,18 +1074,25 @@ halmeoni[worried]: {몰라요}... {남자}{예요|이에요}.
 (She looks down the mountain toward the river.)
 halmeoni[worried]: {박물관}... {아니요}. {몰라요}.
 (She stops herself, and shakes her head hard.)
--> c1_j3.4
+-> c1_jmenu
+
+=== scene c1_jq4
+halmeoni[worried]: {서울} {선생님}...
+(Her hands tighten on the mask. She knows exactly who you mean.)
+halmeoni[worried]: {나쁜} {사람}{이에요}. {탈}{을|을/를}... {팔아요}.
+(She rubs her thumb and fingers together. Money. He'd sell it.)
+-> c1_jmenu
 
 === scene c1_jq2
 halmeoni[sad]: {아니요}. {아니요}...
 (She holds the bundle tighter. She won't go down the mountain while someone is hunting for it.)
 halmeoni: {탈}... {집}{에}... {아니요}.
--> c1_j3.4
+-> c1_jmenu
 
 === scene c1_jq3
 halmeoni[happy]: {할아버지}... {친구}{예요|이에요}. {좋은} {친구}.
 (For a moment she smiles, really smiles.)
--> c1_j3.4
+-> c1_jmenu
 
 === scene c1_jdusk
 ~ You sit down next to her on the cold step. The sun slides behind the ridge. Below, the village lights come on one by one.
@@ -1044,16 +1107,17 @@ halmeoni[worried]: {학생}... {누구}{하고} {왔어요}?!
 * [Run down the path toward it] -> c1_jrun
 
 === scene c1_jcall
-~ You open your mouth to shout, and 할머니 claps a hand over it, eyes wide.
+~ You shout down the path. 할머니 claps a hand over your mouth, but it's too late. The light stops, swings toward you, and starts to run.
 halmeoni[worried]: {아니요}! {아니요}!
-~ Calling out to whoever is hunting her mask is a very bad idea.
-<- c1_jdusk.4
+~ A hand grabs the red bundle out of her arms. Footsteps crash away down the mountain.
+~ ...No. It can't end like that. Back to the top of the path.
+<- c1_j1
 
 === scene c1_jrun
-~ You take one step toward the path. 할머니 grabs your sleeve and pulls you back, hard.
-halmeoni[worried]: {아니요}...
-~ Running straight at a stranger in the dark won't help either of you.
-<- c1_jdusk.4
+~ You run down the path toward the light. Halfway down, it goes out. Something heavy hits your shoulder and you're on the ground.
+~ Above you, 할머니 screams. When you get back up the path, the step is empty, and so is the red cloth.
+~ ...No. It can't end like that. Back to the top of the path.
+<- c1_j1
 
 === scene c1_jdark
 ~ You blow out the lantern. Darkness. 할머니's breathing, fast and shallow.

@@ -315,9 +315,25 @@ function closeMask(real){
   if(real)g+=`<text x="200" y="262" text-anchor="middle" font-size="10" fill="#3a2010" font-family="serif" opacity=".85">1650</text>`;
   return `<svg class="art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${DEFS}${g}</svg>`;
 }
+
+/* close-up: the mud by the bridge post */
+function closeMud(){
+  let g=`<rect width="400" height="300" fill="#6b5137"/><path d="M0 60 Q100 40 200 70 T400 50 M0 200 Q120 180 230 210 T400 190" stroke="#5a432c" stroke-width="14" fill="none" opacity=".6"/>`;
+  g+=`<rect x="0" y="0" width="40" height="300" fill="#4a3522"/><rect x="34" y="0" width="8" height="300" fill="#3a2919"/>`;
+  // the bootprint
+  g+=`<path d="M150 60 Q205 52 212 110 Q216 150 204 170 Q200 200 206 236 Q204 262 178 262 Q152 262 150 236 Q150 200 146 170 Q134 140 136 110 Q138 66 150 60Z" fill="#4c3824"/>`;
+  for(let y=78;y<160;y+=12)g+=`<path d="M146 ${y} l12 6 l12 -6 l12 6 l12 -6 l12 6" stroke="#36271a" stroke-width="4" fill="none"/>`;
+  for(let y=190;y<252;y+=12)g+=`<path d="M156 ${y} l10 6 l10 -6 l10 6 l10 -6" stroke="#36271a" stroke-width="4" fill="none"/>`;
+  // the flashlight ring
+  g+=`<circle cx="290" cy="110" r="26" fill="none" stroke="#3e2d1d" stroke-width="7"/><circle cx="290" cy="110" r="18" fill="#5e4630"/>`;
+  // reeds and the ticket
+  g+=`<g transform="rotate(-14 305 232)"><rect x="270" y="215" width="74" height="34" rx="3" fill="#f2e6c8" stroke="#9c8b66"/><path d="M282 226 H318 M282 236 H306" stroke="#7a6a4c" stroke-width="3"/><path d="M330 215 V249" stroke="#b9a882" stroke-dasharray="3 3"/></g>`;
+  g+=[250,262,276,340,352,366,380].map((x,i)=>`<path d="M${x} 300 Q${x+(i%2?8:-6)} 240 ${x+(i%2?14:-10)} ${190+i*6}" stroke="#7f9a4e" stroke-width="4" fill="none"/>`).join('');
+  return `<svg class="art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${g}</svg>`;
+}
 const ART={
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
   jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate,
-  mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true)
+  mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true), mud:closeMud
 };

@@ -188,6 +188,7 @@ avatar 박 #6a6f7d
 on-open give museumtext
 day {어제}
 them 18:02 김순자 {선생님}, {내일} {아침} {9시}, {박물관}{에서} {만나요}!
+them 18:05 {서울} {선생님}{도} {와요}.
 me 18:30 {네}! {내일} {만나요}.
 
 === phone unknown

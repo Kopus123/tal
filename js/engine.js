@@ -40,7 +40,9 @@ function parseStory(src,st){
       case 'hints':{m=line.match(/^if\s+(\S+):\s*(.+)$/);st.hints.push(m?{c:m[1],t:m[2]}:{t:line});break}
       // deduction: ID [final] if COND | sentence with {blank} words | what it means once solved
       case 'deduce':{m=line.match(/^(\w+)(\s+final)?\s+if\s+(\S+)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
-        if(m)st.cases.push({id:m[1],final:!!m[2],c:m[3],text:m[4],why:m[5],blanks:[...m[4].matchAll(/\{([^}|]+)(?:\|([^}]+))?\}/g)].map(x=>x[2]||x[1])});break}
+        // "... | why | needs A + B": the deduction also needs these two proofs attached (evidence or statement ids; A/B2 = either)
+        if(m){let why=m[5],needs=null;const k=why.match(/^(.*?)\s*\|\s*needs\s+(.+)$/);if(k){why=k[1];needs=k[2].split('+').map(x=>x.trim().split('/').map(y=>y.trim()))}
+        st.cases.push({id:m[1],final:!!m[2],c:m[3],text:m[4],why,needs,blanks:[...m[4].matchAll(/\{([^}|]+)(?:\|([^}]+))?\}/g)].map(x=>x[2]||x[1])})}break}
       // evidence: id | label | picture | what it is | Korean written on it (optional)
       case 'evidence':{const [id,label,icon,desc,kor]=line.split('|').map(x=>(x||'').trim());st.evidence[id]={id,label,icon,desc,ko:kor};break}
       case 'case':{m=line.match(/^(\w+)\s+(\S+)(\s+final)?\s+if\s+(\S+)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
@@ -632,7 +634,11 @@ function showLog(){
 /* ---------- the case board: deductions (fill the blanks) + evidence ----------
    A deduction is a sentence with blanks; you fill them with words from your notebook.
    It's checked as a whole: when it's wrong you only learn that something doesn't follow. */
-let pickQ=null,FILL={},ACT=0,boardTab='ded';
+let pickQ=null,FILL={},ACT=0,boardTab='ded',PROOF={},PMODE=null;
+// proof: either order counts
+const proofOk=(q,pf)=>!q.needs||[[0,1],[1,0]].some(o=>q.needs.length===2?q.needs.every((alts,i)=>alts.includes(pf[o[i]])):q.needs.every((alts,i)=>alts.includes(pf[i])));
+function proofChip(id){const e=ST.evidence[id];if(e)return `${iconSVG(e.icon)}<span>${esc(plain(e.label))}</span>`;
+  const st=ST.statements[id];if(st){const nd=ST.nodes[st.node],c=ST.cast[nd.who]||{};return `<span class="pface">${c.look?portrait(c.look,nd.ex):speakerGlyph()}</span><span>${esc(plain(nd.ko).slice(0,14))}…</span>`}return esc(id)}
 const normAns=s=>String(s).replace(/[\s.?!~,·]/g,'');
 const owned=()=>Object.values(ST.evidence||{}).filter(e=>S.F['ev_'+e.id]);
 // statements: lines people said that matter, saved by "! statement ID" in the story
@@ -677,8 +683,9 @@ function caseBoard(tab){
   const check=q=>{
     const f=FILL[q.id]||[];
     if(q.blanks.some((b,i)=>!f[i])){toast('Fill in every blank first.');return}
-    if(q.blanks.every((b,i)=>b.split('/').some(a=>normAns(a)===normAns(f[i])))){
-      S.cs[q.id]=1;S.F['solved_'+q.id]=1;q.blanks.forEach(b=>noteUsed('{'+b+'}',true));
+    const pf=PROOF[q.id]||[];if(q.needs&&q.needs.some((x,i)=>!pf[i])){toast('Attach your proof first.');return}
+    if(q.blanks.every((b,i)=>b.split('/').some(a=>normAns(a)===normAns(f[i])))&&proofOk(q,pf)){
+      S.cs[q.id]=1;S.F['solved_'+q.id]=1;PMODE=null;q.blanks.forEach(b=>noteUsed('{'+b+'}',true));
       q.blanks.filter(b=>WORLD.tells[b]&&!S.tl[b]).forEach(b=>{S.tl[b]=1;setTimeout(()=>toast(`New tell in your notebook: <b>${esc(b)}</b>`,4000),400)});save();pickQ=null;filter='';miss=false;sfx('solve');buzz([20,40,20]);draw();
       if(q.final)setTimeout(()=>{close(o);finale()},900);else if(caseReadyNow())toast('Everything you know fits together.');
     }else{sfx('wrong');buzz(60);miss=true;draw()}
@@ -696,11 +703,16 @@ function caseBoard(tab){
       h+=ev.length?`<div class="evlist">${ev.map(e=>`<button class="evcard" data-ev="${e.id}">${iconSVG(e.icon)}<span><b>${ko(e.label,false,false)}</b><small>${esc(e.desc)}</small></span></button>`).join('')}</div>`:`<div class="empty">Nothing yet. Things you find that matter will collect here.</div>`;
     }else{
       const qs=ST.cases.filter(q=>cond(q.c));
-      h+=qs.length?'<div class="empty">Fill each blank with a word. When every blank is right, the deduction locks in. If one is wrong, you won\'t be told which.</div>':'<div class="empty">Nothing to work out yet. Look around and see what you can find.</div>';
+      h+=qs.length?'<div class="empty">Fill each blank with a word, and attach proof where it asks. When everything is right, the deduction locks in. If something is wrong, you won\'t be told what.</div>':'<div class="empty">Nothing to work out yet. Look around and see what you can find.</div>';
       h+=qs.map(q=>{
-        if(S.cs[q.id])return`<div class="q solved"><div class="ded">${dedHTML(q,'solved')}</div><div class="why">${esc(q.why)}</div></div>`;
-        if(pickQ!==q.id)return`<div class="q"><div class="ded">${dedHTML(q,'closed')}</div><button class="btn-ink" data-open="${q.id}">Work it out</button></div>`;
-        return`<div class="q open"><div class="ded">${dedHTML(q,'open')}</div>
+        if(S.cs[q.id])return`<div class="q solved"><div class="ded">${dedHTML(q,'solved')}</div>${q.needs?`<div class="proofrow done">${(PROOF[q.id]||[]).filter(Boolean).map(id=>`<span class="pslot filled">${proofChip(id)}</span>`).join('')}</div>`:''}<div class="why">${esc(q.why)}</div></div>`;
+        if(pickQ!==q.id)return`<div class="q"><div class="ded">${dedHTML(q,'closed')}</div>${q.needs?`<div class="why">Needs ${q.needs.length} pieces of proof.</div>`:''}<button class="btn-ink" data-open="${q.id}">Work it out</button></div>`;
+        const pf=PROOF[q.id]||[];
+        const proofRow=q.needs?`<div class="proofrow"><span class="plabel">Proof</span>${q.needs.map((x,i)=>`<button class="pslot ${pf[i]?'filled':''} ${PMODE===i?'active':''}" data-ps="${i}">${pf[i]?proofChip(pf[i]):'＋ Attach'}</button>`).join('')}</div>`:'';
+        if(PMODE!==null&&q.needs)return`<div class="q open"><div class="ded">${dedHTML(q,'open')}</div>${proofRow}
+          <div class="label">Pick the proof</div><div class="pick proofpick">${owned().map(e=>`<button class="pp" data-pp="${e.id}">${proofChip(e.id)}</button>`).join('')}${ownedSt().map(x=>`<button class="pp" data-pp="${x.id}">${proofChip(x.id)}</button>`).join('')}</div>
+          <div class="row"><button class="btn-ink" data-pcancel>Back to words</button></div></div>`;
+        return`<div class="q open"><div class="ded">${dedHTML(q,'open')}</div>${proofRow}
           <form class="typeans" id="ta"><input id="ti" lang="ko" autocomplete="off" placeholder="Type a word, or pick one below" value="${esc(filter)}"><button class="btn-ink" type="submit">Put in</button></form>
           <div class="pick">${shortlist(q,filter).map(id=>`<button class="w ${status(id)}" data-pk="${esc(id)}" data-w="">${esc(id)}</button>`).join('')||'<span class="empty">No matching words.</span>'}</div>
           ${miss?`<div class="miss">Something doesn't follow.</div>`:''}
@@ -711,11 +723,16 @@ function caseBoard(tab){
     o.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{boardTab=b.dataset.bt;sfx('tap');draw()});
     o.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>evidenceSheet(b.dataset.ev));
     o.querySelectorAll('[data-sth]').forEach(b=>b.onclick=()=>{const nd=ST.nodes[ST.statements[b.dataset.sth].node];speak(nd.ko,nd.who)});
-    o.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{sfx('tap');pickQ=b.dataset.open;FILL[pickQ]=FILL[pickQ]||[];ACT=Math.max(0,ST.cases.find(x=>x.id===pickQ).blanks.findIndex((x,i)=>!FILL[pickQ][i]));filter='';miss=false;draw()});
+    o.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{sfx('tap');pickQ=b.dataset.open;PMODE=null;FILL[pickQ]=FILL[pickQ]||[];ACT=Math.max(0,ST.cases.find(x=>x.id===pickQ).blanks.findIndex((x,i)=>!FILL[pickQ][i]));filter='';miss=false;draw()});
     const q=ST.cases.find(x=>x.id===pickQ);if(!q||boardTab!=='ded')return;
-    o.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>{ACT=+b.dataset.slot;sfx('tap');draw()});
+    o.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>{ACT=+b.dataset.slot;PMODE=null;sfx('tap');draw()});
+    o.querySelectorAll('[data-ps]').forEach(b=>b.onclick=()=>{const i=+b.dataset.ps;PMODE=PMODE===i?null:i;miss=false;sfx('tap');draw()});
+    o.querySelectorAll('[data-pp]').forEach(b=>b.onclick=()=>{const pf=PROOF[q.id]=PROOF[q.id]||[];const id=b.dataset.pp;
+      const other=pf.indexOf(id);if(other>=0&&other!==PMODE)pf[other]=null;pf[PMODE]=id;
+      const nxt=q.needs.findIndex((x,i)=>!pf[i]);PMODE=nxt>=0?nxt:null;sfx('tap');draw()});
+    const pc=o.querySelector('[data-pcancel]');if(pc)pc.onclick=()=>{PMODE=null;draw()};
     o.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>place(q,b.dataset.pk));
-    o.querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{FILL[q.id]=[];ACT=0;miss=false;draw()});
+    o.querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{FILL[q.id]=[];PROOF[q.id]=[];PMODE=null;ACT=0;miss=false;draw()});
     o.querySelectorAll('[data-check]').forEach(b=>b.onclick=()=>check(q));
     const ti=o.querySelector('#ti');if(ti){ti.oninput=e=>{filter=e.target.value.trim();
       const pk=o.querySelector('.pick');pk.innerHTML=shortlist(q,filter).map(id=>`<button class="w ${status(id)}" data-pk="${esc(id)}" data-w="">${esc(id)}</button>`).join('')||'<span class="empty">No matching words.</span>';

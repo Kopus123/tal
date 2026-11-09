@@ -375,6 +375,16 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 .nk.ok{background:var(--paper-ink);color:var(--paper);font-size:1rem;font-weight:700}
 .nk:disabled{opacity:.4}
 .grow.tell b{color:#e59a87}
+.proofrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}
+.proofrow .plabel{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);margin-right:2px}
+.pslot,.pp{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:4px 10px 4px 6px;border-radius:10px;border:1px dashed var(--ink-3);background:transparent;color:var(--mist);font-size:.85rem;max-width:100%}
+.pslot.filled,.pp{border-style:solid;color:var(--paper);background:var(--ink-2)}
+.pslot.active{border-color:#d9a43d;box-shadow:0 0 0 2px rgba(217,164,61,.35)}
+.pslot svg,.pp svg{width:30px;height:30px;flex:0 0 auto;background:var(--paper);border-radius:6px}
+.pface{width:30px;height:30px;border-radius:50%;overflow:hidden;flex:0 0 auto;display:inline-block}
+.pface svg{width:30px;height:30px}
+.proofrow.done .pslot{min-height:32px;font-size:.78rem}
+.proofpick{display:flex;flex-wrap:wrap;gap:6px}
 .mixrow{display:flex;align-items:center;gap:8px;position:relative}
 .mixw{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;border:1px solid var(--ink-3);background:var(--ink);color:var(--paper)}
 .mixw svg{width:44px;height:44px;background:var(--paper);border-radius:8px}

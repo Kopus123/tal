@@ -104,7 +104,9 @@ def parse(path):
             m = re.match(r"^(\w+)(\s+final)?\s+if\s+(\S+)\s*\|\s*(.+?)\s*\|\s*(.+)$", line)
             if not m: err(path.name, ln, "deduction line not understood"); continue
             cond_flags(m.group(3), ln); tokens(m.group(4), ln)
-            d["deduce"].append(dict(id=m.group(1), final=bool(m.group(2)), c=m.group(3), blanks=ids_in(m.group(4)), ln=ln))
+            nd = re.search(r"\|\s*needs\s+(.+)$", m.group(5))
+            needs = [[y.strip() for y in x.split("/")] for x in nd.group(1).split("+")] if nd else []
+            d["deduce"].append(dict(id=m.group(1), final=bool(m.group(2)), c=m.group(3), blanks=ids_in(m.group(4)), needs=needs, ln=ln))
         elif sec == "evidence":
             p = [x.strip() for x in line.split("|")]
             if len(p) < 4: err(path.name, ln, "evidence line needs id | label | picture | description"); continue
@@ -224,7 +226,7 @@ def main():
             if eid not in given: warn(fname, e["ln"], f"evidence '{eid}' is never handed to you")
         # flags
         auto = {"started"} | {f"solved_{q['id']}" for q in d["deduce"]} | {f"read_{p}" for p in d["phones"]} \
-             | {f"readn_{p}" for p in d["phones"]} | {f"vm_{p}" for p in d["phones"]} | {f"ev_{e}" for e in evidence}
+             | {f"readn_{p}" for p in d["phones"]} | {f"vm_{p}" for p in d["phones"]} | {f"st_{x}" for x in d["statements"]} | {f"ev_{e}" for e in evidence}
         setf = {f for f, _ in d["flags_set"]} | auto
         for f, ln in d["flags_read"]:
             if f not in setf: err(fname, ln, f"flag '{f}' is checked but never set, so this can never happen")
@@ -233,6 +235,9 @@ def main():
         if len(ids) != len(set(ids)): err(fname, 1, "two deductions share an id")
         if d["deduce"] and not any(q["final"] for q in d["deduce"]): err(fname, 1, "no deduction is marked final, so the chapter can't end")
         for q in d["deduce"]:
+            for alts in q["needs"]:
+                for x in alts:
+                    if x not in d["statements"] and x not in evidence: err(fname, q["ln"], f"deduction {q['id']} needs '{x}', which is neither a statement nor evidence")
             if not q["blanks"]: err(fname, q["ln"], f"deduction {q['id']} has no blanks")
             for b in q["blanks"]:
                 for alt in b.split("/") if b not in words else [b]:

@@ -15,7 +15,8 @@
      camera                aim the camera at the target and take the photo
      phone THREAD          open the phone and read this thread
      map PLACE             travel by the village map
-     solve ID a | b        fill a deduction on the case board and check it
+     solve ID a | b ; X + Y fill a deduction on the case board (and attach proof X and Y), check it
+     nosolve ...           the same, but it must be rejected
      idle                  keep pressing Continue until you're free to look around
      expect COND           a flag condition that must be true now (same syntax as the story)
      done ID               this chapter must be finished                                      */
@@ -44,6 +45,24 @@ async function until(find,what){
 async function idle(){for(let i=0;i<120&&S.node;i++){const n=document.querySelector('#bNext');
   if(!n)fail('needs a decision before it can go on');await clickEl(n)}if(S.node)fail('never finished the scene')}
 
+// solve ID w1 | w2 ; proofA + proofB   (nosolve = the same, but it must be rejected)
+async function solveIt(a,expectFail){
+  const [wpart,ppart]=a.split(';');const [id,...rest]=wpart.trim().split(/\s+/);const words=rest.join(' ').split('|').map(x=>x.trim()).filter(Boolean);
+  const proofs=ppart?ppart.split('+').map(x=>x.trim()):[];
+  const q=ST.cases.find(x=>x.id===id);if(!q)fail(`no deduction ${id}`);if(!cond(q.c))fail(`deduction ${id} isn't on the board yet`);
+  const wasFinal=q.final;document.querySelector('#bCase').click();await settle();   // the real top-bar button
+  const open=document.querySelector(`[data-open="${id}"]`);if(open){open.click();await settle()}else if(pickQ!==id)fail(`deduction ${id} can't be opened`);
+  for(const w of words){const ti=document.querySelector('#ti');ti.value=w;ti.dispatchEvent(new Event('input'));
+    document.querySelector('#ta').dispatchEvent(new Event('submit',{cancelable:true}));await settle()}
+  for(let i=0;i<proofs.length;i++){const s=document.querySelector(`[data-ps="${i}"]`);if(!s)fail(`deduction ${id} has no proof slot ${i+1}`);if(!s.classList.contains('active')){s.click();await settle()}
+    const b=document.querySelector(`[data-pp="${proofs[i]}"]`);if(!b)fail(`"${proofs[i]}" isn't available as proof`);b.click();await settle()}
+  document.querySelector(`[data-check="${id}"]`).click();await settle();
+  const ok=S.cs[id]||(wasFinal&&S.done[S.ch]);
+  if(expectFail){if(ok)fail(`deduction ${id} was accepted but shouldn't be`);document.querySelector(`[data-clear="${id}"]`).click();await settle()}
+  else if(!ok){const m=document.querySelector('#cbb .miss');closeTop();fail(`deduction ${id} not accepted${m?' (Something doesn\'t follow)':''}`)}
+  if(wasFinal&&!expectFail){await tick(1200);await settle()}
+  while(document.querySelector('#ovs .ov')){closeTop();await settle()}
+}
 const STEPS={
   async chapter(id){S=fresh();S.set.auto=0;S.set.sound=0;BACK=[];SEEN.clear();
     document.querySelectorAll('.title').forEach(t=>t.remove());startChapter(id,true);await settle()},
@@ -70,16 +89,8 @@ const STEPS={
   async map(p){await idle();openMap();await settle();const b=document.querySelector(`[data-pin="${p}"]`);
     if(!b){closeTop();fail(`"${p}" isn't on the map yet`)}b.click();await settle();
     if(S.loc!==p){closeTop();fail(`map didn't go to ${p}`)}},
-  async solve(a){const [id,...rest]=a.split(/\s+/);const words=rest.join(' ').split('|').map(x=>x.trim());
-    const q=ST.cases.find(x=>x.id===id);if(!q)fail(`no deduction ${id}`);if(!cond(q.c))fail(`deduction ${id} isn't on the board yet`);
-    const wasFinal=q.final;document.querySelector('#bCase').click();await settle();   // the real top-bar button
-    const open=document.querySelector(`[data-open="${id}"]`);if(!open)fail(`deduction ${id} can't be opened`);open.click();await settle();
-    for(const w of words){const ti=document.querySelector('#ti');ti.value=w;ti.dispatchEvent(new Event('input'));
-      document.querySelector('#ta').dispatchEvent(new Event('submit',{cancelable:true}));await settle()}
-    document.querySelector(`[data-check="${id}"]`).click();await settle();
-    if(!S.cs[id]&&!(wasFinal&&S.done[S.ch])){const m=document.querySelector('#cbb .miss');closeTop();fail(`deduction ${id} not accepted${m?' (Something doesn\'t follow)':''}`)}
-    if(wasFinal){await tick(1200);await settle()}
-    while(document.querySelector('#ovs .ov')){closeTop();await settle()}},
+  async solve(a){await solveIt(a,false)},
+  async nosolve(a){await solveIt(a,true)},
   async idle(){await idle()},
   async expect(c){if(!cond(c))fail(`expected ${c}`)},
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},

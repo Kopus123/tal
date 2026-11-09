@@ -14,6 +14,7 @@ end-text 할머니 is safe, for now. But someone followed you up the mountain in
 if !sawFake: Look closely at the mask on the courtyard floor.
 if !read_threat: 할머니's phone just buzzed. Tap the phone icon in the top-right corner.
 if !showed: 수진 should see what came in on 할머니's phone. Talk to her and show her.
+if sawWall&sawFake&!st_s_sujin: Someone got in over the back wall. Ask 수진 where she was last night.
 if !talkedOwner: Two 김밥. Who was the second one for? The restaurant owner might remember.
 if !marketDone&!paid: The restaurant owner said the woman at the market knows. The bus stops at the market. Maybe buy something from her first.
 if !marketDone: She's ready to talk now. Ask her about 할머니.
@@ -29,12 +30,12 @@ if !solved_d8: What did 할머니 say about the mask in the museum?
 Chapter 1 is done. Look back through your notebook while you wait for Chapter 2.
 
 === deduce
-d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow.
+d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow. | needs fakemask + photo79
 d2 if read_threat | Someone wants the {진짜} mask, at the {다리}, tonight at 9, and wants her to come {혼자}. | And somehow they know the one on the gate is fake.
-dw if sawWall&sawFake | 할머니 never used the front gate. She came and went over the wall {뒤에} the house, by the {산} path. | Red paint on the stones, the same red as the mask. That's how she got past everyone.
-d3 if marketDone | Yesterday she got off at the {시장}, not at the museum, and met {할아버지} there. | The second 김밥 was for him. They ate it together at the market.
+dw if sawWall&sawFake | 할머니 never used the front gate. She came and went over the wall {뒤에} the house, by the {산} path. | Red paint on the stones, the same red as the mask. That's how she got past 수진, who watched the courtyard all night. | needs wall + s_sujin
+d3 if marketDone | Yesterday she got off at the {시장}, not at the museum, and met {할아버지} there. | The second 김밥 was for him. They ate it together at the market. | needs s_kimbap + s_market
 d4 if marketDone&sawBag | She bought {나무} and {빨간} {물감} there, to make the copy. | The bag under her workbench came from that same stall.
-d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다리}. | Maybe the same person who sent the message.
+d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다리}. | And he left a bootprint by the bridge. Maybe the same person who sent the message. | needs s_couple + bootprint
 d6 if doubtMuseum | The museum's mask has no chip in its eyebrow. Maybe it's {가짜} too. | Then which one is the real one?
 dt if doubtMuseum | The museum woman still says 진짜, but now she ends it with {는데요}. She isn't sure anymore. | Her words say yes. Her ending says "but..."
 d7 if toldMountain | 할머니 is hiding at the {절}, up on the {산}. | 할아버지 finally told you.

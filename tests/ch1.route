@@ -52,6 +52,7 @@ expect sawFake&threatSent
 phone unknown
 expect read_threat
 spot Talk to 수진
+choose 할머니 어디
 choose Show her something
 present threat
 idle
@@ -130,12 +131,13 @@ number 900
 choose Leave her be
 idle
 expect knowJunhoTime
-solve d1 가짜 | 만들었어요 | 어제
+nosolve d1 가짜 | 만들었어요 | 어제 ; fakemask + sketch
+solve d1 가짜 | 만들었어요 | 어제 ; photo79 + fakemask
 solve d2 진짜 | 다리 | 혼자
-solve dw 뒤에 | 산
-solve d3 시장 | 할아버지
+solve dw 뒤에 | 산 ; wall + s_sujin
+solve d3 시장 | 할아버지 ; s_kimbap + s_market
 solve d4 나무 | 빨간 | 물감
-solve d5 남자 | 불 | 다리
+solve d5 남자 | 불 | 다리 ; bootprint + s_couple
 solve d6 가짜
 solve dt 는데요
 solve d7 절 | 산

@@ -335,5 +335,6 @@ const ART={
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
   jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate,
-  mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true), mud:closeMud
+  mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true), mud:closeMud,
+  photo_old:()=>closeMask(true).replace('<svg class="art"','<svg class="art" style="filter:sepia(.85) contrast(.9) brightness(1.08)"')
 };

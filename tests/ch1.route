@@ -14,6 +14,7 @@ phone museum
 spot Workshop
 idle
 spot Old photo
+examine chip
 spot Back to the courtyard
 #@ Day 1 · leaving the house
 spot Front gate
@@ -26,7 +27,8 @@ spot Right path
 idle
 spot Talk to the owner
 type 할머니 봤어요?
-choose 고마워요
+type 안녕하세요
+type 고마워요
 idle
 #@ Day 1 · the bus
 spot Bus stop
@@ -34,12 +36,12 @@ spot Wait for the bus
 choose Stay on
 choose Stay on
 choose Press the stop
-type 김순자 선생님 봤어요?
+build 김순자 | 선생님 | 봤어요?
 idle
 #@ Day 1 · the museum, case board
 solve p1 박물관 | 9시 | 탈
 solve p2 버스
-solve p3 안 | 왔어요
+solve p3 안 | 왔어요 ; s_notcame + s_bus
 spot Take the bus home
 idle
 expect ending
@@ -75,8 +77,8 @@ spot Right path
 choose Shake your head
 idle
 spot Talk to the owner
-type 누구 김밥이에요?
-choose 할아버지
+build 김밥 | 두 개 | 누구예요?
+type 할아버지 어디예요
 idle
 spot Talk to the owner
 choose 전화
@@ -95,7 +97,7 @@ build 빨간 | 물감 | 주세요
 number 10000
 number 1000
 choose 할머니 봤어요
-choose 할아버지
+type 할아버지는 어디예요?
 choose 산에
 choose 강에
 idle
@@ -171,14 +173,10 @@ examine chip
 choose 서울
 choose Sit with her
 choose Call out
-present letter
-choose 괜찮아요
-examine chip
-choose Sit with her
 choose Blow out the lantern
 idle
 expect hidden
 #@ Day 2 · the last deductions
 solve d8 할머니 | 박물관 | 가짜 ; realchip + photo79
-solve d9 바꿨어요 | 마을 | 서울 ; s_reason + ticket
+solve d9 바꿨어요 | 마을 | 서울 ; s_reason + card
 done ch1

@@ -38,7 +38,7 @@ const ICON={
   together:()=>fig(20,34,.9,IG,'#2a1d18')+fig(44,34,.9,IB,'#2a1d18')+P('M30,50 Q32,44 34,50',IO,3),
   teacher:()=>fig(24,34,1.05,'#5b6a7a','#2a1d18')+Re(38,30,20,24,2,IP)+P('M48,30 V54','none',2),
   eye:()=>P('M6,32 Q32,8 58,32 Q32,56 6,32Z',IP)+Ci(32,32,9,'#6a4a32')+`<circle cx="32" cy="32" r="3.5" fill="${IK}"/>`,
-  yes:()=>`<circle cx="32" cy="32" r="18" fill="none" stroke="${IG}" stroke-width="7"/>`,
+  yes:()=>fig(26,36,1.05,IG,'#2a1d18')+`<path d="M40,30 L47,38 L60,20" fill="none" stroke="${IG}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`+P('M14,16 Q26,10 38,16','none',2.5),
   no:()=>`<path d="M16,16 L48,48 M48,16 L16,48" stroke="${IR}" stroke-width="7" stroke-linecap="round"/>`,
   bang:()=>P('M10,12 H54 V44 H30 L18,54 V44 H10Z',IP)+P('M32,18 V32','none',5)+`<circle cx="32" cy="39" r="2.8" fill="${IK}"/>`,
   where:()=>P('M32,58 C20,42 14,34 14,26 A18,18 0 0 1 50,26 C50,34 44,42 32,58Z',IR)+Tx(32,33,'?',20,'#fff'),
@@ -54,7 +54,7 @@ const ICON={
   workshop:()=>Re(8,36,34,18,2,IW)+P('M30,30 L52,8','none',4)+P('M26,34 L34,26 L38,30 L30,38Z','#b8b8b8',2.5),
   mask:()=>`<g transform="translate(32,33) scale(1.55)"><ellipse rx="14" ry="18" fill="#e7d2a7" stroke="${IK}" stroke-width="1.8"/><path d="M-11,-9 Q-6,-14 -1,-9 M1,-9 Q6,-14 11,-9" stroke="${IK}" stroke-width="1.8" fill="none"/><path d="M-9,-3 Q-5,-7 -2,-3 M2,-3 Q5,-7 9,-3" stroke="${IK}" stroke-width="1.6" fill="none"/><path d="M-9,6 Q0,16 9,6 Q0,10 -9,6Z" fill="#5a2a1d"/><circle cx="-9" cy="3" r="2.6" fill="#c45a45" opacity=".55"/><circle cx="9" cy="3" r="2.6" fill="#c45a45" opacity=".55"/></g>`,
   pretty:()=>[0,72,144,216,288].map(a=>`<ellipse cx="32" cy="20" rx="8" ry="12" fill="#e9a3b4" stroke="${IK}" stroke-width="2.5" transform="rotate(${a} 32 34)"/>`).join('')+Ci(32,34,6,IO,2.5)+P('M52,8 L54,13 L59,15 L54,17 L52,22 L50,17 L45,15 L50,13Z',IO,1.5),
-  thanks:()=>`<g transform="rotate(35 32 52)">${fig(32,38,1.1,IG,'#2a1d18')}</g>`+P('M8,58 H56','none',3),
+  thanks:()=>P('M32,54 C10,40 6,26 16,18 C24,12 30,18 32,24 C34,18 40,12 48,18 C58,26 54,40 32,54Z',IR)+P('M8,10 l4,4 M56,10 l-4,4 M32,4 v5','none',2.5),
   sleep:()=>P('M40,10 A22,22 0 1 0 54,42 A17,17 0 1 1 40,10Z',IO)+Tx(16,22,'z',14)+Tx(24,14,'z',10),
   festival:()=>P('M3,10 Q32,24 61,10','none',2)+[[9,13,IR],[19,17,IO],[29,19,IG],[39,18.5,IB],[49,16,IR],[57,12.5,IO]].map(([x,y,c])=>`<path d="M${x-4.5},${y} L${x+4.5},${y+.5} L${x},${y+10}Z" fill="${c}" stroke="${IK}" stroke-width="1.4" stroke-linejoin="round"/>`).join('')
     +[0,45,90,135,180,225,270,315].map((a,i)=>{const r=Math.PI*a/180,c=i%2?IR:IO;return `<path d="M${(32+Math.cos(r)*5).toFixed(1)},${(45+Math.sin(r)*5).toFixed(1)} L${(32+Math.cos(r)*13).toFixed(1)},${(45+Math.sin(r)*13).toFixed(1)}" stroke="${c}" stroke-width="3" stroke-linecap="round"/><circle cx="${(32+Math.cos(r)*16).toFixed(1)}" cy="${(45+Math.sin(r)*16).toFixed(1)}" r="1.8" fill="${c}"/>`}).join('')+`<circle cx="32" cy="45" r="2.5" fill="${IO}"/>`,

@@ -27,7 +27,7 @@ The prologue is done. Look back through your notebook while you wait for Chapter
 === deduce
 p1 if read_museum&maskMissing | This morning 할머니 was supposed to meet the {박물관} at {9시}, and bring the {탈}. | Her texts, her calendar, and the empty hook all agree.
 p2 if talked&sawPhoto | She left the village by {버스}, carrying something wrapped in red cloth. | The restaurant owner saw her go, and the couple's photo shows the bundle.
-p3 if museumDone | But at the museum, she {안} {왔어요}. | She got on the bus and never arrived.
+p3 if museumDone | But at the museum, she {안} {왔어요}. | She got on the bus and never arrived. | needs s_bus + s_notcame
 p4 final if ending | 할머니 is 수진's {엄마}, and her note says: {찾지 마세요}. | Not just the village grandmother. Her mother. And she doesn't want to be found.
 
 === evidence
@@ -246,7 +246,7 @@ sujin[worried]: {할머니} {봤어요}?
 * [Shrug, confused] -> m_shrug
 
 === scene m_yes
-sujin[surprised]: {정말}요? {어디}{에서}요?
+sujin[surprised]: {정말}{요}? {어디}{에서}{요}?
 (Her face lights up and she grabs your arm.)
 sujin[worried]: {할머니}... {어디}{예요|이에요}? {어디}{에서} {봤어요}?
 (She waits for you to point somewhere. Anywhere. But you haven't seen anyone this morning, and there's nothing to point at.)
@@ -303,9 +303,17 @@ sign: {오늘}: {축제} 🏮\n{9시} {박물관}
 (A paper calendar on the wall. Today's date has been circled twice in red pen.)
 
 === scene gp1
-~ A faded photo by the door: a young woman in hanbok with a grinning mask pushed up on top of her head. Someone wrote on the back in crayon, a long time ago:
+~ A faded photo by the door: a young woman in hanbok holding up a grinning mask. You lift it off its nail for a closer look.
+@examine oldphoto
+~ Someone wrote on the back in crayon, a long time ago:
 sign: {엄마} ♡
-! give photo79
+
+=== examine oldphoto
+art photo_old
+prompt An old photo, faded brown. Look at the mask closely.
+detail chip 37 28 9 key | There's a small chip missing from the mask's left {눈썹}. ! give photo79
+detail grin 50 76 9 | The same huge grin as the mask 할머니 showed you last night.
+detail cheek 35 59 8 | Even in an old photo, the red cheeks are faded.
 
 # ------------------------------------------------------------ alley
 === scene o1
@@ -332,7 +340,7 @@ yuna: {사진}! {사진} {찍어 주세요}!
 yuna[happy]: 와! {정말} {예뻐요}! {고마워요}!
 (She zooms in on the photo and shows her boyfriend.)
 minsu[happy]: {정말} {고마워요}.
-(He gives you a small, polite bow. They seem friendly. Maybe they saw something.)
+(He gives you a small, polite bow and takes his phone back. They seem friendly. Maybe they saw something.)
 ~ What do you ask them?
 * {배고파요}? -> o6b
 * {할머니} {봤어요}? -> o7 ! learn 할머니
@@ -354,12 +362,12 @@ yuna: {김치}{는|은/는}... {아니요}. 하하...
 <- ocam.4
 
 === scene o7
-yuna[surprised]: {할머니}요? 음... 아! {네}! {아침}{에} {봤어요}!
+yuna[surprised]: {할머니}{요}? 음... 아! {네}! {아침}{에} {봤어요}!
 (She taps her boyfriend's arm.)
 yuna: {오빠}, {사진}! {그} {사진}!
 (He scrolls back through their camera roll.)
 ! set sawPhoto; give couplephoto
-@photo A selfie of the two of them at a bus stop, grinning. Behind them, a little blurry: a small old woman holding a bundle wrapped in red cloth. It's 할머니.
+@photo A selfie of the two of them at a bus stop, grinning. The time on it says 07:12, while you were still asleep. Behind them, a little blurry: a small old woman holding a bundle wrapped in red cloth. It's 할머니. (They send it to the phone in your pocket.)
 minsu: {버스 정류장}{이에요}. {식당} {옆에} {있어요}.
 (He points down the alley toward the fork.)
 * {버스 정류장} {어디}{예요|이에요}? -> o11 ! learn 버스 정류장, 어디
@@ -418,15 +426,24 @@ ajeossi[surprised]: {네}?
 <- korder
 
 === scene k3
-ajeossi[surprised]: 순자 {할머니}요? {네}, {아침}{에} {여기} {있었어요}.
+ajeossi[surprised]: 순자 {할머니}{요}? {네}, {아침}{에} {여기} {있었어요}.
 (He nods at a stool by the window.)
 ajeossi: {김밥} {두 개} {샀어요}.
 (He holds up two fingers. Then, after a moment, holds them up again, like that part matters.)
 ajeossi[worried]: {버스} {탔어요}.
 (He points through the window at the bus stop right next door.)
-! set talked
-~
-* {고마워요}! -> k7 ! learn 고마워요
+! set talked; statement s_bus
+@type Thank him. | ajeossi
+answer: {고마워요}! -> k7
+answer: {감사합니다}! -> k7
+answer: {고맙습니다}! -> k7
+miss -> kthx
+
+=== scene kthx
+ajeossi[surprised]: {네}?
+(He waits, smiling, as if you were about to say something nice.)
+~ He told you a lot. Say thank you: 고마워요.
+<- k3.4
 
 === scene k7
 ajeossi[worried]: {네}~ {할머니} {빨리} {찾아요}!
@@ -550,12 +567,14 @@ staff[happy]: {안녕하세요}! 청솔 {박물관}{이에요}.
 -> mu3
 
 === scene mu3
-@type Ask her about 할머니. (Her full name was in the museum's text: 김순자.)
-answer: 김순자 {선생님} {봤어요}? -> mu4
-answer: {할머니} {봤어요}? -> mu4
-answer: 김순자 {선생님} {여기} {있어요}? -> mu4
-answer: {할머니} {여기} {있어요}? -> mu4
-answer: {선생님} {봤어요}? -> mu4
+@build Ask her about 할머니. The museum's message called her 김순자 선생님: 선생님 is how people address a teacher or a respected master.
+tiles: {할머니} | 김순자 | {선생님} | {봤어요}? | {여기} | {있어요}?
+answer: 김순자 | {선생님} | {봤어요}? -> mu4
+answer: {선생님} | {봤어요}? -> mu4
+answer: {할머니} | {봤어요}? -> mu4
+answer: 김순자 | {선생님} | {여기} | {있어요}? -> mu4
+answer: {할머니} | {여기} | {있어요}? -> mu4
+answer: {선생님} | {여기} | {있어요}? -> mu4
 miss -> muhuh
 === scene muhuh
 staff[surprised]: {네}?
@@ -564,8 +583,9 @@ staff[surprised]: {네}?
 <- mu3
 
 === scene mu4
-staff[surprised]: 김순자 {선생님}이요? {아니요}... {안} {왔어요}.
+staff[surprised]: 김순자 {선생님}{이요|요}? {아니요}... {안} {왔어요}.
 (She checks her watch and frowns, then turns her monitor toward you: a calendar entry at 9:00, with 할머니's name on it.)
+! statement s_notcame
 staff[worried]: {이상해요}...
 (She dials a number and holds the phone to her ear. In your pocket, 할머니's phone starts to buzz. She stares at your pocket, then at you, and slowly lowers her phone.)
 ! set museumDone

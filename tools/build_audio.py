@@ -13,6 +13,14 @@ AUDIO = ROOT / "audio"
 VOICE_NAMES = {"SunHi": "ko-KR-SunHiNeural", "InJoon": "ko-KR-InJoonNeural", "Hyunsu": "ko-KR-HyunsuMultilingualNeural"}
 TOK = re.compile(r"\{([^}|]+)(?:\|[^}]+)?\}")
 
+def split_bar(s):  # must match splitBar() in js/engine.js
+    out, d, cur = [], 0, ""
+    for c in s:
+        d += (c == "{") - (c == "}")
+        if c == "|" and not d: out.append(cur.strip()); cur = ""
+        else: cur += c
+    return out + [cur.strip()]
+
 def normalize(s):  # must match normT() in js/engine.js
     s = TOK.sub(r"\1", s).replace("\\n", " ")
     s = re.sub("[📸🏮^♡✖📞🔔💙]", "", s).replace("/", ", ")
@@ -42,9 +50,11 @@ def collect():
             elif sec == "words":
                 m = re.match(r"^(.+?)\s*=", line)
                 if m: add("word", m.group(1))
+            elif sec == "names":
+                add("word", line.split("|")[0].strip())
             elif sec == "evidence":
                 parts = [x.strip() for x in line.split("|")]
-                if len(parts) >= 5 and parts[4]: add("sign", parts[4])
+                if len(parts) >= 5 and parts[4]: add("sign", "|".join(parts[4:]))
             elif sec == "phone":
                 m = re.match(r"^(them|me)(?:@\S+)?\s+\S+\s+(.+)", line)
                 if m: add("sign", m.group(2))
@@ -56,9 +66,9 @@ def collect():
                 if m := re.match(r"^\*\s+(.+?)\s+->", line):
                     if not m.group(1).startswith("["): add("you", m.group(1))
                 elif m := re.match(r"^tiles:\s*(.+)", line):
-                    for t in m.group(1).split("|"): add("you", t)
+                    for t in split_bar(m.group(1)): add("you", t)
                 elif m := re.match(r"^answer:\s*(.+?)\s+->", line):
-                    add("you", " ".join(t.strip() for t in m.group(1).split("|")))
+                    add("you", " ".join(split_bar(m.group(1))))
                 elif m := re.match(r"^([a-z_]+)(?:\[[\w ]+\])?(?:@[a-z]{2})?:\s*(.+)", line):
                     who = m.group(1)
                     add(who if who in cast else "sign", m.group(2))

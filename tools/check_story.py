@@ -67,7 +67,9 @@ def parse(path):
                 d["tokens"] += [(x, ln) for x in parts]
             elif k in ("unset", "learn", "led", "toast"): pass
             else: err(path.name, ln, f"unknown effect '{k}'")
-    def tokens(s, ln): d["tokens"] += [(t, ln) for t in ids_in(s)]
+    def tokens(s, ln, raw=True):  # raw=False for English text that mentions Korean names
+        d["tokens"] += [(t, ln) for t in ids_in(s)]
+        if raw: d.setdefault("raw", []).append((TOK.sub(" ", s), ln))
     def beat(ln):
         nonlocal count
         count += 1
@@ -104,7 +106,7 @@ def parse(path):
         elif sec == "deduce":
             m = re.match(r"^(\w+)(\s+final)?\s+if\s+(\S+)\s*\|\s*(.+?)\s*\|\s*(.+)$", line)
             if not m: err(path.name, ln, "deduction line not understood"); continue
-            cond_flags(m.group(3), ln); tokens(m.group(4), ln)
+            cond_flags(m.group(3), ln); tokens(m.group(4), ln, False)
             nd = re.search(r"\|\s*needs\s+(.+)$", m.group(5))
             needs = [[y.strip() for y in x.split("/")] for x in nd.group(1).split("+")] if nd else []
             d["deduce"].append(dict(id=m.group(1), final=bool(m.group(2)), c=m.group(3), blanks=ids_in(m.group(4)), needs=needs, ln=ln))
@@ -112,7 +114,7 @@ def parse(path):
             p = [x.strip() for x in line.split("|")]
             if len(p) < 4: err(path.name, ln, "evidence line needs id | label | picture | description"); continue
             d["evidence"][p[0]] = dict(icon=p[2], ln=ln); tokens(p[1], ln)
-            if len(p) > 4: tokens(p[4], ln)
+            if len(p) > 4: tokens("|".join(p[4:]), ln)
         elif sec == "place":
             if m := re.match(r"^(name|sub|art|first|always|ambient|travel)\s+(.+)$", line):
                 cur[m.group(1)] = (m.group(2), ln)
@@ -125,20 +127,26 @@ def parse(path):
             if m := re.match(r"^on-open\s+(.+)", line): effects(m.group(1), ln)
             elif m := re.match(r"^voice(?:@(\S+))?\s+\S+\s+([a-z_]+)\s+(.+)", line):
                 cond_flags(m.group(1), ln); d["speakers"].append((m.group(2), ln)); tokens(m.group(3), ln)
-            elif m := re.match(r"^(?:day|them|me|sys|note)(?:@(\S+))?\s+(.+)", line):
-                cond_flags(m.group(1), ln); tokens(m.group(2), ln)
+            elif m := re.match(r"^(day|them|me|sys|note)(?:@(\S+))?\s+(.+)", line):
+                cond_flags(m.group(2), ln); tokens(m.group(3), ln, m.group(1) != "note")
             elif not re.match(r"^(name|avatar)\s", line): err(path.name, ln, "phone line not understood")
         elif sec == "examine":
-            if m := re.match(r"^art\s+(\S+)", line):
+            if m := re.match(r"^compare\s+(\S+)", line):
+                if m.group(1) not in ARTS: err(path.name, ln, f"art '{m.group(1)}' isn't drawn in js/art.js")
+            elif m := re.match(r"^art\s+(\S+)", line):
                 cur["art"] = m.group(1)
                 if m.group(1) not in ARTS: err(path.name, ln, f"art '{m.group(1)}' isn't drawn in js/art.js")
             elif re.match(r"^prompt\s", line): pass
             elif m := re.match(r"^detail\s+(\w+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(\s+key)?\s*\|\s*(.+?)(?:\s+!\s+(.+))?$", line):
-                tokens(m.group(6), ln)
+                tokens(m.group(6), ln, False)
                 if m.group(5): cur["keys"] += 1
                 if m.group(7): effects(m.group(7), ln)
             else: err(path.name, ln, "examine line not understood")
         elif sec == "pattern": pass
+        elif sec == "meanings":
+            d.setdefault("meanings", {})[line.split("|")[0].strip()] = ln
+        elif sec == "names":
+            d.setdefault("names", {})[line.split("|")[0].strip()] = ln
         elif sec in ("grammar", "endings"): pass
         elif sec == "scene":
             if scene is None: err(path.name, ln, "line outside a scene"); continue
@@ -256,6 +264,15 @@ def main():
             for b in q["blanks"]:
                 for alt in b.split("/") if b not in words else [b]:
                     if alt not in words: err(fname, q["ln"], f"deduction {q['id']}: answer '{alt}' isn't a word")
+    meanings = world.get("meanings", {}); names = set(world.get("names", {}))
+    for w, (spec, ln) in words.items():
+        if spec != "(grammar)" and w not in meanings: WARN.append(f"world.story:{ln}: word '{w}' has no meaning (=== meanings)")
+    namerx = re.compile("|".join(sorted(map(re.escape, names), key=len, reverse=True))) if names else None
+    for name, d in [("world.story", world)] + list(chapters.values()):
+        for text, ln in d.get("raw", []):
+            rest = namerx.sub(" ", text) if namerx else text
+            left = re.findall(r"[가-힣]+", rest)
+            if left: WARN.append(f"{name}:{ln}: Korean you can't tap: {' '.join(left)}")
     for p, ln in world["pins"]:
         if p not in all_places: err("world.story", ln, f"map pin for unknown place '{p}'")
     # voices

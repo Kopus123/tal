@@ -73,7 +73,7 @@ const STEPS={
   async type(t){const inp=await until(()=>document.querySelector('#tin'),'a typed answer');inp.value=t;
     await clickEl(document.querySelector('#bSayT'));if(TFB)await clickEl(document.querySelector('#bNext'))},
   async build(a){await until(()=>document.querySelector('#sb .tiles'),'sentence tiles');
-    for(const w of a.split('|').map(x=>x.trim())){const b=vis('#sb [data-t]').find(b=>!b.disabled&&plain(ST.nodes[S.node].tiles[+b.dataset.t])===plain(w));
+    for(const w of splitBar(a)){const b=vis('#sb [data-t]').find(b=>!b.disabled&&plain(ST.nodes[S.node].tiles[+b.dataset.t])===plain(w));
       if(!b)fail(`no tile "${w}"`);await clickEl(b)}
     await clickEl(document.querySelector('#bSay'))},
   async present(id){await clickEl(await until(()=>document.querySelector(`#sb [data-show="${id}"]`),`a chance to show "${id}"`))},
@@ -107,7 +107,9 @@ let JUMPING=false;
 async function run(name,stopAt){
   const r=await fetch(`tests/${name}.route`,{cache:'no-cache'});if(!r.ok){log(`FAIL ${name}: no route file`);failed=true;return}
   const lines=(await r.text()).split(/\r?\n/);let n=0;const t0=Date.now();
+  const target=stopAt?Math.max(1,lines.findIndex(l=>l.trim().startsWith('#@')&&l.trim().slice(2).trim()===stopAt)):0;
   for(let i=0;i<lines.length;i++){const line=lines[i].trim();
+    if(target&&window.__jumpBar)window.__jumpBar.style.width=Math.min(100,i/target*100)+'%';
     if(stopAt&&line.startsWith('#@')&&line.slice(2).trim()===stopAt)return 'stopped';
     if(!line||line.startsWith('#'))continue;
     const [cmd,...rest]=line.split(/\s+/);const arg=rest.join(' ');
@@ -126,11 +128,13 @@ async function jump(route,label){
   const keep=JSON.parse(JSON.stringify({set:S.set,w:S.w,nb:S.nb,m:S.m,tl:S.tl,mx:S.mx}));
   silence();window.toast=()=>{};JUMPING=true;out.length=0;failed=false;
   const realST=window.setTimeout;window.setTimeout=(f,ms,...x)=>realST(f,Math.min(ms||0,4),...x); // pauses become instant while jumping
-  const veil=document.createElement('div');veil.className='ov center';veil.innerHTML='<div class="panel paper" style="padding:20px;text-align:center">Jumping ahead…</div>';document.body.appendChild(veil);
+  const veil=document.createElement('div');veil.className='ov center';veil.innerHTML=`<div class="panel paper" style="padding:20px;text-align:center;min-width:260px">Jumping ahead to<br><b>${esc(label)}</b><div class="jbar"><i id="jbar"></i></div></div>`;document.body.appendChild(veil);
+  window.__jumpBar=veil.querySelector('#jbar');
   let r;try{r=await run(route,label)}catch(e){out.push(String(e))}
   window.setTimeout=realST;veil.remove();unsilence();JUMPING=false;
   while(document.querySelector('#ovs .ov'))closeTop();
-  Object.assign(S,keep);save();lastLoc=null;render();
+  const met=S.w;Object.assign(S,keep);for(const k in met)if(!S.w[k])S.w[k]={ctx:met[k].ctx||[],note:'',n:met[k].n||1}; // words from skipped scenes, without notes
+  save();lastLoc=null;render();
   if(r==='stopped')toast('Jumped to: '+esc(label),3500);else toast('Jump failed: '+esc(out.join(' ')).slice(0,300),9000);
 }
 window.TAL_TEST={jump};

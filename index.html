@@ -375,6 +375,48 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 .nk.ok{background:var(--paper-ink);color:var(--paper);font-size:1rem;font-weight:700}
 .nk:disabled{opacity:.4}
 .grow.tell b{color:#e59a87}
+.w.name{border-bottom:1px dotted rgba(150,140,120,.6);color:inherit;background:none;padding:0;font:inherit}
+.cue{font-family:var(--f-ui);font-size:.72rem;font-style:italic;letter-spacing:.01em;opacity:.85}
+.treply{display:flex;flex-direction:column;gap:2px;padding:8px 10px;background:#f6f0e0;border-left:3px solid #3f8b77;border-radius:0 8px 8px 0}
+.treply b{font-family:var(--f-ko);font-weight:400;font-size:1.2rem}.treply span{font-size:.85rem;color:var(--paper-mute)}
+.excompare{position:absolute;right:2%;top:3%;width:30%;aspect-ratio:4/3;border:3px solid #f6f0e0;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,.5);overflow:hidden;pointer-events:none;transform:rotate(3deg)}
+.excompare svg{width:100%;height:100%;display:block}
+.excompare span{position:absolute;left:0;right:0;bottom:0;background:rgba(246,240,224,.9);color:#2a231d;font-size:.6rem;text-align:center;padding:1px 0}
+.meaning{font-size:1rem;padding:8px 10px;background:rgba(124,195,174,.15);border-radius:8px}
+.nbtools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.nbtools input{flex:1;min-width:140px;font:inherit;border-radius:10px;border:1px solid var(--ink-3);background:var(--ink);color:var(--paper);padding:7px 10px}
+.jumpitem{display:flex;gap:10px;align-items:center;text-align:left}
+.jumpitem span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ochre);color:var(--ink);font-size:.8rem;font-weight:700;flex:0 0 auto}
+.jbar{height:8px;border-radius:99px;background:#d9cfb6;overflow:hidden;margin-top:12px}.jbar i{display:block;height:100%;width:0;background:#3f8b77;transition:width .15s}
+/* ---- case board: a cork board with pinned cards ---- */
+.cboard{background:#2b2218}
+.cboard #cbb{background-color:#9a7650;background-image:radial-gradient(rgba(60,35,15,.28) 1px,transparent 1.6px),radial-gradient(rgba(255,235,200,.12) 1px,transparent 1.6px);background-size:7px 7px,11px 11px;background-position:0 0,3px 5px;gap:14px}
+.cboard .cbtabs .tab{background:#efe4c8;color:#4a3a28;border-color:#c9b48a}
+.cboard .cbtabs .tab.on{background:#2a231d;color:#f6f0e0}
+.cbnote{font-size:.85rem;line-height:1.45;color:#2a1d10;background:rgba(246,240,224,.75);padding:8px 10px;border-radius:4px}
+.cbhead{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;color:#fff4dc;text-shadow:0 1px 2px rgba(0,0,0,.5);margin-top:4px}
+.cboard .q{position:relative;background:#fbf6e9;color:#2a231d;border:0;border-radius:3px;box-shadow:0 4px 10px rgba(0,0,0,.35);padding:18px 14px 12px;transform:rotate(-.5deg)}
+.cboard .q:nth-of-type(even){transform:rotate(.6deg)}
+.cboard .q::before{content:"";position:absolute;top:6px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a7a,#b5412d 60%,#6e2016);box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.cboard .q.closed{cursor:pointer}
+.cboard .q.open{transform:none;outline:3px solid #d9a43d}
+.cboard .qfoot{font-size:.78rem;color:#7a6a4c}
+.cboard .q .why{color:#5e5444}
+.cboard .slot.empty{border-color:#a8977a;color:#7a6a4c}
+.cboard .slot.filled{background:#2a231d;color:#f6f0e0;border-color:#2a231d}
+.cboard .slot.done{background:rgba(63,139,119,.15);color:#2f6f61}
+.cboard .label{color:#7a6a4c}
+.cboard .miss{color:#b5412d;font-weight:700}
+.cboard .stamp{position:absolute;right:10px;top:8px;font-family:var(--f-ko);color:#b5412d;border:2px solid #b5412d;border-radius:4px;padding:0 6px;font-size:.95rem;transform:rotate(8deg);opacity:.8}
+.cboard .q .btn-ink{background:#efe6cf;color:#2a231d;border-color:#c9b48a}
+.cboard .q .btn-ink.primary{background:#2a231d;color:#f6f0e0}
+.cboard .typeans input{background:#fff;color:#2a231d;border-color:#c9b48a}
+.cboard .pslot{color:#5e5444;border-color:#a8977a}
+.cboard .pslot.filled{background:#2a231d;color:#f6f0e0}
+.cboard .proofrow .plabel{color:#7a6a4c}
+.cboard .evcard{background:#fbf6e9;color:#2a231d;border:0;border-radius:3px;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.cboard .evcard small{color:#5e5444}
+.cboard .evcard.sel{outline:3px solid #d9a43d}
 .jumplist{display:flex;flex-direction:column;gap:6px;padding:4px 0 8px 40px}
 .exlayer{position:absolute;inset:0;cursor:crosshair;touch-action:manipulation;pointer-events:auto}
 .exmark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid #ffd27a;box-shadow:0 0 10px #ffd27a;pointer-events:none}

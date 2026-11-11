@@ -18,6 +18,7 @@
      map PLACE             travel by the village map
      solve ID a | b ; X + Y fill a deduction on the case board (and attach proof X and Y), check it
      nosolve ...           the same, but it must be rejected
+     leave                 press Never mind (walk away from a decision)
      idle                  keep pressing Continue until you're free to look around
      expect COND           a flag condition that must be true now (same syntax as the story)
      done ID               this chapter must be finished                                      */
@@ -99,6 +100,7 @@ const STEPS={
   async solve(a){await solveIt(a,false)},
   async nosolve(a){await solveIt(a,true)},
   async idle(){await idle()},
+  async leave(){const b=await until(()=>document.querySelector('#bLeave'),'a Never mind button');await clickEl(b)},
   async expect(c){if(!cond(c))fail(`expected ${c}`)},
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},
 };

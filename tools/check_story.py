@@ -108,7 +108,8 @@ def parse(path):
             if not m: err(path.name, ln, "deduction line not understood"); continue
             cond_flags(m.group(3), ln); tokens(m.group(4), ln, False)
             nd = re.search(r"\|\s*needs\s+(.+)$", m.group(5))
-            needs = [[y.strip() for y in x.split("/")] for x in nd.group(1).split("+")] if nd else []
+            needs = [[y.strip() for y in re.sub(r'"[^"]*"', "", x).split("/")] for x in nd.group(1).split("+")] if nd else []
+            if nd and nd.group(1).count('"') < 2 * len(needs): WARN.append(f"{path.name}:{ln}: deduction {m.group(1)}: give each proof a \"hint\" so players know what it asks for")
             d["deduce"].append(dict(id=m.group(1), final=bool(m.group(2)), c=m.group(3), blanks=ids_in(m.group(4)), needs=needs, ln=ln))
         elif sec == "evidence":
             p = [x.strip() for x in line.split("|")]

@@ -32,21 +32,21 @@ if !solved_d8: What did 할머니 say about the mask in the museum?
 Chapter 1 is done. Look back through your notebook while you wait for Chapter 2.
 
 === deduce
-d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow. | needs fakemask/nochip + photo79
+d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow. | needs fakemask/nochip "Something that shows this mask is new" + photo79 "What the old mask looked like"
 d2 if read_threat | Someone wants the {진짜} mask, at the {다리}, tonight at 9, and wants her to come {혼자}. | And somehow they know the one on the gate is fake.
-dw if sawWall&sawFake | 할머니 never used the front gate. She came and went through the little door {뒤에} the house, by the {산} path. | Red paint on the latch, the same red as the mask. That's how she got past 수진, who watched the courtyard all night. | needs wall + s_sujin
-d3 if marketDone | Yesterday she got off at the {시장}, not at the museum, and met {할아버지} there. | The second 김밥 was for him. They ate it together at the market. | needs s_kimbap + s_market
+dw if sawWall&sawFake | 할머니 never used the front gate. She came and went through the little door {뒤에} the house, by the {산} path. | Red paint on the latch, the same red as the mask. That's how she got past 수진, who watched the courtyard all night. | needs wall "How she got in" + s_sujin "Who was watching the courtyard all night?"
+d3 if marketDone | Yesterday she got off at the {시장}, not at the museum, and met {할아버지} there. | The second 김밥 was for him. They ate it together at the market. | needs s_kimbap "Who the second 김밥 was for" + s_market "Who saw them together at the market?"
 d4 if marketDone&sawBag | She bought {나무} and {빨간} {물감} there, to make the copy. | The bag under her workbench came from that same stall.
-d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다리}. | And he left a bootprint by the bridge. Maybe the same person who sent the message. | needs s_couple + bootprint
+d5 if sawMan | The night before, a {남자} with a {불} was waiting on the {다리}. | And he left a bootprint by the bridge. Maybe the same person who sent the message. | needs s_couple "Who saw the man on the bridge?" + bootprint "What he left behind"
 d6 if doubtMuseum | The museum's mask has no chip in its eyebrow. Maybe it's {가짜} too. | Then which one is the real one?
 dt if doubtMuseum | The museum woman still says 진짜, but now she ends it with {는데요}. She isn't sure anymore. | Her words say yes. Her ending says "but..."
 d7 if toldMountain | 할머니 is hiding at the {절}, up on the {산}. | 할아버지 finally told you.
-d8 if hidden | The real mask is with {할머니}. The one in the {박물관} is {가짜}. | And the man in the dark knows it. | needs realchip + photo79
+d8 if hidden | The real mask is with {할머니}. The one in the {박물관} is {가짜}. | And the man in the dark knows it. | needs realchip "What her mask's eyebrow looks like" + photo79 "What the old mask looked like in 1979"
 
-dg if metGramps&ev_bootprint | The man on the bridge wasn't 할아버지. He wears smooth {장화}, and the print is a new hiking boot. | Muddy, yes. But mountain mud, and the wrong boots. | needs bootprint + gramboots
-do if clearedOwner | The restaurant owner's phone call was nothing. He was talking to 수진's {아들}. | "Tonight" just meant he'd call back tonight. | needs s_ownercall + s_junho
-dc if gotCard&read_threat | The messages to 할머니 came from the phone of the man from {서울}. | Every digit matches, up to where the ink smudged. | needs card + threat
-d9 final if hidden&st_s_reason | Long ago, 할머니 {바꿨어요} the masks. The real one belongs to the {마을}, and she's hiding it from the man from {서울}. | That's why she ran. That's who is out there in the dark. | needs s_reason + card/ticket
+dg if metGramps&ev_bootprint | The man on the bridge wasn't 할아버지. He wears smooth {장화}, and the print is a new hiking boot. | Muddy, yes. But mountain mud, and the wrong boots. | needs bootprint "The print by the bridge" + gramboots "What 할아버지 wears"
+do if clearedOwner | The restaurant owner's phone call was nothing. He was talking to 수진's {아들}. | "Tonight" just meant he'd call back tonight. | needs s_ownercall "What you overheard" + s_junho "Who he was talking to"
+dc if gotCard&read_threat | The messages to 할머니 came from the phone of the man from {서울}. | Every digit matches, up to where the ink smudged. | needs card "Whose phone number this is" + threat "The number the messages came from"
+d9 final if hidden&st_s_reason | Long ago, 할머니 {바꿨어요} the masks. The real one belongs to the {마을}, and she's hiding it from the man from {서울}. | That's why she ran. That's who is out there in the dark. | needs s_reason "Why she did it, in her words" + card/ticket "Something that points to who is after it"
 
 === evidence
 gramboots | {장화} | boots | 할아버지's rubber boots: smooth soles, caked with mountain mud. |
@@ -935,11 +935,15 @@ haraboji[sad]: {네}. {어제}... {할머니}{하고} {시장}{에} {있었어�
 haraboji[worried]: {오늘}{은|은/는}... {몰라요}. {낚시}{하거든요|거든요}.
 (He turns back to his line, very busy all of a sudden. He isn't a good liar.)
 ! set caughtGramps
--> c1_gtalk.2
+-> c1_gpresent
 
 === scene c1_gtalk
 haraboji[worried]: {몰라요}.
-(He keeps his eyes on the water. Nothing you say is going to change his mind. Something you show him might.)
+(He keeps his eyes on the water.)
+-> caughtGramps ? c1_gpresent : c1_gcatch
+
+=== scene c1_gpresent
+~ Nothing you say is going to change his mind. Something you show him might.
 @present Show him something.
 show: threat -> c1_gshow
 show: letter -> c1_gletter
@@ -951,19 +955,19 @@ haraboji[sad]: {학생}... {편지}...
 (He reads it slowly and hands it back, gently. He knows her handwriting.)
 haraboji[worried]: ...{몰라요}.
 ~ It moved him. But not enough.
-<- c1_gtalk.2
+<- c1_gpresent.2
 
 === scene c1_gphoto
 haraboji[surprised]: ...
 (He stares at the blurry woman behind the couple for a long moment.)
 haraboji[worried]: {몰라요}.
 ~ He knew she left. That isn't news to him.
-<- c1_gtalk.2
+<- c1_gpresent.2
 
 === scene c1_gnope
 haraboji: {네}?
 (He glances at it and goes back to his line.)
-<- c1_gtalk.2
+<- c1_gpresent.2
 === scene c1_gshow
 ~ He squints at the message.
 haraboji[surprised]: {진짜} {탈} {가져와}... {오늘} {밤}... {다리}?!

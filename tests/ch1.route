@@ -127,6 +127,8 @@ spot Path behind the bus stop
 choose 학생이에요
 choose 할머니 봤어요
 contradict s_gramps + s_couple
+leave
+spot The old man
 contradict s_gramps + s_market
 present threat
 choose 강에

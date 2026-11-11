@@ -27,7 +27,7 @@ The prologue is done. Look back through your notebook while you wait for Chapter
 === deduce
 p1 if read_museum&maskMissing | This morning 할머니 was supposed to meet the {박물관} at {9시}, and bring the {탈}. | Her texts, her calendar, and the empty hook all agree.
 p2 if talked&sawPhoto | She left the village by {버스}, carrying something wrapped in red cloth. | The restaurant owner saw her go, and the couple's photo shows the bundle.
-p3 if museumDone | But at the museum, she {안} {왔어요}. | She got on the bus and never arrived. | needs s_bus + s_notcame
+p3 if museumDone | But at the museum, she {안} {왔어요}. | She got on the bus and never arrived. | needs s_bus "Who saw her get on the bus?" + s_notcame "Who says she never arrived?"
 p4 final if ending | 할머니 is 수진's {엄마}, and her note says: {찾지 마세요}. | Not just the village grandmother. Her mother. And she doesn't want to be found.
 
 === evidence

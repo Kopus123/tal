@@ -46,7 +46,8 @@ function parseStory(src,st){
       // deduction: ID [final] if COND | sentence with {blank} words | what it means once solved
       case 'deduce':{m=line.match(/^(\w+)(\s+final)?\s+if\s+(\S+)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
         // "... | why | needs A + B": the deduction also needs these two proofs attached (evidence or statement ids; A/B2 = either)
-        if(m){let why=m[5],needs=null;const k=why.match(/^(.*?)\s*\|\s*needs\s+(.+)$/);if(k){why=k[1];needs=k[2].split('+').map(x=>x.trim().split('/').map(y=>y.trim()))}
+        if(m){let why=m[5],needs=null;const k=why.match(/^(.*?)\s*\|\s*needs\s+(.+)$/);if(k){why=k[1];needs=[];k[2].split('+').forEach(x=>{const h=x.match(/"([^"]*)"/);const ids=x.replace(/"[^"]*"/,'').trim();
+          const alts=ids.split('/').map(y=>y.trim());alts.hint=h?h[1]:'';needs.push(alts)})}
         st.cases.push({id:m[1],final:!!m[2],c:m[3],text:m[4],why,needs,blanks:[...m[4].matchAll(/\{([^}|]+)(?:\|([^}]+))?\}/g)].map(x=>x[2]||x[1])})}break}
       // evidence: id | label | picture | what it is | Korean written on it (optional)
       case 'evidence':{const [id,label,icon,desc,...kor]=line.split('|').map(x=>(x||'').trim());st.evidence[id]={id,label,icon,desc,ko:kor.join('|')};break} // the Korean may contain {a|b} tokens
@@ -735,7 +736,7 @@ function shortlist(q,filter){
   let h=7;for(const ch of q.id)h=(h*31+ch.charCodeAt(0))>>>0;
   const rnd=()=>{h=(h*1103515245+12345)>>>0;return h/4294967296};
   const mix=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
-  const pool=new Set();ST.cases.forEach(c=>c.blanks.forEach(a=>{if(W[a])pool.add(a)}));
+  const pool=new Set();ST.cases.filter(c=>cond(c.c)&&!S.cs[c.id]).forEach(c=>c.blanks.forEach(a=>{if(W[a])pool.add(a)})); // only cards on the board now: no spoilers
   if(q.blanks.some(b=>W[b]&&W[b].g))Object.keys(WORLD.tells).concat(['이에요','아니에요']).filter(id=>W[id]).forEach(id=>pool.add(id));
   mix(Object.keys(S.w).filter(id=>ok(id)&&W[id].p&&!pool.has(id))).slice(0,Math.max(0,16-pool.size)).forEach(x=>pool.add(x));
   return mix([...pool]);
@@ -810,9 +811,9 @@ function caseBoard(tab){
         if(S.cs[q.id])return`<div class="q solved"><span class="stamp">해결</span><div class="ded">${dedHTML(q,'solved')}</div>${q.needs?`<div class="proofrow done">${(PROOF[q.id]||[]).filter(Boolean).map(id=>`<span class="pslot filled">${proofChip(id)}</span>`).join('')}</div>`:''}<div class="why">${esc(q.why)}</div></div>`;
         if(pickQ!==q.id)return`<div class="q closed" data-open="${q.id}" role="button" tabindex="0"><div class="ded">${dedHTML(q,'closed')}</div><div class="qfoot">${q.needs?`📌 Needs ${q.needs.length} pieces of proof · `:''}${lock?'Taking a break from this one…':'Tap to work it out'}</div></div>`;
         const pf=PROOF[q.id]||[];
-        const proofRow=q.needs?`<div class="proofrow"><span class="plabel">Proof</span>${q.needs.map((x,i)=>`<button class="pslot ${pf[i]?'filled':''} ${PMODE===i?'active':''}" data-ps="${i}">${pf[i]?proofChip(pf[i]):'📌 Pin proof'}</button>`).join('')}</div>`:'';
+        const proofRow=q.needs?`<div class="proofrow"><span class="plabel">Proof</span>${q.needs.map((x,i)=>`<button class="pslot ${pf[i]?'filled':''} ${PMODE===i?'active':''}" data-ps="${i}">${pf[i]?proofChip(pf[i]):`📌 ${esc(x.hint||'Pin proof')}`}</button>`).join('')}</div>`:'';
         if(PMODE!==null&&q.needs){const po=proofOptions(q);
-          return`<div class="q open"><div class="ded">${dedHTML(q,'open')}</div>${proofRow}<div class="label">Which of these proves it?</div>${po.missing?'<div class="why">You might not have found everything you need for this one yet.</div>':''}
+          return`<div class="q open"><div class="ded">${dedHTML(q,'open')}</div>${proofRow}<div class="label">${q.needs[PMODE]&&q.needs[PMODE].hint?`Pick: ${esc(q.needs[PMODE].hint)}`:'Which of these proves it?'}</div>${po.missing?'<div class="why">You might not have found everything you need for this one yet.</div>':''}
             <div class="evlist">${po.opts.map(id=>proofCard(id,`class="evcard ${pf.includes(id)?'sel':''}" data-pp="${id}"`)).join('')}</div>
             <div class="row"><button class="btn-ink" data-pcancel>Back to the words</button></div></div>`}
         return`<div class="q open"><div class="ded">${dedHTML(q,'open')}</div>${proofRow}

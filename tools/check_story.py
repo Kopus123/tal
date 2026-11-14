@@ -117,7 +117,7 @@ def parse(path):
              speakers=[], tokens=[], placefx=[], statements={}, pairs=[], examines={}, exrefs=[],
              gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
     sec = cur = scene = None
-    count = 0
+    count = 0; join = False   # inside "@build ... | join": tiles are pieces of a word, not words
     def conds(c, ln):                       # mirror of cond() in js/core/rules.js
         if not c: return
         for t in c.split("&"):
@@ -226,6 +226,8 @@ def parse(path):
                 if m.group(5): cur["keys"] += 1
                 if m.group(7): effects(m.group(7), ln)
             else: err(f, ln, "examine line not understood")
+        elif sec == "pattern":
+            if m := re.match(r"^when\s+(.+)", line): d["tokens"] += [(x.strip(), ln) for x in m.group(1).split(",")]
         elif sec == "meanings":
             d.setdefault("meanings", {})[line.split("|")[0].strip()] = ln
         elif sec == "names":
@@ -242,12 +244,12 @@ def parse(path):
             elif m := re.match(r"^(->|<-)\s*(.+)$", line): target(m.group(2), ln, scene)
             elif m := re.match(r"^@(\w+)\b\s*(.*)$", line):
                 if m.group(1) not in BEATS: err(f, ln, f"the game has no beat called '@{m.group(1)}'"); continue
-                beat(ln)
+                beat(ln); join = m.group(1) == "build" and bool(re.search(r"\|\s*join$", m.group(2)))
                 if m.group(1) == "examine": d["exrefs"].append((m.group(2).strip(), ln))
             elif m := re.match(r"^pair:\s*(\S+)\s*\+\s*(\S+)\s+->\s+(.+)$", line):
                 d["pairs"] += [(m.group(1), ln), (m.group(2), ln)]; target(m.group(3), ln, scene)
-            elif m := re.match(r"^tiles:\s*(.+)$", line): tokens(m.group(1), ln)
-            elif m := re.match(r"^answer:\s*(.+?)\s+->\s+(.+)$", line): tokens(m.group(1), ln); target(m.group(2), ln, scene)
+            elif m := re.match(r"^tiles:\s*(.+)$", line): tokens(m.group(1), ln, not join)
+            elif m := re.match(r"^answer:\s*(.+?)\s+->\s+(.+)$", line): tokens(m.group(1), ln, not join); target(m.group(2), ln, scene)
             elif m := re.match(r"^miss\s+->\s+(.+)$", line): target(m.group(1), ln, scene)
             elif m := re.match(r"^show:\s*(\S+)\s+->\s+(.+)$", line): d["shows"].append((m.group(1), ln)); target(m.group(2), ln, scene)
             elif m := re.match(r"^([a-z_]+)(?:\[([\w ]+)\])?(?:@([a-z]{2}))?:\s*(.+)$", line):

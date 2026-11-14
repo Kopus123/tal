@@ -50,5 +50,9 @@ function buildNames(){const n=WORLD.names||{},rx=s=>s.replace(/[.*+?^${}()|[\]\\
   NAMERX=parts.length?new RegExp(`(?<![가-힣])(?:${parts.join('|')})`,'g'):null}
 const meaningOf=id=>{const k=String(id).split('/')[0];return(WORLD.meanings&&WORLD.meanings[k])||''};
 function learn(){} // kept so old story effects ("learn X") are harmless: you decide what you know now
-function checkPattern(){const p=ST.patterns[0];if(!p||F.pattern)return;
-  if(p.pairs.filter(x=>S.w[x[1]]).length>=p.need){F.pattern=1;toast('Pattern spotted. Check the Patterns tab in your notebook.')}}
+// A pattern page opens once you've met enough of its words: the ones under "when", or else the right-hand
+// side of its pairs. S.pat remembers which pages are open.
+const patMet=p=>(p.when||p.pairs.map(x=>x[1])).filter(w=>S.w[w]).length;
+function checkPattern(){const fresh=ST.patterns.filter(p=>!S.pat[p.id]&&patMet(p)>=p.need);if(!fresh.length)return;
+  fresh.forEach(p=>S.pat[p.id]=1);
+  toast(fresh.length>1?`${fresh.length} patterns spotted. They're in your notebook's Patterns tab.`:`Pattern spotted: <b>${esc(fresh[0].title)}</b>. It's in your notebook's Patterns tab.`,4500)}

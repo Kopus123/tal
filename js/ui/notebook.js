@@ -57,7 +57,6 @@ function notebook(){
     const eng=id=>((S.w[id].note||'').trim()||(S.w[id].checked?meaningOf(id):'')).toLowerCase();
     if(nbQ){const q=nbQ.toLowerCase();list=list.filter(id=>id.includes(nbQ)||eng(id).includes(q))}
     list=nbSort==='ko'?[...list].sort((a,b)=>a.localeCompare(b,'ko')):nbSort==='en'?[...list].sort((a,b)=>(!eng(a))-(!eng(b))||eng(a).localeCompare(eng(b))||a.localeCompare(b,'ko')):[...list].reverse();
-    const pat=ST.patterns[0];
     const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],['mix','Mix-ups'],['sym','Symbols']];
     let inner=`<div class="tabs">${tabs.map(([k,t])=>`<button class="tab ${nbTab===k?'on':''}" data-tab="${k}">${t}</button>`).join('')}</div>`;
     if(['all','todo','guess','sure'].includes(nbTab))inner+=`<div class="label">${by('sure').length} sure · ${by('guess').length} guesses · ${vocab.length} seen</div>
@@ -83,9 +82,10 @@ function notebook(){
         <div class="empty">Brighter ones are numbers you've heard in the story. Tap any to hear it.</div>`;
     }
     else if(nbTab==='pat'){
-      if(!pat||!F.pattern)inner+=`<div class="empty">Nothing yet. Keep listening to how people talk about what already happened.</div>`;
-      else inner+=`<div class="q"><div class="qt">${esc(pat.title)}</div><div class="why">${esc(pat.note)}</div>
-        ${pat.pairs.filter(p=>S.w[p[1]]).map(p=>`<div style="font-family:var(--f-ko);font-size:1.3rem">${esc(p[0])} <span style="color:var(--mist)">→</span> <button class="w ${status(p[1])}" data-w="${esc(p[1])}">${esc(p[1])}</button></div>`).join('')}</div>`;
+      const open=ST.patterns.filter(p=>S.pat[p.id]),left=ST.patterns.length-open.length;
+      inner+=open.map(p=>`<div class="q"><div class="qt">${esc(p.title)}</div><div class="why">${esc(p.note)}</div>
+        ${(p.when?p.pairs:p.pairs.filter(x=>S.w[x[1]])).map(([a,b])=>`<div style="font-family:var(--f-ko);font-size:1.3rem">${esc(a)} <span style="color:var(--mist)">→</span> ${W[b]?`<button class="w ${status(b)}" data-w="${esc(b)}">${esc(b)}</button>`:esc(b)}</div>`).join('')}</div>`).join('');
+      if(left)inner+=`<div class="empty">${open.length?`${left} more to spot.`:'Nothing yet.'} Keep listening to how people say things.</div>`;
     }
     else if(nbTab==='sym')inner+=`<div class="symlist">${SYMBOLS()}</div>`;
     else inner+=list.length?`<div class="grid">${list.map(id=>{const st=status(id),r=S.w[id];return`<button class="card st-${st}" data-w="${esc(id)}"><span class="k">${esc(id)}</span><span class="note">${esc(r.note||'')}</span><span class="tag">${STATE_LABEL[st]}</span></button>`}).join('')}</div>`:`<div class="empty">Nothing here yet.</div>`;

@@ -53,10 +53,11 @@ async function choose(c){
 }
 async function say(nd){
   if(busy)return;sfx('tap');setBusy(true);revealHeard();
-  const words=bseq.map(i=>nd.tiles[i]);const line=words.join(' ');ko(line);logLine({who:'you',ko:line});
+  const words=bseq.map(i=>nd.tiles[i]);const line=words.join(nd.join?'':' ');ko(line);logLine({who:'you',ko:line});
+  const whole=nd.join&&W[plain(line)]?'{'+plain(line)+'}':line;   // pieces of one word count as using that word
   const hit=nd.ans.find(a=>a[0].length===words.length&&a[0].every((w,i)=>w===words[i]));
-  noteUsed(line,!!hit&&!leadsToRewind(hit[1]));
-  await speakBuilt(words,line);await new Promise(r=>setTimeout(r,250));
+  noteUsed(whole,!!hit&&!leadsToRewind(hit[1]));
+  await (nd.join?speak(line,'you'):speakBuilt(words,line));await new Promise(r=>setTimeout(r,250));
   setBusy(false);go(hit?hit[1]:nd.miss);
 }
 /* ---------- typed answers: close enough counts, and you see what to fix ---------- */

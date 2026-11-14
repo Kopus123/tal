@@ -468,6 +468,20 @@ ajeossi[surprised]: {네}?
 === scene k7
 ajeossi[worried]: {네}~ {할머니} {빨리} {찾아요}!
 (He goes back to wiping the counter, but he keeps glancing at the window.)
+@build Tell him you will. Put the word together: "look for". | join
+tiles: 찾 | 가 | 아요 | 어요
+answer: 찾 | 아요 -> k8
+miss -> k7miss
+
+=== scene k7miss
+ajeossi[surprised]: {네}?
+(He cups a hand to his ear.)
+~ Not quite. 찾 has ㅏ in it, so its ending is 아요.
+<- k7.2
+
+=== scene k8
+ajeossi[happy]: {네}, {네}! {빨리}!
+(He waves you toward the door with his cloth.)
 
 === scene k3r
 ajeossi: {할머니}{는|은/는} {버스} {탔어요}. {버스 정류장}{에서}!

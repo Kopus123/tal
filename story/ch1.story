@@ -339,8 +339,8 @@ sujin: {네}?
 * [Leave her be] -> c1_sjbye
 
 === scene c1_sjq1
-sujin[sad]: {몰라요}... {정말} {몰라요}.
-(She shakes her head slowly.)
+sujin[worried]: {몰라요}. {버스} {탔어요}... {박물관}{에} {안} {왔어요}. {이상해요}.
+(She counts it off on her fingers. It doesn't add up, and she knows it.)
 sujin[worried]: {어제} {밤}{에}... {마당}{에} {있었어요}. {할머니}{는|은/는}... {없어요}.
 (She points at the step where she sat. She waited out here all night, and never saw a thing.)
 ! statement s_sujin
@@ -395,7 +395,7 @@ sujin[surprised]: {네}? {그} {시}{에}...?
 -> c1_sjhub.2
 
 === scene c1_sjq4
-sujin[worried]: {김밥} {두 개}... {몰라요}. {식당} {아저씨}{는|은/는} {알아요}.
+sujin[worried]: {김밥} {두 개}... {할머니}{는|은/는} {혼자} {안} {먹었어요}. {식당} {아저씨}{는|은/는} {알아요}.
 (She points toward the front gate and the alley beyond it.)
 -> c1_sjhub.2
 
@@ -462,6 +462,25 @@ sujin[worried]: {누구}{예요|이에요}? {누구}?!
 sujin: {김밥} {두 개}... {할머니}{는|은/는} {누구}{하고}...
 (She stops, thinking. Then she gives the phone back.)
 sujin[worried]: {김밥}... {식당} {아저씨}{는|은/는} {알아요}. {우리} {같이} {찾아요}. {빨리}!
+@build Tell her you're going. Put the word together: "go". | join
+tiles: 가 | 찾 | 요 | 아요 | 어요
+answer: 가 | 요 -> c1_showgo
+answer: 가 | 아요 -> c1_showalmost
+miss -> c1_showmiss
+
+=== scene c1_showalmost
+sujin: {가요}!
+(She says it for you, already halfway to the gate.)
+~ Almost. 가 already ends in ㅏ, so 가 + 아요 squeezes together into 가요.
+<- c1_show.5
+
+=== scene c1_showmiss
+sujin[surprised]: {네}?
+~ Not quite. You want "go": the stem is 가.
+<- c1_show.5
+
+=== scene c1_showgo
+sujin: {네}. {가요}!
 
 === scene c1_wall
 ~ Behind the clay jars, almost hidden: a low wooden door in the back wall, the kind nobody uses anymore. Its iron latch has a smear of red paint on it.
@@ -636,7 +655,7 @@ ajeossi[happy]: {네}! {여기} {있어요}.
 * {매워요}! -> c1_kspicy
 
 === scene c1_kgood
-ajeossi[happy]: {고마워요}!
+ajeossi[happy]: 하하, {고마워요}! {김밥}{도} {맛있어요}!
 
 === scene c1_kspicy
 ajeossi[happy]: 하하! {물}! {물} {있어요}!
@@ -766,7 +785,7 @@ ajumma[surprised]: {백} {원}? {아니요}, {아니요}! {천 원}!
 <- c1_mprice
 
 === scene c1_mpaid
-ajumma[happy]: {고마워요}!
+ajumma[happy]: {고마워요}, {고마워요}!
 (She wraps your purchase in newspaper and hands it over. Then she leans on her counter. She has a minute now.)
 ! set paid
 -> c1_mtalk
@@ -783,7 +802,7 @@ ajumma[happy]: {네}! {안녕}!
 <- c1_mtalk
 
 === scene c1_m2
-ajumma[surprised]: 순자 {할머니}? {네}! {어제} {아침}{에} {왔어요}.
+ajumma[surprised]: 아이고, 순자 {할머니}? {네}, {네}! {어제} {아침}{에} {왔어요}.
 (She points at the ground in front of her stall. Right here.)
 ajumma: {할아버지}{하고} {왔어요}. {김밥}{도} {먹었어요}. {여기}{에서}!
 (She mimes two people sitting on the low stools, eating.)
@@ -865,7 +884,7 @@ staff[sad]: {선생님}... {괜찮아요}?
 
 === scene c1_mucase
 ~ The big glass case. The old mask sits on its velvet stand: long eyebrows, a huge grin.
-staff[happy]: {진짜} {탈}{이에요}! 1650! {진짜}!
+staff[happy]: {진짜} {탈}{입니다}! 1650! {진짜}{입니다}!
 (The woman from the desk has followed you. She says it proudly, tapping the glass.)
 ! statement s_staff
 ~ You look closer. The left eyebrow is perfect. Not a chip anywhere.
@@ -883,7 +902,7 @@ staff[worried]: {이상해요}... {진짜}... {진짜}{인데요|는데요}...
 ! set doubtMuseum; statement s_staff2
 
 === scene c1_mufake
-staff[happy]: {가짜}? 하하. {아니요}! 1650! {진짜}!
+staff[happy]: {가짜}? 하하. {아니요}. {진짜}{입니다}.
 (She taps the glass, very sure of herself.)
 
 === scene c1_munope
@@ -975,7 +994,7 @@ miss -> c1_gnope
 === scene c1_gletter
 haraboji[sad]: {학생}... {편지}...
 (He reads it slowly and hands it back, gently. He knows her handwriting.)
-haraboji[worried]: ...{몰라요}.
+haraboji[worried]: ...{몰라요}. {낚시}{하거든요|거든요}.
 ~ It moved him. But not enough.
 <- c1_gpresent.2
 
@@ -1025,6 +1044,8 @@ sujin[surprised]: {할머니}? {집}{에}? {아니요}... {없어요}.
 (She stares at you. She's been sitting right here all day.)
 ~ Not home, then. He whispered it. What if it wasn't 집 at all?
 ! mixup 절 / 집
+sujin[surprised]: {잠깐만요}... {집}? {절}{이|이/가} {아니에요}?
+(She points up at the mountain behind the house. She's a step ahead of you.)
 ~ You'll have to go back to the river and ask him again.
 
 === scene c1_gagain

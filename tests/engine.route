@@ -63,3 +63,8 @@ used 탈
 knows 탈 2
 used 탈 wrong
 knows 탈 0
+
+# --- pattern pages open when enough of their words have been met
+chapter prologue
+choose Laugh with her
+saved pat.is

@@ -29,6 +29,8 @@ spot Talk to the owner
 type 할머니 봤어요?
 type 안녕하세요
 type 고마워요
+build 찾 | 어요
+build 찾 | 아요
 idle
 #@ Day 1 · the bus
 spot Bus stop
@@ -63,6 +65,8 @@ spot Talk to 수진
 choose 할머니 어디
 choose Show her something
 present threat
+build 가 | 아요
+build 가 | 요
 idle
 spot Back wall
 spot Workshop

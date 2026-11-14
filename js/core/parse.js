@@ -63,7 +63,7 @@ function parseStory(src,st,file){
           cur.details.push({id:m[1],x:+m[2],y:+m[3],r:+m[4],key:!!m[5],t:m[6],fx:m[7]?fx(m[7]):[]});
         break}
       case 'pattern':{if(m=line.match(/^title\s+(.+)/))cur.title=m[1];else if(m=line.match(/^note\s+(.+)/))cur.note=m[1];
-        else if(m=line.match(/^need\s+(\d+)/))cur.need=+m[1];else if(m=line.match(/^(.+?)\s*>\s*(.+)$/))cur.pairs.push([m[1],m[2]]);break}
+        else if(m=line.match(/^need\s+(\d+)/))cur.need=+m[1];else if(m=line.match(/^when\s+(.+)/))cur.when=m[1].split(',').map(x=>x.trim());else if(m=line.match(/^(.+?)\s*>\s*(.+)$/))cur.pairs.push([m[1],m[2]]);break}
       case 'place':{
         if(m=line.match(/^(name|sub|art|first|always|ambient|travel|music|sound)\s+(.+)$/))cur[m[1]]=m[2];
         else if(m=line.match(/^desc\s+(?:if\s+(\S+):\s*)?(.+)$/))cur.desc.push({c:m[1],t:m[2]});
@@ -95,7 +95,8 @@ function parseStory(src,st,file){
           if(lab.startsWith('['))o.en=lab.replace(/^\[|\]$/g,'');else{o.ko=lab;o.lang=st.meta.lang||'ko'}(last.ch=last.ch||[]).push(o)}
         else if(m=line.match(/^->\s*(.+)$/)){if(last)last.next=m[1].trim()}
         else if(m=line.match(/^<-\s*(.+)$/)){if(last)last.rewind=m[1].trim()}
-        else if(m=line.match(/^@build\s+(.+)$/))node({type:'build',en:m[1],tiles:[],ans:[]});
+        // "@build prompt | join": the tiles are pieces of ONE word (a stem and endings) and snap together without spaces
+        else if(m=line.match(/^@build\s+(.+)$/)){const k=m[1].match(/^(.*?)\s*\|\s*join$/);node({type:'build',en:k?k[1]:m[1],join:!!k,tiles:[],ans:[]})}
         else if(m=line.match(/^tiles:\s*(.+)$/))last.tiles=splitBar(m[1]);
         // "@type prompt | who": who answers small talk (hello, thanks) while you work on it
         else if(m=line.match(/^@type\s+(.+)$/)){const k=m[1].match(/^(.*?)\s*\|\s*([a-z_]+)$/);node({type:'type',en:k?k[1]:m[1],to:k?k[2]:null,ans:[]})}

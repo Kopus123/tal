@@ -6,18 +6,19 @@
 //   per chapter  loc/node/F/cs/visited: where you are and that chapter's flags (swapped in and out of S.prog)
 //   the world    S.world: the day, the time of day, money, friendships, things you own, your room, village flags.
 //                It carries on between chapters and is only reset by "Start over".
-//   you          notebook (w, nb), word mastery (m), tells (tl), mix-ups (mx), settings, finished chapters, the map
+//   you          notebook (w, nb), word mastery (m), tells (tl), mix-ups (mx), patterns spotted (pat), settings,
+//                finished chapters, the map
 const KEY='tal-save-v2';
 // Save format version. When the format changes: bump SAVE_V and add a step to MIGRATE that upgrades the old shape.
 const SAVE_V=5;
 // slot = time of day: 0 morning, 1 afternoon, 2 evening, 3 night (names in SLOTS, js/core/world.js)
 // did = effects that add up (money, friendship, items) and have already happened, so a beat can't pay out twice
 const freshWorld=()=>({day:1,slot:0,money:0,rel:{},inv:{},room:{},g:{},did:{}});
-const fresh=()=>({v:SAVE_V,world:freshWorld(),m:{},tl:{},mx:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0,music:2,amb:2,fade:1},visited:{}});
+const fresh=()=>({v:SAVE_V,world:freshWorld(),m:{},tl:{},mx:{},pat:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0,music:2,amb:2,fade:1},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)
 function freshKeepNotes(){const old=S;const n=fresh();n.set=old.set;
-  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});n.m=old.m||{};n.tl=old.tl||{};n.mx=old.mx||{};return n}
+  Object.entries(old.w||{}).forEach(([id,r])=>{if(r&&r.note&&r.note.trim())n.w[id]={ctx:[],note:r.note,sure:r.sure||0,n:1}});n.m=old.m||{};n.tl=old.tl||{};n.mx=old.mx||{};n.pat=old.pat||{};return n}
 let S=fresh();
 // MIGRATE[n] turns a version-n save into version n+1. They run in order, so any old save upgrades step by step.
 const MIGRATE={

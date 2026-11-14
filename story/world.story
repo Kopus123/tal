@@ -30,6 +30,7 @@
 #    === meanings           word | short English meaning  (Check my guess, and under case-board blanks)
 #    === names              name | name or sound | what tapping it says
 #    === pattern ID         title / note / need N / plain > changed    (the notebook's Patterns tab)
+#                           opens once N of the changed words are met, or N of the words under:  when A, B
 #
 #  ------------------------------------------------ a chapter file
 #    === meta               lang / start SCENE / start-place PLACE / end-title / end-text
@@ -66,6 +67,7 @@
 #    <- TARGET              rewind: that was a wrong turn, back to the decision
 #    @card 제목 | 부제        full-screen title card
 #    @build prompt          sentence tiles:   tiles: a | b | c    answer: a | b -> TARGET    miss -> TARGET
+#    @build prompt | join   the same, but the tiles are pieces of ONE word (stem + ending):  answer: 찾 | 아요 -> TARGET
 #    @type prompt [| who]   typed answer:     answer: 한국어 -> TARGET (several allowed)     miss -> TARGET
 #                           (who = the person who answers small talk like hello and thanks)
 #    @number prompt | kind  number pad (kind: time won phone count):   answer: 9:00 -> TARGET   miss -> TARGET
@@ -253,6 +255,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 편지 = letter
 비밀 = secret
 오세요 = come
+잠깐만요 = excuse
 감사합니다 = thanks
 고맙습니다 = thanks
 줘 = please
@@ -534,6 +537,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 제 | my (polite)
 낚시 | fishing
 줘 | give (casual, rude)
+잠깐만요 | wait a moment
 는데요 | the "...but" ending (trailing off)
 감사합니다 | thank you (formal)
 고맙습니다 | thank you (formal)
@@ -568,3 +572,52 @@ need 3
 보다 > 봤어요
 만들어요 > 만들었어요
 먹어요 > 먹었어요
+
+=== pattern present
+title -아요 or -어요
+note The everyday polite ending. Look at the last vowel of the stem: ㅏ or ㅗ takes 아요, anything else takes 어요. When the stem already ends in ㅏ, the two squeeze together: 가 + 아요 = 가요.
+need 3
+찾다 > 찾아요
+알다 > 알아요
+받다 > 받아요
+팔다 > 팔아요
+가다 > 가요
+만나다 > 만나요
+있다 > 있어요
+없다 > 없어요
+숨다 > 숨어요
+
+=== pattern not
+title 안 = not
+note Put 안 right before the verb and it flips: 왔어요 = came, 안 왔어요 = didn't come. A few verbs have their own opposite instead: the opposite of 알아요 (know) is 몰라요, and of 있어요 (there is) is 없어요.
+need 1
+when 안
+왔어요 > 안 왔어요
+가요 > 안 가요
+받아요 > 안 받아요
+먹었어요 > 안 먹었어요
+알아요 > 몰라요
+있어요 > 없어요
+
+=== pattern please
+title -세요 and -지 마세요
+note Asking politely. Stem + 세요 = please do: 오세요 = please come. Stem + 지 마세요 = please don't: 찾지 마세요 = please don't look. Without the 세요 it turns into an order, and from a stranger that is rude.
+need 2
+when 오세요, 주세요, 찾지 마세요, 어서 오세요
+오다 > 오세요
+주다 > 주세요
+찾다 > 찾지 마세요
+가다 > 가지 마세요
+가져오다 > 가져와 (no 세요: an order)
+
+=== pattern is
+title 이에요 or 예요
+note Both mean "is". After a consonant it's 이에요, after a vowel it shrinks to 예요. Say them out loud and you'll hear why: it's just easier.
+need 1
+when 이에요
+탈 > 탈이에요
+학생 > 학생이에요
+아들 > 아들이에요
+어디 > 어디예요
+누구 > 누구예요
+가짜 > 가짜예요

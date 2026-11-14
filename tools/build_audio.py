@@ -34,7 +34,7 @@ def collect():
             keys.append(f"{who}|{t}")
     files = sorted((ROOT / "story").glob("*.story"), key=lambda p: (p.name != "world.story", p.name))  # cast first
     for f in files:
-        sec = None
+        sec = None; join = False
         for raw in f.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if not line or line.startswith("#"):
@@ -63,12 +63,14 @@ def collect():
             elif sec == "scene":
                 if line.startswith("show:"):
                     continue
+                if line.startswith("@"):   # "@build ... | join": the answer is one word, its pieces are never said alone
+                    join = bool(re.match(r"^@build\b.*\|\s*join$", line))
                 if m := re.match(r"^\*\s+(.+?)\s+->", line):
                     if not m.group(1).startswith("["): add("you", m.group(1))
                 elif m := re.match(r"^tiles:\s*(.+)", line):
-                    for t in split_bar(m.group(1)): add("you", t)
+                    for t in ([] if join else split_bar(m.group(1))): add("you", t)
                 elif m := re.match(r"^answer:\s*(.+?)\s+->", line):
-                    add("you", " ".join(split_bar(m.group(1))))
+                    add("you", ("" if join else " ").join(split_bar(m.group(1))))
                 elif m := re.match(r"^([a-z_]+)(?:\[[\w ]+\])?(?:@[a-z]{2})?:\s*(.+)", line):
                     who = m.group(1)
                     add(who if who in cast else "sign", m.group(2))

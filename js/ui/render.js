@@ -53,7 +53,7 @@ function render(){
     body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${chips}${mapBtn}</div>`;
   }else if(nd.type==='build'){
     const tl=nd.tiles;
-    body=`<div class="en">${esc(nd.en)}</div><div class="built">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):'<span class="ph">Tap words to build a sentence</span>'}</div>
+    body=`<div class="en">${esc(nd.en)}</div><div class="built ${nd.join?'joined':''}">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):`<span class="ph">${nd.join?'Tap the pieces to build the word':'Tap words to build a sentence'}</span>`}</div>
       <div class="tiles">${tl.map((t,i)=>`<button class="tile" data-t="${i}" ${bseq.includes(i)?'disabled':''}>${ko(t,false,false)}</button>`).join('')}</div>`;
     foot=`<div class="row"><button class="btn" id="bClr" style="justify-content:center">Clear</button><button class="btn primary" id="bSay" ${bseq.length?'':'disabled'}>Say it</button></div><div class="controw">${backBtn}<button class="btn act" id="bLeave">Never mind</button></div>`;
   }else if(nd.type==='type'){
@@ -127,7 +127,7 @@ function render(){
   if($('#bBack'))$('#bBack').onclick=goBack;
   const es=sb.querySelector('#enShow');if(es)es.onclick=()=>{ENOPEN=S.node;const top=sb.scrollTop;render();sb.scrollTop=top};
   const bs=sb.querySelector('[data-say]');if(bs)bs.onclick=()=>{sfx('tap');speak(nd.ko,nd.who)};
-  sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{sfx('tap');bseq.push(+b.dataset.t);speak(nd.tiles[+b.dataset.t],'you');render()});
+  sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{sfx('tap');bseq.push(+b.dataset.t);if(!nd.join)speak(nd.tiles[+b.dataset.t],'you');render()});
   if($('#bClr'))$('#bClr').onclick=()=>{bseq=[];render()};
   if($('#bLeave'))$('#bLeave').onclick=()=>{S.node=null;BACK=[];save();render()};
   if($('#bSay'))$('#bSay').onclick=()=>say(nd);

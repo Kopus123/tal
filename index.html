@@ -501,10 +501,21 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 <div class="toasts" id="toasts"></div>
 <div id="ovs"></div>
 
-<!-- story/*.story = the plot.  js/art.js = scene drawings.  js/icons.js = word pictures.  js/engine.js = how the game works. -->
+<!-- story/*.story = the plot.  js/art.js = scene drawings.  js/icons.js = word pictures.  js/core, js/ui = how the game works (see README.md). -->
 <script src="audio/clips.js"></script>
 <script src="js/art.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/people.js"></script>
-<script src="js/engine.js"></script>
+<script src="js/core/parse.js"></script>
+<script src="js/core/state.js"></script>
+<script src="js/core/rules.js"></script>
+<script src="js/core/words.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/core/flow.js"></script>
+<script src="js/ui/render.js"></script>
+<script src="js/ui/overlays.js"></script>
+<script src="js/ui/notebook.js"></script>
+<script src="js/ui/caseboard.js"></script>
+<script src="js/ui/phone.js"></script>
+<script src="js/boot.js"></script>
 <script>if(/[?&]autotest=/.test(location.search))document.write('<script src="js/autotest.js"><'+'/script>')</script>

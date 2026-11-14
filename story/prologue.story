@@ -41,6 +41,8 @@ note | {찾지 마세요} | letter | The note tucked into the mask on the gate. 
 # glow WORD X% Y% R%            the spot lights up when someone says WORD
 
 === place night
+music calm
+sound night
 travel no
 name 마당
 sub The courtyard, last night
@@ -52,6 +54,8 @@ glow 할머니 75 70 9
 glow 탈 75 62 7
 
 === place madang
+music calm
+sound birds
 name 마당
 sub The courtyard
 art madang
@@ -66,6 +70,8 @@ glow 방 45 52 12
 glow 마당 50 88 46 10
 
 === place gongbang
+music calm
+sound room
 name 공방
 sub 할머니's workshop
 art gongbang
@@ -81,6 +87,8 @@ glow 축제 87 30 9
 glow 오늘 87 30 9
 
 === place golmok
+music festival
+sound birds
 name 골목
 sub The alley
 art golmok
@@ -96,6 +104,8 @@ glow 왼쪽 14 76 10
 glow 사진 50 62 9
 
 === place sanqil
+music calm
+sound wind
 name 산길
 sub A mountain path
 art san
@@ -106,6 +116,8 @@ spot "Go back down" 50 88 => place golmok
 glow 산 50 30 22
 
 === place sikdang
+music calm
+sound room
 name 식당
 sub The little restaurant
 art sikdang
@@ -125,6 +137,8 @@ glow 버스 85 30 9
 glow 물 77 60 5
 
 === place jeong
+music calm
+sound birds
 name 버스 정류장
 sub The bus stop
 art jeong
@@ -136,6 +150,8 @@ spot "Back to the restaurant" 12 88 => place sikdang
 glow 버스 정류장 24 45 12
 
 === place bus
+music none
+sound bus
 travel no
 name 버스
 sub On the bus
@@ -146,6 +162,8 @@ glow 박물관 50 11 16
 glow 지하철역 50 11 16
 
 === place museum
+music none
+sound room
 travel no
 name 박물관
 sub The museum
@@ -160,6 +178,8 @@ spot "Take the bus home" 88 88 -> allSolved ? e1 : ewait if museumDone
 glow 탈 24 42 16
 
 === place gate
+music tense
+sound night
 travel no
 name 대문
 sub The front gate, evening

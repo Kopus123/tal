@@ -68,6 +68,8 @@ bootprint | {다리} · ? | man | By the bridge: a big bootprint, and the round 
 # ------------------------------------------------------------ places
 
 === place madang
+music tense
+sound birds
 name 마당
 sub The courtyard, the next morning
 art madang_mask
@@ -83,6 +85,8 @@ glow 손 30 64 8
 glow 집 50 44 40 22
 
 === place gongbang
+music tense
+sound room
 name 공방
 sub 할머니's workshop
 art gongbang
@@ -97,6 +101,8 @@ glow 나무 50 82 14
 glow 물감 50 82 14
 
 === place golmok
+music calm
+sound birds
 name 골목
 sub The alley
 art golmok
@@ -110,6 +116,8 @@ glow 오른쪽 86 76 10
 glow 왼쪽 14 76 10
 
 === place sanqil
+music calm
+sound wind
 name 산길
 sub The mountain path
 art san
@@ -124,6 +132,8 @@ glow 산 50 30 22
 glow 절 50 22 14
 
 === place sikdang
+music calm
+sound room
 name 식당
 sub The little restaurant
 art sikdang
@@ -143,6 +153,8 @@ glow 버스 정류장 85 30 9
 glow 시장 85 40 10
 
 === place jeong
+music calm
+sound birds
 name 버스 정류장
 sub The bus stop
 art jeong
@@ -157,6 +169,8 @@ glow 버스 정류장 24 45 12
 glow 뒤에 40 62 12
 
 === place bus
+music none
+sound bus
 name 버스
 sub On the bus
 art bus
@@ -167,6 +181,8 @@ glow 박물관 50 11 16
 glow 지하철역 50 11 16
 
 === place sijang
+music none
+sound market
 name 시장
 sub The market
 art market
@@ -186,6 +202,8 @@ glow 아주머니 66 60 9
 glow 천 원 66 60 9
 
 === place museum
+music none
+sound room
 name 박물관
 sub The museum
 art museum
@@ -201,6 +219,8 @@ spot "Take the bus back" 78 88 -> c1_mback
 glow 탈 24 42 16
 
 === place gang
+music calm
+sound river
 name 강
 sub The river
 art river
@@ -218,6 +238,8 @@ glow 다리 82 40 13
 glow 할아버지 64 60 9
 
 === place jeol
+music tense
+sound night
 name 절
 sub The temple on the mountain
 art temple

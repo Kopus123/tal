@@ -28,6 +28,8 @@
      oldsave NAME          load tests/saves/NAME.json as if it were the save on the phone (it gets upgraded)
      note WORD TEXT        the notebook note for WORD must be exactly TEXT
      saved PATH            the save must hold something at this dotted path ("saved m.탈.u")
+     used WORD [wrong]     count one right (or wrong) use of a word
+     knows WORD N          the word's hint level must be N (0 full hints, 1 fading, 2 known)
      switch ID             move to this chapter keeping the save, the way the story does at a chapter's end  */
 (function(){
 const out=[];let failed=false;
@@ -73,7 +75,7 @@ async function solveIt(a,expectFail){
   while(document.querySelector('#ovs .ov')){closeTop();await settle()}
 }
 const STEPS={
-  async chapter(id){S=fresh();S.set.auto=0;S.set.sound=0;BACK=[];SEEN.clear();
+  async chapter(id){S=fresh();S.set.auto=0;S.set.sound=0;S.set.music=0;S.set.amb=0;BACK=[];SEEN.clear();
     document.querySelectorAll('.title').forEach(t=>t.remove());startChapter(id,true);await settle()},
   async choose(t){await clickEl(await until(()=>vis('#sf [data-ch]').find(b=>txt(b).includes(t)),`a choice "${t}"`))},
   async spot(l){await idle();const b=vis('#sb .chipbtn[data-hs]').find(b=>txt(b)===l);
@@ -110,6 +112,8 @@ const STEPS={
   async leave(){const b=await until(()=>document.querySelector('#bLeave'),'a Never mind button');await clickEl(b)},
   async expect(c){if(!cond(c))fail(`expected ${c}`)},
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},
+  async used(a){const [w,how]=a.split(/\s+/);if(!W[w])fail(`${w} isn't a word`);noteUsed('{'+w+'}',how!=='wrong')},
+  async knows(a){const [w,n]=a.split(/\s+/);if(knowLevel(w)!==+n)fail(`${w} is at hint level ${knowLevel(w)}, expected ${n}`)},
   async switch(id){if(!CH[id])fail(`no chapter ${id}`);startChapter(id,true);await settle()},
   async saved(path){let v=S;for(const k of path.split('.')){v=v==null?v:v[k]}if(!v)fail(`the save has nothing at ${path}`)},
   async fx(a){const k=a.match(/^@(\S+)\s+(.+)$/);

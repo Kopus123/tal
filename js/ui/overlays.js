@@ -68,11 +68,14 @@ function settings(){
       <div class="set-row"><span>Korean text size</span>${seg('size',[[0,'Small'],[1,'Medium'],[2,'Large']])}</div>
       <div class="set-row"><span>Things glow when named</span>${seg('glow',[[1,'On'],[0,'Off']])}</div>
       <div class="set-row"><span>Sound effects and vibration</span>${seg('sound',[[1,'On'],[0,'Off']])}</div>
+      <div class="set-row"><span>Music</span>${seg('music',[[2,'On'],[1,'Low'],[0,'Off']])}</div>
+      <div class="set-row"><span>Background sounds</span>${seg('amb',[[2,'On'],[1,'Low'],[0,'Off']])}</div>
+      <div class="set-row"><span>Hints fade as you learn words</span>${seg('fade',[[1,'On'],[0,'Off']])}</div>
       <div class="set-row"><span>Playtest tools (skip button)</span>${seg('dev',[[1,'On'],[0,'Off']])}</div>
       <button class="btn-ink" id="tv">▶ Test voice</button>
       ${S.set.dev?`<div class="empty">Tracking ${Object.keys(S.m).length} words · save format ${S.v}</div><button class="btn-ink" id="cps">Copy save data</button>`:''}
       <button class="btn-ink" id="rs" style="color:#e59a87">${confirmReset?'Tap again to erase all progress':'Start over'}</button>`;
-    o.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.set[b.dataset.k]=+b.dataset.v;save();sfx('tap');draw();document.documentElement.dataset.size=S.set.size});
+    o.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.set[b.dataset.k]=+b.dataset.v;save();sfx('tap');draw();setVolumes();document.documentElement.dataset.size=S.set.size});
     o.querySelector('#tv').onclick=()=>speak('{안녕하세요}!','sujin');
     const cps=o.querySelector('#cps');if(cps)cps.onclick=()=>{try{navigator.clipboard.writeText(JSON.stringify(S));toast('Save data copied.')}catch(e){toast('Could not copy.')}};
     o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{S=freshKeepNotes();BACK=[];save();o.remove();title()}};

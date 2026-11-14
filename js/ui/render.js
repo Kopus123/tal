@@ -4,7 +4,7 @@
 /* ---------- scene layers: art, ambience, hints ---------- */
 function glowHTML(ids){
   if(!S.set.glow)return'';const l=ST.places[S.loc];if(!l)return'';
-  return l.glow.filter(g=>ids.includes(g.w)).map(g=>`<div class="glow" style="left:${g.x}%;top:${g.y}%;width:${g.r*2}%${g.h?`;height:${g.h*2}%;aspect-ratio:auto`:''}"></div>`).join('');
+  return l.glow.filter(g=>ids.includes(g.w)&&knowLevel(g.w)<2).map(g=>`<div class="glow ${knowLevel(g.w)?'faint':''}" style="left:${g.x}%;top:${g.y}%;width:${g.r*2}%${g.h?`;height:${g.h*2}%;aspect-ratio:auto`:''}"></div>`).join('');
 }
 function flashGlow(id){const h=glowHTML([id]);if(!h)return;const fx=$('#fx');fx.querySelectorAll('.glow').forEach(e=>e.remove());fx.insertAdjacentHTML('beforeend',h)}
 const AMB_N={leaves:12,petals:12,motes:16,dust:14,snow:26,rain:44};
@@ -28,6 +28,7 @@ function render(){
   const ak=artName+(artName==='bus'?'|'+(S.F.led||''):'');
   if(ak!==artKey){const w=$('#art');w.innerHTML=(ART[artName]||ART.madang)();w.classList.remove('in');void w.offsetWidth;w.classList.add('in');artKey=ak}
   const amb=exam?'none':l.ambient||'none';if(amb!==ambKey){$('#amb').innerHTML=ambientHTML(amb);ambKey=amb}
+  setScene(l.music||'none',l.sound||'none');
   let h='';
   if(nd&&nd.type==='camera')h+=`<div class="vf" id="vf" style="left:${cam.x}%;top:${cam.y}%"><span>Drag me</span></div>`;
   if(exam){const got=d=>S.F['ex_'+exam.id+'_'+d.id];
@@ -99,7 +100,7 @@ function render(){
       const anim=revealFor!==S.node?nd.ex:'';
       body=`<div class="line"><div class="spk"><div class="pt ${anim}" style="--cbg:${c.c||'#888'}">${face}</div><div class="seal">${esc(c.n||'')}</div></div>
         <div class="talk">${nd.audio?heardHTML(nd):`<div class="koline ${nd.who==='bus'?'led':''}">${ko(nd.ko)}</div><button class="say" data-say aria-label="Hear it again">▶ Again</button>`}</div></div>
-        ${nd.en?`<div class="en">${esc(nd.en)}</div>`:''}`;
+        ${enHTML(nd)}`;
     }
     if(nd.ch)foot=`<div class="acts">${nd.ch.map((x,i)=>!cond(x.c)?'':`<button class="btn ${x.ko?'ko':'act'}" data-ch="${i}">${x.ko?`<span class="qm">“</span><span>${ko(x.ko,false,false)}<span class="qm">”</span></span>`:esc(x.en)}</button>`).join('')}</div>${backBtn?`<div class="controw">${backBtn}</div>`:''}`;
     else foot=`${cont(nd.next||nd.rewind?'Continue':'Look around')}${devSkip}`;
@@ -124,6 +125,7 @@ function render(){
   sb.querySelectorAll('[data-nk]').forEach(b=>b.onclick=()=>{const k=b.dataset.nk;sfx('tap');
     if(k==='✓'){sayNumber(nd);return}if(k==='⌫')NUMV=NUMV.slice(0,-1);else if(NUMV.length<11)NUMV+=k;render()});
   if($('#bBack'))$('#bBack').onclick=goBack;
+  const es=sb.querySelector('#enShow');if(es)es.onclick=()=>{ENOPEN=S.node;const top=sb.scrollTop;render();sb.scrollTop=top};
   const bs=sb.querySelector('[data-say]');if(bs)bs.onclick=()=>{sfx('tap');speak(nd.ko,nd.who)};
   sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{sfx('tap');bseq.push(+b.dataset.t);speak(nd.tiles[+b.dataset.t],'you');render()});
   if($('#bClr'))$('#bClr').onclick=()=>{bseq=[];render()};
@@ -136,7 +138,11 @@ function render(){
 function heardHTML(nd){
   const pics=(HEARD[nd.id]||0)<2?'':idsIn(nd.ko).filter((id,i,a)=>a.indexOf(id)===i&&W[id]&&!W[id].g&&S.nb[id]).map(id=>iconSVG(W[id].p,'hicon')).join('');
   return `<div class="heardbox"><button class="listen" data-say aria-label="Listen again">🔊 Listen again</button>${pics?`<div class="heardpics">${pics}</div>`:''}<div class="heardnote">${pics?'Pictures for the words you know.':'You only heard this. It gets written down once you act on it.'}</div></div>`}
-let RNODE=null;
+let RNODE=null,ENOPEN=null;
+// what you see them do. Once you know every word in the line, it folds away behind a small button: the Korean is enough.
+function enHTML(nd){if(!nd.en)return'';
+  if(nd.audio||ENOPEN===nd.id||!lineKnown(nd.ko))return `<div class="en">${esc(nd.en)}</div>`;
+  return `<button class="enshow" id="enShow">show what they do</button>`}
 function reveal(el){
   if(!el)return 0;let i=0;const step=55;
   [...el.childNodes].forEach(n=>{

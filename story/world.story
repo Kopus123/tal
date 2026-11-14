@@ -39,6 +39,7 @@
 #                           ids; B/B2 = either one).  "final" ends the chapter when solved.
 #    === evidence           id | label | picture | what it is | Korean written on it (optional)
 #    === place NAME         name / sub / art KEY (js/art.js) / ambient / travel no
+#                           music calm|tense|festival|none / sound birds|river|market|night|wind|room|bus|none  (js/music.js)
 #                           first SCENE (plays the first time you arrive) / always SCENE (every time)
 #                           desc [if COND:] text                 (the first one that fits is shown)
 #                           spot "Label" X Y -> SCENE [if COND]  (also  => place NAME   and   => phone)

@@ -21,7 +21,15 @@ function wrec(id){return S.w[id]||(S.w[id]={ctx:[],note:''})}
 const today=()=>Math.floor(Date.now()/864e5);
 const mast=id=>S.m[id]||(S.m[id]={s:0,u:0,x:0,t:0});
 function noteSeen(str){idsIn(str).forEach(id=>{if(!W[id])return;const m=mast(id);m.s++;m.t=today()})}
-function noteUsed(str,ok){idsIn(str).forEach(id=>{if(!W[id])return;const m=mast(id);ok?m.u++:m.x++;m.t=today()})}
+function noteUsed(str,ok){idsIn(str).forEach(id=>{if(!W[id])return;const m=mast(id);if(ok){m.u++;m.k=(m.k||0)+1}else{m.x++;m.k=0}m.t=today()})}
+/* ---------- hint fading ----------
+   How much help a word still needs: 0 = all of it, 1 = fading, 2 = you know it.
+   m.k counts right uses in a row; one slip sets it back to 0 and the hints return.
+   A word you marked "sure" and have met often fades a little even if you never had to use it. */
+function knowLevel(id){if(!S.set.fade)return 0;const m=S.m[id];if(!m)return 0;const k=m.k||0;
+  if(k>=4)return 2;if(k>=2)return 1;const r=S.w[id];return r&&r.sure&&m.s>=6&&!m.x?1:0}
+// is every real word in this line one you know? (grammar pieces don't count)
+function lineKnown(str){const ids=idsIn(str).filter(id=>W[id]&&!W[id].g);return ids.length>0&&ids.every(id=>knowLevel(id)===2)}
 // does this answer play out and then rewind you (a wrong answer)?
 function leadsToRewind(t){let id=t,n=0;while(id&&n++<40){const nd=ST.nodes[tgt(id)];if(!nd)return false;if(nd.rewind)return true;
   if(nd.ch||nd.ans||nd.shows||nd.type)return false;id=nd.next}return false}

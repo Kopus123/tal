@@ -17,7 +17,8 @@ function speak(text,who){
   stopAudio();const my=TOKEN;
   return new Promise(async done=>{
     const t=normT(text);if(!t)return done();
-    const cap=setTimeout(done,8000),fin=()=>{clearTimeout(cap);done()};
+    duck(true);
+    const cap=setTimeout(()=>{duck(false);done()},8000),fin=()=>{clearTimeout(cap);if(my===TOKEN)duck(false);done()};
     const f=clipFor(text,who);
     if(f){try{const b=await buffer(f);if(my!==TOKEN)return fin();const c=ac();
       const s=c.createBufferSource();s.buffer=b;s.playbackRate.value=S.set.slow?.82:1;s.connect(c.destination);

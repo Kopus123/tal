@@ -65,7 +65,7 @@ function parseStory(src,st,file){
       case 'pattern':{if(m=line.match(/^title\s+(.+)/))cur.title=m[1];else if(m=line.match(/^note\s+(.+)/))cur.note=m[1];
         else if(m=line.match(/^need\s+(\d+)/))cur.need=+m[1];else if(m=line.match(/^(.+?)\s*>\s*(.+)$/))cur.pairs.push([m[1],m[2]]);break}
       case 'place':{
-        if(m=line.match(/^(name|sub|art|first|always|ambient|travel)\s+(.+)$/))cur[m[1]]=m[2];
+        if(m=line.match(/^(name|sub|art|first|always|ambient|travel|music|sound)\s+(.+)$/))cur[m[1]]=m[2];
         else if(m=line.match(/^desc\s+(?:if\s+(\S+):\s*)?(.+)$/))cur.desc.push({c:m[1],t:m[2]});
         else if(m=line.match(/^spot\s+"([^"]+)"\s+([\d.]+)\s+([\d.]+)\s+(->|=>)\s+(.+?)(?:\s+if\s+(\S+))?$/))
           cur.spots.push({l:m[1],x:+m[2],y:+m[3],kind:m[4],t:m[5],c:m[6]});

@@ -51,3 +51,15 @@ oldsave v2
 expect day=1&money=0
 note 탈 mask
 saved m.탈
+
+# --- hint fading: right uses in a row make a word's hints fade; one slip brings them back
+chapter prologue
+knows 탈 0
+used 탈
+used 탈
+knows 탈 1
+used 탈
+used 탈
+knows 탈 2
+used 탈 wrong
+knows 탈 0

@@ -52,6 +52,9 @@ SECTIONS = set(re.findall(r"case '(\w+)':", _parser))
 BEATS = set(re.findall(r"/\^@(\w+)", _parser))
 _slots = re.search(r"const SLOTS=\[([^\]]*)\]", (ROOT / "js" / "core" / "world.js").read_text(encoding="utf-8"))
 SLOTS = set(re.findall(r"'(\w+)'", _slots.group(1))) if _slots else set()
+_music = (ROOT / "js" / "music.js").read_text(encoding="utf-8")
+MOODS = set(re.findall(r"'(\w+)'", re.search(r"const MOODS=\[([^\]]*)\]", _music).group(1)))
+BEDS = set(re.findall(r"'(\w+)'", re.search(r"const BEDS=\[([^\]]*)\]", _music).group(1)))
 if not ({"set", "give"} <= set(EFFECTS) and "@" in CONDS and {"scene", "place"} <= SECTIONS and "build" in BEATS and SLOTS):
     sys.exit("check_story.py could not read the game's rules from js/core (did the def lines or the parser change shape?)")
 
@@ -195,8 +198,10 @@ def parse(path):
             d["evidence"][p[0]] = dict(icon=p[2], ln=ln); tokens(p[1], ln)
             if len(p) > 4: tokens("|".join(p[4:]), ln)
         elif sec == "place":
-            if m := re.match(r"^(name|sub|art|first|always|ambient|travel)\s+(.+)$", line):
+            if m := re.match(r"^(name|sub|art|first|always|ambient|travel|music|sound)\s+(.+)$", line):
                 cur[m.group(1)] = (m.group(2), ln)
+                if m.group(1) == "music" and m.group(2) not in MOODS: err(f, ln, f"no music called '{m.group(2)}' ({', '.join(sorted(MOODS))})")
+                if m.group(1) == "sound" and m.group(2) not in BEDS: err(f, ln, f"no sound called '{m.group(2)}' ({', '.join(sorted(BEDS))})")
             elif m := re.match(r"^desc\s+(?:if\s+(\S+):\s*)?(.+)$", line): conds(m.group(1), ln)
             elif m := re.match(r'^spot\s+"([^"]+)"\s+([\d.]+)\s+([\d.]+)\s+(->|=>)\s+(.+?)(?:\s+if\s+(\S+))?$', line):
                 conds(m.group(6), ln); cur["spots"].append(dict(kind=m.group(4), t=m.group(5), ln=ln))

@@ -27,6 +27,7 @@ Plain scripts loaded in this order by `index.html`. No build step; functions are
 | `js/core/world.js` | What carries on between chapters: day, time of day, money, friendship, things you own |
 | `js/core/words.js` | Tappable words: colors, mastery tracking, close-enough matching, names |
 | `js/audio.js` | Voices, sound effects, vibration |
+| `js/music.js` | Music moods and background sounds, synthesized (a place asks with `music calm` / `sound river`) |
 | `js/core/flow.js` | Moving through the story: beats, choices, typed and number answers, rewinds, chapters |
 | `js/ui/render.js` | The main screen: scene window and the paper sheet |
 | `js/ui/overlays.js` | Menu, settings, log, chapter list, map, title screen, toasts |

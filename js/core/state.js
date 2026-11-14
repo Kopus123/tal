@@ -13,7 +13,7 @@ const SAVE_V=5;
 // slot = time of day: 0 morning, 1 afternoon, 2 evening, 3 night (names in SLOTS, js/core/world.js)
 // did = effects that add up (money, friendship, items) and have already happened, so a beat can't pay out twice
 const freshWorld=()=>({day:1,slot:0,money:0,rel:{},inv:{},room:{},g:{},did:{}});
-const fresh=()=>({v:SAVE_V,world:freshWorld(),m:{},tl:{},mx:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0},visited:{}});
+const fresh=()=>({v:SAVE_V,world:freshWorld(),m:{},tl:{},mx:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0,music:2,amb:2,fade:1},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)
 function freshKeepNotes(){const old=S;const n=fresh();n.set=old.set;

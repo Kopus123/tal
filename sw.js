@@ -1,7 +1,7 @@
 // Offline support. Game code and story: network first (so updates arrive), cache as offline fallback.
 // Audio clips, icons, fonts: cache first (they never change once recorded).
 const VERSION = 'tal-v27';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './audio/clips.js', './js/art.js', './js/icons.js', './js/people.js', './js/core/parse.js', './js/core/state.js', './js/core/rules.js', './js/core/words.js', './js/audio.js', './js/core/flow.js', './js/ui/render.js', './js/ui/overlays.js', './js/ui/notebook.js', './js/ui/caseboard.js', './js/ui/phone.js', './js/boot.js',
+const SHELL = ['./', './index.html', './manifest.webmanifest', './audio/clips.js', './js/art.js', './js/icons.js', './js/people.js', './js/core/parse.js', './js/core/state.js', './js/core/rules.js', './js/core/world.js', './js/core/words.js', './js/audio.js', './js/core/flow.js', './js/ui/render.js', './js/ui/overlays.js', './js/ui/notebook.js', './js/ui/caseboard.js', './js/ui/phone.js', './js/boot.js',
   './story/world.story', './story/prologue.story', './story/ch1.story', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {

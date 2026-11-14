@@ -18,7 +18,7 @@ function go(id){
   id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
   if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
-  S.node=id;bseq=[];TFB=null;TREPLY=null;tHint=0;CSEL=[];NUMV='';EXMISS=0;runFx(nd.fx,replay);checkPattern();
+  S.node=id;bseq=[];TFB=null;TREPLY=null;tHint=0;CSEL=[];NUMV='';EXMISS=0;runFx(nd.fx,{replay,key:id});checkPattern();
   if(nd.ko&&!replay)noteSeen(nd.ko);
   if(nd.audio)HEARD[id]=(HEARD[id]||0)+1;
   if(nd.type==='camera')cam={x:22+Math.random()*10,y:24+Math.random()*10};
@@ -47,7 +47,7 @@ function rewindTo(t){
 }
 function setBusy(b){busy=b;const f=$('#sf');if(f)f.style.opacity=b?.55:''}
 async function choose(c){
-  if(busy)return;sfx('tap');setBusy(true);revealHeard();runFx(c.fx);
+  if(busy)return;sfx('tap');setBusy(true);revealHeard();runFx(c.fx,{key:S.node+'>'+c.go});
   if(c.ko){ko(c.ko);noteUsed(c.ko,!leadsToRewind(c.go));logLine({who:'you',ko:c.ko});await speak(c.ko,'you');await new Promise(r=>setTimeout(r,250))}
   setBusy(false);go(c.go);
 }
@@ -114,7 +114,7 @@ function examTap(nd,px,py){
   if(!d){EXMISS++;sfx('tap');if(ex){const p=document.createElement('span');p.className='exripple';p.style.left=px+'%';p.style.top=py+'%';ex.appendChild(p);setTimeout(()=>p.remove(),600)}
     if(EXMISS===4)render();return}
   if(S.F['ex_'+x.id+'_'+d.id])return;
-  S.F['ex_'+x.id+'_'+d.id]=1;sfx('learn');buzz(20);runFx(d.fx);logLine({who:'narr',en:plain(d.t)});noteSeen(d.t);
+  S.F['ex_'+x.id+'_'+d.id]=1;sfx('learn');buzz(20);runFx(d.fx,{key:'ex_'+x.id+'_'+d.id});logLine({who:'narr',en:plain(d.t)});noteSeen(d.t);
   const top=$('#sb').scrollTop;render();$('#sb').scrollTop=top;
 }
 

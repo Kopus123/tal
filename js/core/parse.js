@@ -6,10 +6,13 @@ let CH={};            // chapter id -> parsed chapter file
 let ST=null;          // the current chapter, merged with the world
 let W={};             // every word in every chapter -> {p: picture spec, g: grammar, def}
 
-/* ---------- story parser ---------- */
+/* ---------- story parser ----------
+   The format is documented at the top of story/world.story. tools/check_story.py reads the section
+   names (the case '...' labels) and the @beat names from this file, so they can't drift apart. */
+const PARSE_WARN=[];   // lines the parser did not understand: the automatic playthrough fails if there are any
 // split "a | b | {x|y}" on the bars that aren't inside {braces}
 function splitBar(str){const out=[];let d=0,cur='';for(const c of str){if(c==='{')d++;else if(c==='}')d--;if(c==='|'&&!d){out.push(cur.trim());cur=''}else cur+=c}out.push(cur.trim());return out}
-function parseStory(src,st){
+function parseStory(src,st,file){
   st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{}};
   let sec=null,cur=null,scene=null,last=null,count=0;
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;
@@ -112,8 +115,9 @@ function parseStory(src,st){
         // "who[audio]: ..." = you only hear it: no text until you've acted on it ("who[sad audio]" works too)
         else if(m=line.match(/^([a-z_]+)(?:\[([\w ]+)\])?(?:@([a-z]{2}))?:\s*(.+)$/)){const tags=(m[2]||'').split(/\s+/).filter(Boolean);
           node({who:m[1],ex:tags.find(t=>t!=='audio')||'neutral',audio:tags.includes('audio'),ko:nl(m[4]),lang:m[3]||st.meta.lang||'ko'})}
-        else console.warn('story line not understood',ln+1,line);
+        else{PARSE_WARN.push(`${file||'story'}:${ln+1}: ${line}`);console.warn('story line not understood',ln+1,line)}
         break}
+      default:PARSE_WARN.push(`${file||'story'}:${ln+1}: nothing reads the section "=== ${sec}"`);
     }
   });
   return st;

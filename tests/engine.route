@@ -1,0 +1,53 @@
+# Engine checks: the rules story files can use (effects and conditions), the world that carries on
+# between chapters, and old saves upgrading. No story in here, so no spoilers.
+# Run with: python tools/playtest.py engine
+
+chapter prologue
+# --- a new game starts on the morning of day 1 with nothing
+expect day=1&time:morning&!time:evening&money=0&!g:test&!has:radio&!rel:sujin>=1
+
+# --- money, friendship, things you own, village flags
+fx money +500; rel sujin +2; item +radio; item +radio; set g:test
+expect money=500&money>=500&!money>500&money<501&rel:sujin>=2&rel:sujin=2&has:radio&has:radio=2&g:test&!has:camera
+fx money -200; item -radio; rel sujin -1; unset g:test
+expect money=300&has:radio=1&rel:sujin=1&!g:test
+fx money -999
+expect money=0
+fx money =1000
+expect money=1000
+
+# --- effects that add up pay out once per beat, unless they say "each time"
+fx @beatA money +100
+fx @beatA money +100
+expect money=1100
+fx @beatA money +100 each time
+fx @beatA money +100 each time
+expect money=1300
+
+# --- "if" on an effect, mixing chapter flags and world ones
+fx set localFlag; money +1 if localFlag&g:nope; money +5 if localFlag&money>=1300
+expect money=1305&localFlag
+
+# --- the world carries on into the next chapter; chapter flags don't
+switch ch1
+expect money=1305&!localFlag&started&rel:sujin=1
+# --- replaying a chapter can't farm a once-only effect
+switch prologue
+fx @beatA money +100
+expect money=1305
+
+# --- the save on the phone today (format 4) upgrades and keeps everything you wrote and learned
+oldsave v4
+expect day=1&time:morning&money=0&sawFake&hasPhone
+note 탈 mask
+note 강 river
+saved m.탈.u
+saved tl.는데요
+saved mx.절/집
+saved done.prologue
+saved w.탈.checked
+# --- a very old save (before chapters merged) still upgrades step by step, notes intact
+oldsave v2
+expect day=1&money=0
+note 탈 mask
+saved m.탈

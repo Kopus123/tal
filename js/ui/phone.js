@@ -13,7 +13,7 @@ function openPhone(){
   };
   const thread=t=>{
     const before=S.F['readn_'+t.id]||0;msgsOf(t).filter(m=>!m.d).slice(before).forEach(m=>noteSeen(m.ko));
-    runFx(t.fx);S.F['read_'+t.id]=1;S.F['readn_'+t.id]=msgCount(t);const ms=msgsOf(t);
+    runFx(t.fx,{key:'phone_'+t.id});S.F['read_'+t.id]=1;S.F['readn_'+t.id]=msgCount(t);const ms=msgsOf(t);
     o.querySelector('#phv').innerHTML=`<div class="ph-top"><button id="pb">‹ Back</button><b>${esc(t.name)}</b></div><div class="msgs">${ms.map((m,i)=>m.d?`<div class="day">${ko(m.d)}</div>`:m.sys?`<div class="bub sys">${esc(m.ko)}</div>`:m.vm?`<button class="bub vm" data-vm="${i}"><span class="vmplay">▶</span> 음성 메시지<small>${m.t} · tap to listen</small></button>`:`<div class="bub ${m.me?'me':''}" data-bi="${i}">${ko(m.ko)}<small>${m.t} · tap to hear</small></div>`).join('')}${t.note&&cond(t.noteC)?`<div class="ph-note">${esc(t.note)}</div>`:''}</div>`;
     o.querySelectorAll('[data-bi]').forEach(b=>b.onclick=()=>speak(ms[+b.dataset.bi].ko,'sign'));
     o.querySelectorAll('[data-vm]').forEach(b=>b.onclick=()=>{const m=ms[+b.dataset.vm];S.F['vm_'+t.id]=1;speak(m.ko,m.who)});

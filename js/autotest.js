@@ -20,8 +20,15 @@
      nosolve ...           the same, but it must be rejected
      leave                 press Never mind (walk away from a decision)
      idle                  keep pressing Continue until you're free to look around
-     expect COND           a flag condition that must be true now (same syntax as the story)
-     done ID               this chapter must be finished                                      */
+     expect COND           a condition that must be true now (same syntax as the story's "if")
+     done ID               this chapter must be finished
+   For testing the engine itself, not the story:
+     fx EFFECTS            run story effects directly ("fx money +500; set g:x"); "fx @KEY ..." runs them
+                           as if they came from the beat KEY, so once-only effects can be tested
+     oldsave NAME          load tests/saves/NAME.json as if it were the save on the phone (it gets upgraded)
+     note WORD TEXT        the notebook note for WORD must be exactly TEXT
+     saved PATH            the save must hold something at this dotted path ("saved m.탈.u")
+     switch ID             move to this chapter keeping the save, the way the story does at a chapter's end  */
 (function(){
 const out=[];let failed=false;
 const log=s=>out.push(s);
@@ -103,6 +110,18 @@ const STEPS={
   async leave(){const b=await until(()=>document.querySelector('#bLeave'),'a Never mind button');await clickEl(b)},
   async expect(c){if(!cond(c))fail(`expected ${c}`)},
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},
+  async switch(id){if(!CH[id])fail(`no chapter ${id}`);startChapter(id,true);await settle()},
+  async saved(path){let v=S;for(const k of path.split('.')){v=v==null?v:v[k]}if(!v)fail(`the save has nothing at ${path}`)},
+  async fx(a){const k=a.match(/^@(\S+)\s+(.+)$/);
+    const list=(k?k[2]:a).split(';').map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(\w+)\s+(.+?)(?:\s+if\s+(\S+))?$/);
+      if(!m)fail(`effect not understood: ${x}`);if(!EFFECTS[m[1]])fail(`no effect called "${m[1]}"`);return {k:m[1],a:m[2].trim(),c:m[3]}});
+    runFx(list,k?{key:k[1]}:{});save()},
+  async oldsave(name){const r=await fetch(`tests/saves/${name}.json`,{cache:'no-cache'});if(!r.ok)fail(`no tests/saves/${name}.json`);
+    S=adopt(await r.json());S.set.auto=0;S.set.sound=0;BACK=[];SEEN.clear();
+    if(S.v!==SAVE_V)fail(`the save stopped at format ${S.v}, the game is at ${SAVE_V}: a MIGRATE step is missing`);
+    document.querySelectorAll('.title').forEach(t=>t.remove());resume();render();await settle()},
+  async note(a){const [w,...rest]=a.split(/\s+/);const want=rest.join(' '),got=(S.w[w]||{}).note;
+    if(got!==want)fail(`the note for ${w} is ${got===undefined?'missing':'"'+got+'"'}, expected "${want}"`)},
 };
 
 let JUMPING=false;
@@ -145,6 +164,7 @@ async function main(){
   const errs=[];window.addEventListener('error',e=>errs.push(e.message));
   for(let i=0;i<400&&document.querySelector('#boot');i++)await tick(25);
   if(document.querySelector('#boot')){log('FAIL: the game never finished loading');failed=true}
+  else if(PARSE_WARN.length){log('FAIL: the game could not read these story lines:\n  '+PARSE_WARN.join('\n  '));failed=true}
   else for(const name of(new URLSearchParams(location.search).get('autotest')||'').split(',').filter(Boolean)){await run(name);if(failed)break}
   if(errs.length){log('page errors:\n  '+errs.join('\n  '));failed=true}
   const pre=document.createElement('pre');pre.id='autotest';pre.textContent=(failed?'FAIL':'PASS')+'\n'+out.join('\n');

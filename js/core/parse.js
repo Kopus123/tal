@@ -15,7 +15,8 @@ function splitBar(str){const out=[];let d=0,cur='';for(const c of str){if(c==='{
 function parseStory(src,st,file){
   st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{}};
   let sec=null,cur=null,scene=null,last=null,count=0;
-  const node=n=>{count++;const id=count===1?scene:scene+'.'+count;
+  let early=[];   // effects written before a scene's first line: they run with that first line
+  const node=n=>{count++;const id=count===1?scene:scene+'.'+count;if(early.length){n.fx=early;early=[]}
     if(last&&!last.next&&!last.rewind&&!last.ch&&!last.ans)last.next=id;
     n.id=id;st.nodes[id]=n;last=n;return n};
   const fx=s=>s.split(';').map(x=>x.trim()).filter(Boolean).map(x=>{
@@ -25,7 +26,7 @@ function parseStory(src,st,file){
     const line=raw.trim();if(!line||line.startsWith('#'))return;
     const h=line.match(/^===\s*(\w+)\s*(.*)$/);
     if(h){sec=h[1];const arg=h[2].trim();
-      if(sec==='scene'){scene=arg;last=null;count=0}
+      if(sec==='scene'){scene=arg;last=null;count=0;early=[]}
       else if(sec==='place')cur=st.places[arg]={id:arg,spots:[],glow:[],desc:[]};
       else if(sec==='phone'){cur={id:arg,m:[],fx:[]};st.phones.push(cur)}
       else if(sec==='pattern'){cur={id:arg,pairs:[],need:3};st.patterns.push(cur)}
@@ -87,6 +88,7 @@ function parseStory(src,st,file){
       case 'scene':{
         if(line.startsWith('~'))node({who:'narr',en:line.slice(1).trim()});
         else if(m=line.match(/^\((.*)\)$/)){if(last)last.en=m[1]}
+        else if(line.startsWith('!')&&!last)early=early.concat(fx(line.slice(1)));
         else if(line.startsWith('!')){if(last){const f=fx(line.slice(1));last.fx=(last.fx||[]).concat(f);
           f.filter(e=>e.k==='statement').forEach(e=>st.statements[e.a]={id:e.a,node:last.id})}}
         // "* label -> TARGET [if COND] [! effects]": the choice only shows when COND holds

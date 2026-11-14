@@ -68,3 +68,23 @@ knows 탈 0
 chapter prologue
 choose Laugh with her
 saved pat.is
+
+# --- Check my guess judges the guess: it never accepts just anything
+guess 탈 wrong H
+guess 탈 wrong thing
+guess 탈 right mask
+guess 탈 right a Mask!
+guess 탈 right masks
+guess 없어요 right dont have
+guess 없어요 right isn't there
+guess 없어요 wrong there
+guess 괜찮아요 right it's ok i think? okay
+guess 할머니 right grandmother
+guess 할머니 wrong grandpa
+guess 강 right river
+guess 강 wrong r
+guess 빨리 right quick
+guess 봤어요 right saw
+guess 봤어요 wrong was
+guess 할머니 right grandma
+guess 할아버지 wrong grandma

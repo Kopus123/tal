@@ -42,6 +42,7 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--celadon-lt);
 .loc{flex:1;min-width:0;display:flex;align-items:baseline;gap:10px}
 .loc .ko{white-space:nowrap;flex:none;font-family:var(--f-brush);font-size:2rem;line-height:1;color:var(--paper);background:none;border:0;padding:0}
 .loc .sub{font-size:.78rem;color:var(--mist);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[hidden]{display:none!important}   /* "hidden" always wins, whatever else styles the element */
 .ib{position:relative;width:42px;height:42px;border-radius:12px;border:1px solid var(--ink-3);background:var(--ink-2);display:grid;place-items:center;padding:0}
 .ib svg{width:20px;height:20px;stroke:var(--paper);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .ib .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--ochre)}

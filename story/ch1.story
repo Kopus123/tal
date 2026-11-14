@@ -29,7 +29,7 @@ if !metHalmeoni: You worked out where she is. Up the mountain path, and keep cli
 if !hidden: Someone with a light is coming. Don't let them see you, and don't let them find her.
 if !allSolved: Open the case board (the board button at the top) and answer the questions you can see.
 if !solved_d8: What did 할머니 say about the mask in the museum?
-Chapter 1 is done. Look back through your notebook while you wait for Chapter 2.
+Chapter 1 is done. At the temple, "Leave it here for now" takes you back to the village. Look back through your notebook while you wait for Chapter 2.
 
 === deduce
 d1 if sawFake | The mask on the gate is {가짜}. 할머니 {만들었어요} it herself, {어제}. | Wet paint, fresh shavings, and no chip in the eyebrow. | needs fakemask/nochip "Something that shows this mask is new" + photo79 "What the old mask looked like"
@@ -248,6 +248,7 @@ travel no
 first c1_j1
 desc The dark temple. Somewhere close, a man is breathing.
 spot "할머니" 58 66 -> c1_jend
+spot "Leave it here for now" 50 90 -> c1_jleave if solved_d9
 glow 할머니 58 66 10
 glow 탈 58 70 7
 glow 절 50 38 22
@@ -730,6 +731,18 @@ bus: {다음} {정류장}{은|은/는} {지하철역}{입니다}.
 ~ In a narrow stall crammed with paint pots and blocks of wood sits a woman in a flowered apron, counting change.
 ajumma[happy]: {어서 오세요}! {어서 오세요}!
 (She waves you over to her stall.)
+@type Say hello back. | ajumma
+answer: {안녕하세요}! -> c1_m1hi
+answer: {안녕하세요} -> c1_m1hi
+miss -> c1_m1no
+
+=== scene c1_m1no
+ajumma[surprised]: {네}?
+~ Just say hello: 안녕하세요.
+<- c1_m1.3
+
+=== scene c1_m1hi
+ajumma[happy]: {네}, {네}, {안녕하세요}!
 ~ She's busy with customers. If you buy something, she'll have a minute for you.
 
 === scene c1_mafter_in
@@ -1201,6 +1214,11 @@ stranger[audio]: {진짜} {탈}... {줘}.
 ~ It isn't nine o'clock, and this isn't the bridge. He never meant to wait there. He followed you.
 ~ 할머니's hand finds yours in the dark and squeezes. Neither of you breathes.
 ! set hidden; toast One question left on your case board.
+
+=== scene c1_jleave
+~ This is where Chapter 1 stops. What happens next on the mountain is for Chapter 2.
+~ Until then, the village is open to you as it was this afternoon: walk around, reread your notebook, finish anything you left.
+! place madang
 
 === scene c1_jend
 halmeoni[worried]: {숨어요}...

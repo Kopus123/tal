@@ -4,6 +4,7 @@
 # '#@ Label' lines are checkpoints for Menu > Jump ahead (Playtest tools on). Put them where you're free to look around.
 
 chapter prologue
+shown #bPhone no
 # --- the evening before
 choose Laugh with her
 # --- the next morning
@@ -24,6 +25,8 @@ choose 할머니
 choose 버스 정류장
 idle
 spot Right path
+type 고마워요
+type 안녕하세요
 idle
 spot Talk to the owner
 type 할머니 봤어요?
@@ -38,6 +41,7 @@ spot Wait for the bus
 choose Stay on
 choose Stay on
 choose Press the stop
+type 안녕하세요
 build 김순자 | 선생님 | 봤어요?
 idle
 #@ Day 1 · the museum, case board
@@ -95,6 +99,7 @@ idle
 spot Bus stop
 spot Wait for the bus
 choose Press the stop
+type 안녕하세요
 idle
 spot The paint stall
 build 빨간 | 물감 | 주세요
@@ -186,3 +191,6 @@ expect hidden
 solve d8 할머니 | 박물관 | 가짜 ; realchip + photo79
 solve d9 바꿨어요 | 마을 | 서울 ; s_reason + card
 done ch1
+spot Leave it here for now
+idle
+expect @madang

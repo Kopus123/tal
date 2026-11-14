@@ -68,7 +68,7 @@ defEffect('led','text',a=>{S.F.led=a});
 defEffect('toast','text',(a,x)=>{if(!x.replay)toast(esc(a),5000)});
 defEffect('learn','text',()=>{}); // from before the notebook was yours: harmless, does nothing
 defEffect('mixup','mixup',(a,x)=>{const [r,h]=a.split('/').map(v=>v.trim());const k=r+'/'+h;
-  if(!x.replay){S.mx[k]=(S.mx[k]||0)+1;noteUsed('{'+r+'}',false);toast(`Mix-up saved to your notebook: <b>${esc(r)}</b> / <b>${esc(h)}</b>`,4000)}});
+  if(!x.replay){S.mx[k]=(S.mx[k]||0)+1;noteUsed('{'+r+'}',false);toast(`You misheard that. Saved in your notebook under Misheard: <b>${esc(r)}</b> / <b>${esc(h)}</b>`,4000)}});
 defEffect('statement','statement',(a,x)=>{if(!S.F['st_'+a]){S.F['st_'+a]=1;if(!x.replay)toast('Statement saved to your case board.',2600)}});
 defEffect('have','evidence',a=>eachOf(a,v=>{S.F['ev_'+v]=1})); // evidence you already carry, no announcement
 defEffect('give','evidence',(a,x)=>eachOf(a,v=>{if(!S.F['ev_'+v]){S.F['ev_'+v]=1;const ev=ST.evidence[v];if(ev&&!x.replay)toast(`${iconSVG(ev.icon)} Evidence: <b>${ko(ev.label,false,false)}</b>`,3500)}}));

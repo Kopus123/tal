@@ -420,6 +420,19 @@ sign: ↑ {산} 1.2km
 ! learn 오른쪽 if heardDir
 ajeossi[happy]: {어서 오세요}!
 (He waves you in with the cloth, smiling.)
+@type Say hello back. | ajeossi
+answer: {안녕하세요}! -> k1hi
+answer: {안녕하세요} -> k1hi
+miss -> k1no
+
+=== scene k1no
+ajeossi[happy]: {네}?
+(He waits, still smiling.)
+~ Just say hello: 안녕하세요.
+<- k1.3
+
+=== scene k1hi
+ajeossi[happy]: {네}, {안녕하세요}! 하하.
 
 === scene ktalk
 @type Ask him if he's seen 할머니.
@@ -598,7 +611,16 @@ bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
 ~ Inside, it's cool and quiet. Glass cases full of old masks line the walls. A woman at the front desk looks up.
 ! place museum
 staff[happy]: {안녕하세요}! 청솔 {박물관}{이에요}.
--> mu3
+@type Say hello back before you ask her anything. | staff
+answer: {안녕하세요}! -> mu3
+answer: {안녕하세요} -> mu3
+miss -> mu1no
+
+=== scene mu1no
+staff[surprised]: {네}?
+(She smiles politely and waits.)
+~ Say hello first: 안녕하세요.
+<- mu1.3
 
 === scene mu3
 @build Ask her about 할머니. The museum's message called her 김순자 선생님: 선생님 is how people address a teacher or a respected master.

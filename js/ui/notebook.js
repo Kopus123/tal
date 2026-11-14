@@ -1,6 +1,16 @@
 /* ============ NOTEBOOK ============
    The word page, the notebook and its tabs, and the little page for names. */
 
+// Is what you wrote the meaning? Any one of the meanings listed (split by commas) is enough, small typos and
+// endings are forgiven (mask / masks), filler words don't count, and so "h" or "thing" is not a match for anything.
+let WRONG=null;
+const FILLER=new Set('a an the to it its is are am be i im me my of please you your for or and that this there they them'.split(' '));
+function guessWords(s){return String(s).toLowerCase().replace(/\([^)]*\)/g,' ').replace(/'/g,'').replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(w=>w&&!FILLER.has(w))}
+function nearWord(x,w){if(x===w)return true;if(Math.min(x.length,w.length)<3)return false;
+  let cp=0;while(cp<x.length&&cp<w.length&&x[cp]===w[cp])cp++;   // letters they share from the start: grandma / grandmother
+  return (x.length>=8&&w.length>=8&&lev(x,w)<=1)||cp>=Math.max(4,Math.ceil(.75*Math.min(x.length,w.length)))||(w.length===3&&x.startsWith(w)&&x.length<=5)}
+function guessRight(guess,meaning){const g=guessWords(guess);if(!g.length)return false;
+  return String(meaning).replace(/\([^)]*\)/g,' ').split(',').map(guessWords).filter(a=>a.length).some(a=>a.every(w=>g.some(x=>nearWord(x,w))))}
 function wordSheet(id){
   const d=W[id];if(!d)return;const r=wrec(id);S.nb[id]=1;save();
   const o=overlay(`<div class="panel paper" role="dialog" aria-label="${esc(id)}">${head('수첩')}<div class="ph-body" id="wsb"></div></div>`);
@@ -15,14 +25,19 @@ function wordSheet(id){
       <button class="btn" id="wsay" style="justify-content:center">▶ Hear it</button>
       ${d.g?'':`<div class="label">What you think it means</div><textarea id="wnote" placeholder="Your own words">${esc(r.note||'')}</textarea>
       <label class="surebox"><input type="checkbox" id="wsure" ${r.sure?'checked':''} ${r.note&&r.note.trim()?'':'disabled'}><span>I'm sure about this</span></label>
-      ${r.checked?`<div class="meaning">Meaning: <b>${esc(meaningOf(id))}</b></div>`:meaningOf(id)?`<button class="btn-ink" id="wcheck" ${r.note&&r.note.trim()?'':'disabled'}>Check my guess</button><div class="hintline">${r.note&&r.note.trim()?'Shows the meaning, so you can see if you were right.':'Write a guess first, then you can check it.'}</div>`:''}`}
+      ${r.checked?`<div class="meaning">${r.right?'You got it. ':''}Meaning: <b>${esc(meaningOf(id))}</b></div>`:meaningOf(id)?`<button class="btn-ink" id="wcheck" ${r.note&&r.note.trim()?'':'disabled'}>Check my guess</button>
+        <div class="hintline">${!(r.note&&r.note.trim())?'Write a guess first, then you can check it.':WRONG===id?'Not quite. Look at the picture and where you\'ve seen it, then try another guess.':'Tells you if your guess is right. It only shows the meaning once you get it.'}</div>
+        ${(r.tries||0)>=3?`<button class="linkish" id="wreveal">I give up, show me</button>`:''}`:''}`}
       <div class="label">Where you've seen it</div>${ctx}
       ${d.g?'':`<button class="linkish" id="wsym">What do the badges on the picture mean?</button>`}`;
     o.querySelector('#wsay').onclick=()=>speak(id,'word');
     const n=o.querySelector('#wnote');if(n)n.oninput=e=>{r.note=e.target.value;if(!r.note.trim())r.sure=0;save();
       const c=o.querySelector('#wsure');c.disabled=!r.note.trim();const wc2=o.querySelector('#wcheck');if(wc2)wc2.disabled=!r.note.trim();if(!r.note.trim())c.checked=false;o.querySelector('.badge').className='badge st-'+status(id);o.querySelector('.badge').textContent=STATE_LABEL[status(id)]};
     const c=o.querySelector('#wsure');if(c)c.onchange=e=>{r.sure=e.target.checked?1:0;save();sfx(r.sure?'learn':'tap');o.querySelector('.badge').className='badge st-'+status(id);o.querySelector('.badge').textContent=STATE_LABEL[status(id)]};
-    const wc=o.querySelector('#wcheck');if(wc)wc.onclick=()=>{r.checked=1;save();sfx('learn');draw()};
+    const wc=o.querySelector('#wcheck');if(wc)wc.onclick=()=>{
+      if(guessRight(r.note,meaningOf(id))){r.checked=1;r.right=1;WRONG=null;sfx('learn')}else{r.tries=(r.tries||0)+1;WRONG=id;sfx('wrong');buzz(40)}
+      save();draw()};
+    const wr=o.querySelector('#wreveal');if(wr)wr.onclick=()=>{r.checked=1;WRONG=null;save();draw()};
     const sy=o.querySelector('#wsym');if(sy)sy.onclick=()=>{nbTab='sym';notebook()};
   };
   draw();speak(id,'word');
@@ -57,7 +72,7 @@ function notebook(){
     const eng=id=>((S.w[id].note||'').trim()||(S.w[id].checked?meaningOf(id):'')).toLowerCase();
     if(nbQ){const q=nbQ.toLowerCase();list=list.filter(id=>id.includes(nbQ)||eng(id).includes(q))}
     list=nbSort==='ko'?[...list].sort((a,b)=>a.localeCompare(b,'ko')):nbSort==='en'?[...list].sort((a,b)=>(!eng(a))-(!eng(b))||eng(a).localeCompare(eng(b))||a.localeCompare(b,'ko')):[...list].reverse();
-    const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],['mix','Mix-ups'],['sym','Symbols']];
+    const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],...(Object.keys(S.mx||{}).length?[['mix','Misheard']]:[]),['sym','Symbols']];
     let inner=`<div class="tabs">${tabs.map(([k,t])=>`<button class="tab ${nbTab===k?'on':''}" data-tab="${k}">${t}</button>`).join('')}</div>`;
     if(['all','todo','guess','sure'].includes(nbTab))inner+=`<div class="label">${by('sure').length} sure · ${by('guess').length} guesses · ${vocab.length} seen</div>
       <div class="nbtools"><input id="nbq" placeholder="Search Korean or your notes" value="${esc(nbQ)}" autocomplete="off"><span class="seg">${[['ko','ㄱㄴㄷ'],['en','A–Z'],['new','Newest']].map(([k,t])=>`<button data-sort="${k}" class="${nbSort===k?'on':''}">${t}</button>`).join('')}</span></div>`;
@@ -69,7 +84,7 @@ function notebook(){
     }
     else if(nbTab==='mix'){
       const pairs=Object.entries(S.mx||{});
-      inner+=pairs.length?`<div class="empty">Words you heard wrong, next to what was really said. Tap each to hear the difference.</div><div class="glist">${pairs.map(([k,n])=>{const [r,h]=k.split('/');
+      inner+=pairs.length?`<div class="empty">Sometimes a word is only spoken, and you have to pick what you heard. When you pick a word that sounds almost the same, the pair is saved here: what they really said, next to what you heard. Tap each to hear the difference.</div><div class="glist">${pairs.map(([k,n])=>{const [r,h]=k.split('/');
         const side=(id,lab)=>`<button class="mixw" data-w="${esc(id)}">${W[id]&&W[id].p?iconSVG(W[id].p):''}<b>${esc(id)}</b><small>${lab}</small></button>`;
         return `<div class="mixrow">${side(r,'what they said')}<span class="mixvs">≠</span>${side(h,'what you heard')}${n>1?`<span class="mixn">×${n}</span>`:''}</div>`}).join('')}</div>`
         :`<div class="empty">Nothing yet. When you mishear a word, it goes here next to what was really said.</div>`;

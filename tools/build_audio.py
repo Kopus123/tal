@@ -13,7 +13,7 @@ AUDIO = ROOT / "audio"
 VOICE_NAMES = {"SunHi": "ko-KR-SunHiNeural", "InJoon": "ko-KR-InJoonNeural", "Hyunsu": "ko-KR-HyunsuMultilingualNeural"}
 TOK = re.compile(r"\{([^}|]+)(?:\|[^}]+)?\}")
 
-def split_bar(s):  # must match splitBar() in js/engine.js
+def split_bar(s):  # must match splitBar() in js/core/parse.js
     out, d, cur = [], 0, ""
     for c in s:
         d += (c == "{") - (c == "}")
@@ -21,7 +21,7 @@ def split_bar(s):  # must match splitBar() in js/engine.js
         else: cur += c
     return out + [cur.strip()]
 
-def normalize(s):  # must match normT() in js/engine.js
+def normalize(s):  # must match normT() in js/audio.js
     s = TOK.sub(r"\1", s).replace("\\n", " ")
     s = re.sub("[📸🏮^♡✖📞🔔💙]", "", s).replace("/", ", ")
     return re.sub(r"\s+", " ", s).strip()

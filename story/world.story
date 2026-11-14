@@ -2,34 +2,102 @@
 #  탈 · WORLD  (shared by every chapter: no plot in here)
 #
 #  This file: the game's title, the chapter list, the cast, every word
-#  and its picture, grammar patterns, and the village map.
+#  and its picture and meaning, grammar notes, names, and the village map.
 #  Each chapter has its own file (prologue.story, ch1.story ...) with
 #  its places, scenes, clues and hints.
 #
-#  Chapter file quick reference
-#    === meta              start SCENE / start-place PLACE / end-title / end-text
-#    === place NAME        name, sub, art, ambient, first, always, travel no,
-#                          desc [if COND:] text, spot "Label" X Y -> SCENE | => place NAME | => phone,
-#                          glow WORD X Y R
-#    === scene NAME        a block of lines; each line is one beat
-#    who: 한국어            someone speaks (who = a key from the cast)
-#    who[worried]: 한국어   ...with a face: neutral happy worried surprised sad
-#    who@ja: ...           a line in another language (default comes from meta "lang", which is ko)
-#    @card 제목 | 부제       full-screen title card (chapter openings)
-#    (English)             what you SEE them do, attached to the line above
-#    ~ English             narration beat
-#    ! effect; effect      runs when the beat above starts
-#                          set FLAG | unset FLAG | learn WORD, WORD | place PLACE
-#                          led TEXT | toast TEXT     (add "if COND" to any effect)
-#    * 한국어 -> TARGET     a choice the player says out loud
-#    * [Action] -> TARGET  a choice the player does
-#    -> TARGET             jump when the beat ends (NAME, or NAME.2 for its 2nd beat)
-#    TARGET can be  "COND ? A : B".  COND = flag, !flag, @place, joined with &
-#    {word}                tappable word.  {surface|notebook entry} when they differ
-#    @build / tiles: / answer: / miss ->     sentence-building moment
-#    @camera / @photo                        special beats
-#    === case              ID ANSWER [final] if COND | question | why   (final ends the chapter)
-#    === hints / === phone NAME
+#  THE STORY FORMAT, COMPLETE.  The game reads it in js/core/parse.js.
+#  Lines starting with # are notes.  After any change run:
+#  python tools/check_story.py   and   python tools/playtest.py
+#
+#  ------------------------------------------------ words in any text
+#    {word}                 a tappable word (needs an entry under === words)
+#    {surface|entry}        shown as "surface", opens the notebook page "entry"
+#    names and sounds       anything listed under === names is tappable by itself
+#    \n                     a line break inside a line
+#
+#  ------------------------------------------------ this file (the world)
+#    === meta               lang ko / title / village / blurb
+#    === chapters           id | title | subtitle | file | continues
+#                           ("continues" = plays on from the file above as one chapter)
+#    === map                pin PLACE X% Y%
+#    === cast               key | name | color | voice rate pitch | look
+#    === words              word = picture [+past] [+future] [+not]      (pictures: js/icons.js)
+#                           piece = (grammar)                            (explained under === grammar)
+#    === grammar            piece | what it does          (shown when you tap the piece)
+#    === tells              piece | what it gives away    (shown once you catch it on the case board)
+#    === endings            ending | note                 (the notebook's Grammar tab)
+#    === meanings           word | short English meaning  (Check my guess, and under case-board blanks)
+#    === names              name | name or sound | what tapping it says
+#    === pattern ID         title / note / need N / plain > changed    (the notebook's Patterns tab)
+#
+#  ------------------------------------------------ a chapter file
+#    === meta               lang / start SCENE / start-place PLACE / end-title / end-text
+#    === hints              if COND: text      (the first one that fits is the hint; a last plain line = fallback)
+#    === deduce             ID [final] if COND | sentence with {blank} words | what it means once solved
+#                           add  | needs A "what this proof is" + B/B2 "..."   for proof (evidence or statement
+#                           ids; B/B2 = either one).  "final" ends the chapter when solved.
+#    === evidence           id | label | picture | what it is | Korean written on it (optional)
+#    === place NAME         name / sub / art KEY (js/art.js) / ambient / travel no
+#                           first SCENE (plays the first time you arrive) / always SCENE (every time)
+#                           desc [if COND:] text                 (the first one that fits is shown)
+#                           spot "Label" X Y -> SCENE [if COND]  (also  => place NAME   and   => phone)
+#                           glow WORD X Y [R] [H]                (the ring when someone says WORD)
+#    === phone ID           name / avatar LETTER COLOR / on-open effects
+#                           day[@COND] text / them[@COND] TIME text / me[@COND] TIME text / sys[@COND] text
+#                           voice[@COND] TIME WHO text    (a voicemail: sound only)
+#                           note[@COND] text              (@COND = only once COND is true)
+#    === examine ID         art KEY / compare KEY / prompt text
+#                           detail ID X Y R [key] | what you notice [! effects]    (key = must be found)
+#    === scene NAME         a block of lines; each line below is one beat
+#
+#  ------------------------------------------------ lines in a scene
+#    who: 한국어             someone speaks (who = a key from the cast; sign = something written)
+#    who[worried]: ...      with a face: neutral happy worried surprised sad
+#    who[audio]: ...        you only hear it; the text appears after you act  (who[sad audio] works too)
+#    who@ja: ...            a line in another language (default: meta "lang")
+#    (English)              what you SEE them do, attached to the line above
+#    ~ English              narration
+#    ! effect; effect       runs when the beat above starts (list below)
+#    * 한국어 -> TARGET      a choice you say out loud        [if COND] [! effects] may follow
+#    * [Action] -> TARGET   a choice you do
+#    -> TARGET              where to go when the beat ends (otherwise: the next line)
+#    <- TARGET              rewind: that was a wrong turn, back to the decision
+#    @card 제목 | 부제        full-screen title card
+#    @build prompt          sentence tiles:   tiles: a | b | c    answer: a | b -> TARGET    miss -> TARGET
+#    @type prompt [| who]   typed answer:     answer: 한국어 -> TARGET (several allowed)     miss -> TARGET
+#                           (who = the person who answers small talk like hello and thanks)
+#    @number prompt | kind  number pad (kind: time won phone count):   answer: 9:00 -> TARGET   miss -> TARGET
+#    @present prompt        show evidence:    show: ID -> TARGET     miss -> TARGET
+#    @contradict prompt     pick two that clash:   pair: A + B -> TARGET (statement or evidence ids)   miss -> TARGET
+#    @examine ID            a close-up from === examine ID
+#    @camera [X Y |] prompt aim the camera at X Y and shoot       @photo text    look at the photo
+#
+#    TARGET   a scene NAME, NAME.2 for its 2nd beat, or  COND ? A : B
+#
+#  ------------------------------------------------ effects (after "!")     add  if COND  to any of them
+#    set FLAG, FLAG         switch flags on (unset = off).  g:FLAG = a village flag, kept between chapters
+#    place PLACE            move to a place           led TEXT     the bus sign
+#    toast TEXT             a short message           learn ...    old, does nothing
+#    give ID, ID            hand over evidence (with a message)     have ID, ID    the same, silently
+#    statement ID           save the line above as a statement
+#    mixup RIGHT / HEARD    record a mishearing in the notebook
+#    money +500 | -200 | =1000         rel WHO +1         item +NAME | -NAME
+#                           these three happen once per beat, however often you pass it;
+#                           end with "each time" for a price paid on every visit: money -1500 each time
+#
+#  ------------------------------------------------ conditions (after "if", "@" on phone lines, "?" in targets)
+#    FLAG   !FLAG   A&B     a flag is on / off / both           @PLACE   you are at that place
+#    allSolved              every deduction on the board (except the final one) is solved
+#    money>=500   day>=3    numbers compare with  >=  <=  >  <  =        (also rel:WHO>=2, has:NAME>=2)
+#    time:morning           also afternoon, evening, night
+#    g:FLAG                 a village flag            rel:WHO    friendship            has:NAME   you own it
+#    flags the game sets by itself:  started, solved_ID (deduction), read_ID and vm_ID (phone thread read /
+#    voicemail heard), st_ID (statement saved), ev_ID (evidence held), ex_EXAMINE_DETAIL (detail noticed).
+#    The phone button appears once the story sets hasPhone.
+#
+#  New effects and conditions are added in js/core/rules.js (or a file like js/core/world.js);
+#  the checker reads them from there.
 # ===================================================================
 
 === meta

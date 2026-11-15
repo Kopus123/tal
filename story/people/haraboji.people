@@ -8,6 +8,8 @@ greet hb_hi
 chat 0 hb_fish
 chat 0 hb_know
 chat 0 hb_busy
+ask 할머니 hb_ask_gm
+ask 물고기 hb_ask_fish
 bye hb_bye
 
 === scene hb_hi
@@ -66,3 +68,14 @@ haraboji: ...{좋아요}.
 === scene hb_bye
 haraboji: ...{낚시}{하거든요|거든요}.
 (He is busy. He has always been busy.)
+
+=== scene hb_ask_gm
+haraboji: ...
+(He doesn't answer for a long time. The float bobs.)
+haraboji[sad]: {좋은} {친구}{예요|이에요}. {옛날}{부터}.
+(Since long ago. He says nothing more, and you don't ask.)
+! rel haraboji +1
+
+=== scene hb_ask_fish
+haraboji[happy]: {물고기}? {큰} {물고기}{가|이/가} {있어요}. {여기}.
+(He points at a dark patch of water under the bridge. One day.)

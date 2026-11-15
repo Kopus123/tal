@@ -15,12 +15,13 @@ function enter(place){
   S.loc=place;const l=ST.places[place];S.node=null;BACK=[];
   if(l.always){go(l.always);return}
   if(l.first&&!S.visited[place]){S.visited[place]=1;go(l.first);return}
-  S.visited[place]=1;save();render();
+  S.visited[place]=1;save();if(!checkEvents())render();
 }
 function go(id){
   id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
   if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
+  if(ST.free&&PSTART.has(id))S.world.seen[id]=S.world.day;   // a villager's conversation, heard today
   S.node=id;bseq=[];TFB=null;TREPLY=null;tHint=0;CSEL=[];NUMV='';EXMISS=0;runFx(nd.fx,{replay,key:id});checkPattern();
   if(nd.ko&&!replay)noteSeen(nd.ko);
   if(nd.audio)HEARD[id]=(HEARD[id]||0)+1;
@@ -34,7 +35,7 @@ function next(){
   if(nd&&nd.rewind){rewindTo(nd.rewind);return}
   if(nd&&nd.next)go(nd.next);
   else if(S.F.goChapter){const c=S.F.goChapter;delete S.F.goChapter;startChapter(c,false)}   // "! chapter ID": the story carries on in another file
-  else{S.node=null;BACK=[];save();render()}
+  else{S.node=null;BACK=[];save();if(!checkEvents())render()}   // a scene that ends somewhere new can walk you into a village event
 }
 // step back one line in the current scene (like a visual novel's back button)
 function goBack(){
@@ -159,7 +160,7 @@ async function present(nd,id){
 /* ---------- chapters ---------- */
 function useChapter(id){
   const c=CH[id]||CH[WORLD.chapters[0].id];
-  ST={examines:Object.assign({},c.examines),statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:Object.assign({},PNODES,c.nodes),free:!!chInfo(id).free,cases:c.cases,phones:c.phones,hints:c.hints,
+  ST={examines:Object.assign({},c.examines),statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:Object.assign({},PNODES,c.nodes),free:!!chInfo(id).free,events:c.events||[],cases:c.cases,phones:c.phones,hints:c.hints,
     patterns:WORLD.patterns.concat(c.patterns),meta:Object.assign({},WORLD.meta,c.meta),map:WORLD.map,chapters:WORLD.chapters};
 }
 const chIndex=id=>WORLD.chapters.findIndex(c=>c.id===id);

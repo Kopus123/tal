@@ -8,6 +8,8 @@ greet aj_hi
 chat 0 aj_special
 chat 0 aj_gramps
 chat 0 aj_order
+ask 할아버지 aj_ask_gramps
+ask 김밥 aj_ask_kimbap
 bye aj_bye
 
 === scene aj_hi
@@ -72,3 +74,12 @@ ajeossi: {물}? {네}... {여기} {있어요}.
 === scene aj_bye
 ajeossi: {바빠요}! 하하. {내일} {오세요}!
 (The lunch crowd is coming in. Tomorrow.)
+
+=== scene aj_ask_gramps
+ajeossi: {할아버지}? 하하. {매일} {김밥} {두 개}!
+(He holds up two fingers. One to eat now, one for later, every single day.)
+! rel ajeossi +1
+
+=== scene aj_ask_kimbap
+ajeossi[happy]: {김밥}{은|은/는}... {비밀}{이에요}!
+(He taps his nose. The recipe is not for sale.)

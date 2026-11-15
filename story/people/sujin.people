@@ -9,6 +9,10 @@ greet sj_hi2
 chat 0 sj_weather
 chat 0 sj_what
 chat 0 sj_hungry
+chat 0 sj_photo
+chat 1 sj_junho
+ask 할머니 sj_ask_gm
+ask 탈 sj_ask_mask
 story 1 sj_workshop
 bye sj_bye
 
@@ -77,3 +81,43 @@ sujin[happy]: {저}{는|은/는} {사진}{을|을/를} {찍어요}!
 === scene sj_bye
 sujin: {네}, {내일} {만나요}!
 (She has work to do. Tomorrow.)
+
+=== scene sj_photo
+sujin: {사진}{을|을/를} {찍어요}! {같이}!
+(She holds her phone out at arm's length for a selfie. You're in the corner of it, blinking.)
+* {네}! -> sj_photo_a
+* {아니요}... -> sj_photo_b
+
+=== scene sj_photo_a
+sujin[happy]: 하하! {예뻐요}!
+(She shows you. You are not pretty in it. She keeps it anyway.)
+! rel sujin +1
+
+=== scene sj_photo_b
+sujin[happy]: {괜찮아요}. {내일}!
+(She will absolutely try again tomorrow.)
+
+=== scene sj_junho
+sujin: 준호{는|은/는} {서울}{에} {있어요}.
+(She checks her phone, then puts it away again.)
+sujin[sad]: {매일} {전화해요}...
+(Every day she calls. You can't tell whether he picks up.)
+
+=== scene sj_ask_gm
+sujin[worried]: {할머니}{는|은/는}... {괜찮아요}.
+(She says it firmly, like she's deciding it.)
+sujin: {비밀}{이에요}. {네}?
+(A finger to her lips. Not a word to anyone.)
+
+=== scene sj_ask_mask
+sujin: {탈}...
+(She looks at the empty hook in the workshop for a long moment.)
+sujin[happy]: {탈}{은|은/는} {마을}{의} {탈}{이에요}.
+(She says it the way her mother said it, and almost smiles.)
+! rel sujin +1
+
+=== scene ev_haggle_told
+sujin[happy]: {장날}{에}... {아저씨}{하고} {아주머니}{가|이/가}... 하하!
+(She mimes someone clutching a cabbage and someone clutching their chest. You missed quite a show.)
+sujin: "{비싸요}! {비싸요}!" "{싸요}! {싸요}!"
+(She does both voices.)

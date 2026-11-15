@@ -1,0 +1,77 @@
+# 시장 아주머니: says everything twice, 아이고 for everything, knows everyone's business. (format: js/core/villagers.js)
+
+=== person ajumma
+at morning sijang 66 56
+at afternoon sijang 66 56
+at evening sikdang 70 60
+greet am_hi
+chat 0 am_price
+chat 0 am_paint
+chat 0 am_tired
+ask 할아버지 am_ask_gramps
+ask 물감 am_ask_paint
+bye am_bye
+
+=== scene am_hi
+ajumma[happy]: 아이고, {학생}! {어서 오세요}, {어서 오세요}!
+(She waves you over to her stall as if you were a long-lost nephew.)
+
+=== scene am_price
+ajumma: {배추}! {배추} {싸요}, {싸요}!
+(She holds up an enormous cabbage.)
+* {얼마예요}? -> am_price_a
+* {비싸요}! -> am_price_b
+
+=== scene am_price_a
+ajumma[happy]: {천 원}! {천 원}!
+(A thousand won for a cabbage that size. She is very proud of it.)
+! rel ajumma +1
+
+=== scene am_price_b
+ajumma[surprised]: {비싸요}?! 아이고... {싸요}! {싸요}!
+(She looks wounded, then laughs.)
+
+=== scene am_paint
+ajumma: {빨간} {물감}{이|이/가} {없어요}. {없어요}!
+(She shows you the empty shelf where the red paint used to be.)
+* {누구}{예요|이에요}? -> am_paint_a
+* {괜찮아요}. -> am_paint_b
+
+=== scene am_paint_a
+ajumma[happy]: 하하. {학생}! {학생}{이|이/가} {샀어요}!
+(She points at you. You did buy the last pot.)
+! rel ajumma +1
+
+=== scene am_paint_b
+ajumma: {네}, {네}. {내일} {와요}.
+(New paint comes tomorrow, apparently.)
+
+=== scene am_tired
+ajumma[sad]: 아이고... {바빠요}, {바빠요}.
+(She sinks onto her little stool and fans herself with a price card.)
+* {물} {주세요}! -> am_tired_a
+* {같이} {있어요}. -> am_tired_b
+
+=== scene am_tired_a
+ajumma[surprised]: {물}? 하하. {저}{는|은/는} {물}{이|이/가} {없어요}!
+(You meant to fetch her some. She laughs until she has to wipe her eyes.)
+
+=== scene am_tired_b
+ajumma[happy]: {고마워요}, {고마워요}.
+(You mind the stall for two minutes while she rests. Nobody buys anything.)
+! rel ajumma +2
+
+=== scene am_ask_gramps
+ajumma: {할아버지}? {매일} {강}{에} {있어요}. {매일}!
+(She rolls her eyes, fondly.)
+ajumma[happy]: {할머니}{하고} {친구}{예요|이에요}. {옛날}{에}...
+(She raises her eyebrows twice. There is a story there, and she isn't going to tell it. Yet.)
+
+=== scene am_ask_paint
+ajumma: {물감}{은|은/는} {여기} {있어요}. {나무}{도} {있어요}!
+(She sweeps a hand over the stall: pots of color, blocks of wood, brushes.)
+! rel ajumma +1
+
+=== scene am_bye
+ajumma: {바빠요}, {바빠요}! {내일} {와요}!
+(A queue has formed behind you.)

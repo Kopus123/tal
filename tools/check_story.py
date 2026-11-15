@@ -124,7 +124,7 @@ def parse(path):
     d = dict(meta={}, cast={}, words={}, places={}, scenes={}, deduce=[], evidence={}, phones={},
              hints=[], chapters=[], pins=[], jumps=[], flags_set=[], flags_read=[], gives=[], shows=[],
              speakers=[], tokens=[], placefx=[], statements={}, pairs=[], examines={}, exrefs=[],
-             people_files=[], person_at=[], chapter_refs=[], cal=[], cal_read=[], gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
+             people_files=[], person_at=[], gossip=[], chapter_refs=[], cal=[], cal_read=[], gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
     sec = cur = scene = None
     count = 0; join = False   # inside "@build ... | join": tiles are pieces of a word, not words
     def conds(c, ln):                       # mirror of cond() in js/core/rules.js
@@ -248,8 +248,18 @@ def parse(path):
                 if m.group(1) not in SLOTS: err(f, ln, f"'{m.group(1)}' isn't a time of day ({', '.join(sorted(SLOTS))})")
                 d["person_at"].append((m.group(2), ln))
             elif m := re.match(r"^(?:greet|bye)\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
-            elif m := re.match(r"^(?:chat|story)\s+\d+\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
-            else: err(f, ln, "person line should be: at SLOT PLACE X Y / greet SCENE / chat LEVEL SCENE / story LEVEL SCENE / bye SCENE")
+            elif m := re.match(r"^(?:chat|story)\s+\d+\s+(\w+)(?:\s+if\s+(\S+))?$", line): d["jumps"].append((m.group(1), ln, None)); conds(m.group(2), ln)
+            elif m := re.match(r"^ask\s+(\S+)\s+(\w+)(?:\s+if\s+(\S+))?$", line):
+                d["tokens"].append((m.group(1), ln)); d["jumps"].append((m.group(2), ln, None)); conds(m.group(3), ln)
+            else: err(f, ln, "person line should be: at SLOT PLACE X Y / greet SCENE / chat LEVEL SCENE [if COND] / story LEVEL SCENE [if COND] / ask WORD SCENE [if COND] / bye SCENE")
+        elif sec == "event":
+            if m := re.match(r"^when\s+(\S+)$", line): conds(m.group(1), ln)
+            elif m := re.match(r"^at\s+(\w+)\s+(\w+)$", line):
+                if m.group(1) not in SLOTS: err(f, ln, f"'{m.group(1)}' isn't a time of day ({', '.join(sorted(SLOTS))})")
+                d["placefx"].append((m.group(2), ln))
+            elif m := re.match(r"^scene\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
+            elif m := re.match(r"^missed\s+(\w+)\s+(\w+)$", line): d["who_refs"].append((m.group(1), ln)); d["gossip"].append((m.group(2), ln))
+            else: err(f, ln, "event line should be: when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE")
         elif sec == "calendar":
             p = [x.strip() for x in line.split("|")]
             m = re.match(r"^(\w+)\s+(every\s+\d+(\s+from\s+\d+)?|day\s+\d+)$", p[0])
@@ -334,6 +344,8 @@ def main():
     for fname, d in list(chapters.values()) + people:
         for x, ln in d["chapter_refs"]:
             if x not in chapter_ids: err(fname, ln, f"'chapter {x}': there is no such chapter in world.story")
+        for x, ln in d["gossip"]:
+            if not any(x in pd["scenes"] for _, pd in people) and x not in d["scenes"]: err(fname, ln, f"gossip scene '{x}' isn't in any people file")
         for x, ln in d["person_at"]:
             if x not in all_places: err(fname, ln, f"unknown place '{x}'")
         scenes, places = d["scenes"], d["places"]
@@ -366,8 +378,9 @@ def main():
             if n and (not n.isdigit() or int(n) < 1 or int(n) > scenes[base]["beats"]):
                 err(fname, ln, f"'{t}': scene {base} only has {scenes[base]['beats']} beats")
             if base != frm: reached.add(base)
+        gossiped = {x for _, cd in chapters.values() for x, _ in cd["gossip"]}
         for sid, s in scenes.items():
-            if sid not in reached: warn(fname, s["ln"], f"nothing leads to scene '{sid}'")
+            if sid not in reached and sid not in gossiped: warn(fname, s["ln"], f"nothing leads to scene '{sid}'")
             if s["beats"] == 0: err(fname, s["ln"], f"scene '{sid}' has no beats")
         # speakers
         for who, ln in d["speakers"]:

@@ -7,6 +7,8 @@ at evening jeong 62 68
 greet jh_hi
 chat 0 jh_what
 chat 0 jh_homework
+chat 0 jh_game
+ask 탈 jh_ask_mask
 bye jh_bye
 
 === scene jh_hi
@@ -48,3 +50,28 @@ jiho[surprised]: {진짜}...?
 === scene jh_bye
 jiho: {안녕}!
 (He is gone before you can answer.)
+
+=== scene jh_game
+jiho[happy]: {같이} {놀아}! {빨리}!
+(He has a pebble in each hand and a look of great seriousness.)
+* {네}! -> jh_game_a
+* {바빠요}. -> jh_game_b
+
+=== scene jh_game_a
+jiho[happy]: {좋아}! {나}{는|은/는} {진짜} {잘해}!
+(He throws both pebbles. They land nowhere in particular. He declares himself the winner.)
+! rel jiho +1
+
+=== scene jh_game_b
+jiho[sad]: {바빠}? {나}{도} {바빠}... {숙제}.
+(He drags his feet off toward home.)
+
+=== scene jh_ask_mask
+jiho[surprised]: {탈}? {무서워}!
+(He pulls an enormous grin with his fingers, then shivers dramatically.)
+
+=== scene ev_bigfish_told
+jiho[surprised]: {할아버지}{가|이/가} {큰} {물고기} {잡았어}! {진짜}!
+(He spreads his arms as wide as they go. Then a bit wider.)
+jiho: {그리고}... {다시} {줬어}! {강}{에}!
+(He can't believe it either: caught it, and let it go.)

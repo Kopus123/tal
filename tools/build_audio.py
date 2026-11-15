@@ -51,6 +51,10 @@ def collect():
             elif sec == "words":
                 m = re.match(r"^(.+?)\s*=", line)
                 if m: add("word", m.group(1))
+            elif sec == "person":
+                if m := re.match(r"^ask\s+(\S+)\s+\w+", line):
+                    w = m.group(1); c = ord(w[-1]) - 0xAC00
+                    add("you", w + ("은" if 0 <= c < 11172 and c % 28 else "는") + "?")
             elif sec == "names":
                 add("word", line.split("|")[0].strip())
             elif sec == "evidence":

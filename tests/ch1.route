@@ -201,6 +201,7 @@ talk sujin
 idle
 expect rel:sujin>=1
 talk sujin
+choose Just chat
 anychoice
 idle
 map gang
@@ -228,3 +229,43 @@ spot Back to the alley
 map madang
 sleep
 expect day=5&time:morning&on:market
+# --- the talk menu: once you've said hello, you can bring things up
+talk sujin
+idle
+expect rel:sujin>=3
+# (close enough now: her personal story comes first, then the menu)
+talk sujin
+idle
+saved world.seen.sj_workshop
+talk sujin
+choose 할머니는
+idle
+# --- the bus, and a market-day event you're there for
+map jeong
+spot Take the bus
+choose Ride to the market
+idle
+expect @sijang
+saved world.evs.haggle@5
+talk ajumma
+idle
+spot Take the bus back
+idle
+map madang
+wait
+wait
+sleep
+# --- day 6: you don't go to the river in the evening, so you miss what happens there
+wait
+wait
+wait
+expect time:night&day=6
+saved world.gossip.jiho.0
+sleep
+wait
+map golmok
+talk jiho
+idle
+talk jiho
+idle
+expect !g:bigfish

@@ -126,7 +126,7 @@ function render(){
     $('#bHintT').onclick=()=>{tHint=Math.min(tHint+1,3);const v=tin.value;render();const t2=$('#tin');t2.value=v;t2.focus()}}
   if($('#bSkip'))$('#bSkip').onclick=skipAhead;
   if($('#bMap'))$('#bMap').onclick=openMap;
-  if($('#bWait'))$('#bWait').onclick=()=>{sfx('page');passTime();render()};
+  if($('#bWait'))$('#bWait').onclick=()=>{sfx('page');passTime();if(!S.node)render()};
   if($('#bBed'))$('#bBed').onclick=()=>{sfx('page');nextMorning();render()};
   sb.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>present(nd,b.dataset.show));
   sb.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>{const k=b.dataset.cx;sfx('tap');

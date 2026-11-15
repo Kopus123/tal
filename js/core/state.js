@@ -15,7 +15,8 @@ const SAVE_V=7;
 // did = effects that add up (money, friendship, items) and have already happened, so a beat can't pay out twice
 // frozen = the story is holding the clock (it sets the time itself); when it lets go, time passes as you wait and sleep
 // met = the day you last said hello to each person; seen = the day you last heard each conversation
-const freshWorld=()=>({day:1,slot:0,frozen:0,money:0,rel:{},met:{},seen:{},inv:{},room:{},g:{},did:{}});
+// evs = village events seen or missed (id@day); gossip = scenes someone will tell you, about events you missed
+const freshWorld=()=>({day:1,slot:0,frozen:0,money:0,rel:{},met:{},seen:{},evs:{},gossip:{},inv:{},room:{},g:{},did:{}});
 const fresh=()=>({v:SAVE_V,world:freshWorld(),m:{},tl:{},mx:{},pat:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0,music:2,amb:2,fade:1},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)

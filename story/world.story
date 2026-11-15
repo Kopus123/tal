@@ -22,6 +22,7 @@
 #                           ("continues" = plays on from the file above as one chapter;
 #                            "free" = the village between chapters: clock running, people about)
 #    === people             id | file in story/people/      (each file: === person ID, then ordinary scenes)
+#    === event ID           when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE     (free days: js/core/villagers.js)
 #    === map                pin PLACE X% Y%
 #    === cast               key | name | color | voice rate pitch | look
 #    === words              word = picture [+past] [+future] [+not]      (pictures: js/icons.js)
@@ -128,6 +129,8 @@ sujin    | sujin.people
 ajeossi  | ajeossi.people
 haraboji | haraboji.people
 jiho     | jiho.people
+staff    | staff.people
+ajumma   | ajumma.people
 
 === map
 # pin PLACE X% Y%  (places show on the map once you've been there)
@@ -274,6 +277,21 @@ sign       |               |          | SunHi  -10%  +0Hz
 편지 = letter
 비밀 = secret
 오세요 = come
+안녕히 가세요 = wave
+전화해요 = call
+부터 = clock +past
+놀아 = friend
+잘해 = good
+바빠 = fast
+무서워 = hide
+그리고 = next
+다시 = next
+줬어 = please +past
+큰 = big
+비싸요 = pricey
+싸요 = cheap
+잡았어 = fish +past
+배추 = kimchi
 뭐 = unknown
 해요 = make
 해 = make
@@ -576,6 +594,21 @@ sign       |               |          | SunHi  -10%  +0Hz
 낚시 | fishing
 줘 | give (casual, rude)
 잠깐만요 | wait a moment
+안녕히 가세요 | goodbye (to someone leaving)
+전화해요 | call (on the phone)
+부터 | since, from
+놀아 | play (casual)
+잘해 | good at it (casual)
+바빠 | busy (casual)
+무서워 | scary (casual)
+그리고 | and then
+다시 | again, back
+줬어 | gave (casual)
+큰 | big
+비싸요 | expensive
+싸요 | cheap
+잡았어 | caught (casual)
+배추 | napa cabbage
 뭐 | what
 해요 | do
 해 | do (casual)

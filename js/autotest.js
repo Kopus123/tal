@@ -33,6 +33,8 @@
      guess WORD right|wrong TEXT   Check my guess must judge TEXT that way for WORD
      shown SELECTOR [no]   that element must be visible on screen (or, with "no", hidden)
      nospot LABEL          that spot must NOT be offered here
+     talk WHO              talk to a villager who is here now
+     anychoice             press the first choice on offer
      wait                  press Wait a while (free time only)
      sleep                 press Go to bed (at home, evening or night)
      switch ID             move to this chapter keeping the save, the way the story does at a chapter's end  */
@@ -118,6 +120,9 @@ const STEPS={
   async expect(c){if(!cond(c))fail(`expected ${c}`)},
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},
   async nospot(l){await idle();if(vis('#sb .chipbtn[data-hs]').some(b=>txt(b)===l))fail(`"${l}" is offered here but shouldn't be`)},
+  async talk(who){await idle();const b=document.querySelector(`#sb [data-who="${who}"]`);
+    if(!b)fail(`${who} isn't here now (here: ${vis('#sb [data-who]').map(x=>x.dataset.who).join(', ')||'nobody'})`);await clickEl(b)},
+  async anychoice(){await clickEl(await until(()=>vis('#sf [data-ch]')[0],'a choice'))},
   async wait(){await idle();const b=document.querySelector('#bWait');if(!b)fail('there is no Wait button here (is the clock running, and is it before night?)');await clickEl(b)},
   async sleep(){await idle();const b=document.querySelector('#bBed');if(!b)fail('there is no Go to bed button here (home, evening or night, clock running)');await clickEl(b)},
   async shown(a){const [sel,how]=a.split(/\s+/);const el=document.querySelector(sel);if(!el)fail(`nothing matches ${sel}`);

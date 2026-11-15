@@ -91,7 +91,9 @@ def _fx_time(d, a, ln, f):
     if not m: err(f, ln, f"'time {a}' should be stop, go, sleep, +1 or set SLOT")
     elif m.group(2) and m.group(2) not in SLOTS: err(f, ln, f"'{m.group(2)}' isn't a time of day ({', '.join(sorted(SLOTS))})")
 
-EFFECT_KINDS = {"time": _fx_time, "flags": _fx_flags, "unflags": None, "text": None, "place": _fx_place, "evidence": _fx_evidence,
+def _fx_chapter(d, a, ln, f): d["chapter_refs"].append((a.strip(), ln))
+
+EFFECT_KINDS = {"chapter": _fx_chapter, "time": _fx_time, "flags": _fx_flags, "unflags": None, "text": None, "place": _fx_place, "evidence": _fx_evidence,
                 "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item}
 ADDS_UP = {"amount", "who_amount", "item", "time"}      # these may end in "each time"
 
@@ -122,7 +124,7 @@ def parse(path):
     d = dict(meta={}, cast={}, words={}, places={}, scenes={}, deduce=[], evidence={}, phones={},
              hints=[], chapters=[], pins=[], jumps=[], flags_set=[], flags_read=[], gives=[], shows=[],
              speakers=[], tokens=[], placefx=[], statements={}, pairs=[], examines={}, exrefs=[],
-             cal=[], cal_read=[], gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
+             people_files=[], person_at=[], chapter_refs=[], cal=[], cal_read=[], gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
     sec = cur = scene = None
     count = 0; join = False   # inside "@build ... | join": tiles are pieces of a word, not words
     def conds(c, ln):                       # mirror of cond() in js/core/rules.js
@@ -173,6 +175,7 @@ def parse(path):
             elif sec == "place": cur = d["places"][arg] = dict(ln=ln, spots=[], first=None, always=None, art=None)
             elif sec == "phone": cur = d["phones"][arg] = dict(ln=ln)
             elif sec == "examine": cur = d["examines"][arg] = dict(ln=ln, id=arg, art=None, keys=0)
+            elif sec == "person": d["who_refs"].append((arg, ln))
             continue
         if sec not in SECTIONS: continue
         if sec == "meta":
@@ -235,6 +238,17 @@ def parse(path):
             else: err(f, ln, "examine line not understood")
         elif sec == "pattern":
             if m := re.match(r"^when\s+(.+)", line): d["tokens"] += [(x.strip(), ln) for x in m.group(1).split(",")]
+        elif sec == "people":
+            p = [x.strip() for x in line.split("|")]
+            if len(p) < 2: err(f, ln, "people line should be: id | file"); continue
+            d["people_files"].append((p[0], p[1], ln)); d["who_refs"].append((p[0], ln))
+        elif sec == "person":
+            if m := re.match(r"^at\s+(\w+)\s+(\w+)\s+[\d.]+\s+[\d.]+$", line):
+                if m.group(1) not in SLOTS: err(f, ln, f"'{m.group(1)}' isn't a time of day ({', '.join(sorted(SLOTS))})")
+                d["person_at"].append((m.group(2), ln))
+            elif m := re.match(r"^(?:greet|bye)\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
+            elif m := re.match(r"^(?:chat|story)\s+\d+\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
+            else: err(f, ln, "person line should be: at SLOT PLACE X Y / greet SCENE / chat LEVEL SCENE / story LEVEL SCENE / bye SCENE")
         elif sec == "calendar":
             p = [x.strip() for x in line.split("|")]
             m = re.match(r"^(\w+)\s+(every\s+\d+(\s+from\s+\d+)?|day\s+\d+)$", p[0])
@@ -286,7 +300,13 @@ def main():
         fp = STORY / c["file"]
         if not fp.exists(): err("world.story", c["ln"], f"chapter file {c['file']} is missing"); continue
         chapters[c["id"]] = (fp.name, parse(fp))
-    files = [("world.story", world)] + list(chapters.values())
+    people = []
+    for pid, pf, ln in world["people_files"]:
+        fp = STORY / "people" / pf
+        if not fp.exists(): err("world.story", ln, f"people file story/people/{pf} is missing"); continue
+        people.append((fp.name, parse(fp)))
+    people_names = {n for n, _ in people}
+    files = [("world.story", world)] + list(chapters.values()) + people
     words = dict(world["words"])
     for _, (_, d) in chapters.items(): words.update(d["words"])
     cast = set(world["cast"])
@@ -308,12 +328,17 @@ def main():
             if x not in world["cal"]: err(name, ln, f"'on:{x}' isn't in the calendar (=== calendar in world.story)")
         for who, ln in d["who_refs"]:
             if who not in cast and who not in d["cast"]: err(name, ln, f"'{who}' isn't in the cast")
-    for fname, d in chapters.values():
-        all_places |= set(d["places"])
+    chapter_ids = {c["id"] for c in world["chapters"]}
+    for _, d in chapters.values(): all_places |= set(d["places"])
+    for fname, d in list(chapters.values()) + people:
+        for x, ln in d["chapter_refs"]:
+            if x not in chapter_ids: err(fname, ln, f"'chapter {x}': there is no such chapter in world.story")
+        for x, ln in d["person_at"]:
+            if x not in all_places: err(fname, ln, f"unknown place '{x}'")
         scenes, places = d["scenes"], d["places"]
         evidence = dict(world["evidence"]); evidence.update(d["evidence"])
         for k in ("start", "start-place"):
-            if k not in d["meta"]: err(fname, 1, f"meta is missing '{k}'")
+            if k not in d["meta"] and fname not in people_names: err(fname, 1, f"meta is missing '{k}'")
         if "start" in d["meta"]: d["jumps"].append((d["meta"]["start"][0], d["meta"]["start"][1], None))
         if "start-place" in d["meta"] and d["meta"]["start-place"][0] not in places:
             err(fname, d["meta"]["start-place"][1], "start-place is not a place in this file")

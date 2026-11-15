@@ -32,7 +32,7 @@ defCond('rel:','who',w=>S.world.rel[w]||0);
 defCond('has:','item',it=>S.world.inv[it]||0);
 
 defEffect('money','amount',a=>{const am=amount(a);if(am)S.world.money=bump(S.world.money,am)},{once:1});
-defEffect('rel','who_amount',a=>{const [w,n]=a.trim().split(/\s+/),am=amount(n);if(w&&am)S.world.rel[w]=bump(S.world.rel[w]||0,am)},{once:1});
+defEffect('rel','who_amount',a=>{const [w,n]=a.trim().split(/\s+/),am=amount(n);if(!w||!am)return;if(am.op==='=')S.world.rel[w]=am.n;else addRel(w,am.op==='-'?-am.n:am.n)},{once:1});
 defEffect('item','item',a=>{const m=a.trim().match(/^([+-]?)(\S+)$/);if(!m)return;
   const n=Math.max(0,(S.world.inv[m[2]]||0)+(m[1]==='-'?-1:1));if(n)S.world.inv[m[2]]=n;else delete S.world.inv[m[2]]},{once:1});
 

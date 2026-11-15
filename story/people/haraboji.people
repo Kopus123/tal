@@ -1,0 +1,68 @@
+# 할아버지: gruff, few words, always fishing, always an excuse. (format: js/core/villagers.js)
+
+=== person haraboji
+at morning gang 64 60
+at afternoon gang 64 60
+at evening gang 64 60
+greet hb_hi
+chat 0 hb_fish
+chat 0 hb_know
+chat 0 hb_busy
+bye hb_bye
+
+=== scene hb_hi
+haraboji: ...{네}.
+(He nods without taking his eyes off the water. From him, that is a warm welcome.)
+
+=== scene hb_fish
+haraboji: {물고기}{가|이/가} {없어요}.
+(He stares at his float, which has not moved.)
+* {물고기} {있어요}! -> hb_fish_a
+* {네}, {없어요}. -> hb_fish_b
+
+=== scene hb_fish_a
+haraboji[surprised]: {어디}? {어디}?!
+(You point at a ripple. It was the wind.)
+haraboji[happy]: 하하. {없어요}.
+(He almost smiles. Almost.)
+! rel haraboji +1
+
+=== scene hb_fish_b
+haraboji: {네}. {없어요}.
+(A long, comfortable silence.)
+
+=== scene hb_know
+haraboji: {학생}{은|은/는} {낚시} {알아요}?
+(He holds the rod out an inch in your direction.)
+* {네}, {알아요}. -> hb_know_a
+* {아니요}, {몰라요}. -> hb_know_b
+
+=== scene hb_know_a
+haraboji: {정말}?
+(He hands you the rod. Within ten seconds the line is wrapped around a reed.)
+haraboji[happy]: 하하하. {몰라요}!
+
+=== scene hb_know_b
+haraboji[happy]: {괜찮아요}. {저}{도} {몰라요}. 하하.
+(He lifts his empty bucket to prove it.)
+! rel haraboji +1
+
+=== scene hb_busy
+haraboji: {오늘}{은|은/는} {바빠요}.
+(He has not moved in an hour.)
+* {바빠요}? -> hb_busy_a
+* [Sit down next to him] -> hb_busy_b
+
+=== scene hb_busy_a
+haraboji: {네}. {낚시}{하거든요|거든요}.
+(He says it with a perfectly straight face.)
+
+=== scene hb_busy_b
+~ You sit down on the next rock. The river goes by. Nobody says anything for a while.
+haraboji: ...{좋아요}.
+(He keeps his eyes on the float.)
+! rel haraboji +1
+
+=== scene hb_bye
+haraboji: ...{낚시}{하거든요|거든요}.
+(He is busy. He has always been busy.)

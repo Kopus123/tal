@@ -102,3 +102,11 @@ fx time sleep
 expect day=2&time:morning&on:festival&!on:market
 fx time stop; time +1
 expect time:morning&!clock
+
+# --- a save that finished chapter 1 before the village existed wakes up in the village, nothing lost
+oldsave v6
+expect day=5&clock&@madang
+note 탈 mask
+saved prog.ch1.F.solved_d9
+saved done.ch1
+saved pat.past

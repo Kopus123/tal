@@ -29,7 +29,9 @@ function go(id){
 function next(){
   sfx('page');const nd=ST.nodes[S.node];
   if(nd&&nd.rewind){rewindTo(nd.rewind);return}
-  if(nd&&nd.next)go(nd.next);else{S.node=null;BACK=[];save();render()}
+  if(nd&&nd.next)go(nd.next);
+  else if(S.F.goChapter){const c=S.F.goChapter;delete S.F.goChapter;startChapter(c,false)}   // "! chapter ID": the story carries on in another file
+  else{S.node=null;BACK=[];save();render()}
 }
 // step back one line in the current scene (like a visual novel's back button)
 function goBack(){
@@ -154,7 +156,7 @@ async function present(nd,id){
 /* ---------- chapters ---------- */
 function useChapter(id){
   const c=CH[id]||CH[WORLD.chapters[0].id];
-  ST={examines:Object.assign({},c.examines),statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:c.nodes,cases:c.cases,phones:c.phones,hints:c.hints,
+  ST={examines:Object.assign({},c.examines),statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:Object.assign({},PNODES,c.nodes),free:!!chInfo(id).free,cases:c.cases,phones:c.phones,hints:c.hints,
     patterns:WORLD.patterns.concat(c.patterns),meta:Object.assign({},WORLD.meta,c.meta),map:WORLD.map,chapters:WORLD.chapters};
 }
 const chIndex=id=>WORLD.chapters.findIndex(c=>c.id===id);

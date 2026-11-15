@@ -16,7 +16,8 @@ function dayPanel(){
   const o=overlay(`<div class="panel paper">${head(d+'일째')}<div class="ph-body">
     <div class="en">${d}일째 = day ${d}. ${S.world.frozen?'The story sets the time for now.':'Time passes when you wait, travel or sleep.'}</div>
     <div class="dayrow">${SLOTS.map(s=>`<button class="w ${s===slotName()?'nowslot':''}" data-w="${SLOT_KO[s]}">${SLOT_KO[s]}</button>`).join('')}</div>
-    <div class="label">Calendar</div>${[d,d+1,d+2,d+3].map(row).join('')}</div></div>`);
+    <div class="label">Calendar</div>${[d,d+1,d+2,d+3].map(row).join('')}
+    ${Object.keys(S.world.met).length?`<div class="label">People</div>${Object.keys(S.world.met).filter(w=>PEOPLE[w]).map(w=>`<div class="calrow"><b>${esc((ST.cast[w]||{}).n||w)}</b><span class="hearts">${'♥'.repeat(relLevel(w))}${'♡'.repeat(REL_STEPS.length-relLevel(w))}${S.world.met[w]===d?' <small class="en">said hello today</small>':''}</span></div>`).join('')}`:''}</div></div>`);
   o.querySelector('.x').onclick=()=>close(o);
 }
 function showLog(){
@@ -96,7 +97,7 @@ function finale(){
   const cont=nextChapter();
   if(cont&&cont.cont&&chReady(cont.id)){startChapter(cont.id,true);return} // same chapter, the story just keeps going
   const vocab=Object.keys(S.w).filter(id=>W[id]&&!W[id].g);const n=s=>vocab.filter(id=>status(id)===s).length;
-  const nx=nextChapter();
+  const nxAny=nextChapter(),nx=nxAny&&!nxAny.free?nxAny:null;   // free days are not a chapter you "start"
   const nextBit=!nx?'':chReady(nx.id)?`<button class="btn primary" id="nextch">Start ${esc(nx.t)}</button>`:`<div class="en" style="text-align:center">${esc(nx.t)} is coming soon.</div>`;
   const o=overlay(`<div class="panel paper">${head(esc(ST.meta['end-title']||''))}<div class="ph-body">
     <div class="narr">${esc(ST.meta['end-text']||'')}</div>
@@ -115,7 +116,7 @@ function chapterList(){
     parts.forEach(p=>{if(p.id!==S.ch)delete S.prog[p.id];delete S.done[p.id]});
     startChapter(hid,true);parts.slice(1).forEach(p=>delete S.prog[p.id]);save()};
   const draw=()=>{
-    o.querySelector('#clb').innerHTML=WORLD.chapters.filter(c=>!c.cont).map(c=>{
+    o.querySelector('#clb').innerHTML=WORLD.chapters.filter(c=>!c.cont&&!c.free).map(c=>{
       const parts=groupParts(c).filter(p=>chReady(p.id));
       const ready=parts.length>0,open=ready&&chUnlocked(c.id);
       const done=ready&&!!S.done[parts[parts.length-1].id],started=parts.some(p=>chStarted(p.id));

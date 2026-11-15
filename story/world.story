@@ -19,7 +19,9 @@
 #  ------------------------------------------------ this file (the world)
 #    === meta               lang ko / title / village / blurb
 #    === chapters           id | title | subtitle | file | continues
-#                           ("continues" = plays on from the file above as one chapter)
+#                           ("continues" = plays on from the file above as one chapter;
+#                            "free" = the village between chapters: clock running, people about)
+#    === people             id | file in story/people/      (each file: === person ID, then ordinary scenes)
 #    === map                pin PLACE X% Y%
 #    === cast               key | name | color | voice rate pitch | look
 #    === words              word = picture [+past] [+future] [+not]      (pictures: js/icons.js)
@@ -88,6 +90,7 @@
 #    statement ID           save the line above as a statement
 #    mixup RIGHT / HEARD    record a mishearing in the notebook
 #    time stop | go | set evening | sleep | +1      the clock (see js/core/world.js)
+#    chapter ID             when this scene ends, carry on in another chapter file
 #    money +500 | -200 | =1000         rel WHO +1         item +NAME | -NAME
 #                           these three happen once per beat, however often you pass it;
 #                           end with "each time" for a price paid on every visit: money -1500 each time
@@ -116,6 +119,14 @@ blurb A mystery in Korean. Nobody will translate for you. Tap any word to see a 
 # id       | title    | subtitle | file           | continues (blank = starts a new chapter)
 prologue   | 1장      | 탈       | prologue.story
 ch1        | 1장      | 탈       | ch1.story      | continues
+village    | 마을     | Free days | village.story | free
+
+=== people
+# id | file in story/people/   (who lives in the village on free days: see js/core/villagers.js)
+sujin    | sujin.people
+ajeossi  | ajeossi.people
+haraboji | haraboji.people
+jiho     | jiho.people
 
 === map
 # pin PLACE X% Y%  (places show on the map once you've been there)
@@ -141,6 +152,7 @@ staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz | hair=long hc=#
 ajumma     | 시장 아주머니 | #b5653d  | SunHi  +4%   -6Hz  | hair=bun hc=#3a2a20 top=#d9822b wear=apron extra=wrinkles skin=#e0b98f
 stranger   | ???           | #2a2a2a  | InJoon -10%  -14Hz
 junho      | 준호          | #4f6ea8  | InJoon +6%   +12Hz
+jiho       | 지호          | #d9a43d  | InJoon +12%  +40Hz | hair=short hc=#1f1a18 top=#e2c044 wear=plain
 haraboji   | 할아버지      | #6b7a5a  | InJoon -12%  -26Hz | hair=short hc=#e4e0da top=#6b7a5a wear=plain extra=wrinkles,stubble skin=#d9b38e
 bus        | 안내 방송     | #2a2a2a  | Hyunsu -5%   +0Hz
 you        |               |          | Hyunsu -8%   +0Hz
@@ -261,6 +273,22 @@ sign       |               |          | SunHi  -10%  +0Hz
 편지 = letter
 비밀 = secret
 오세요 = come
+뭐 = unknown
+해요 = make
+해 = make
+좋아요 = good
+좋아 = good
+싫어요 = good +not
+싫어 = good +not
+날씨 = noon
+바빠요 = fast
+숙제 = letter
+만들어요 = make
+찍어요 = camera
+먹어요 = eat
+나 = me
+몰라 = dontknow
+가 = go
 잠깐만요 = excuse
 감사합니다 = thanks
 고맙습니다 = thanks
@@ -547,6 +575,22 @@ sign       |               |          | SunHi  -10%  +0Hz
 낚시 | fishing
 줘 | give (casual, rude)
 잠깐만요 | wait a moment
+뭐 | what
+해요 | do
+해 | do (casual)
+좋아요 | it's good, I like it
+좋아 | good, I like it (casual)
+싫어요 | I don't like it
+싫어 | I don't like it (casual)
+날씨 | weather
+바빠요 | busy
+숙제 | homework
+만들어요 | make
+찍어요 | take (a photo)
+먹어요 | eat
+나 | I, me (casual)
+몰라 | I don't know (casual)
+가 | go (casual)
 는데요 | the "...but" ending (trailing off)
 감사합니다 | thank you (formal)
 고맙습니다 | thank you (formal)
@@ -558,6 +602,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 순자 | name | 할머니's first name.
 김순자 | name | 할머니's full name. 김 is the family name.
 준호 | name | Someone who texts 할머니's phone.
+지호 | name | A school kid from the village.
 민수 | name | One of the couple visiting the village.
 유나 | name | One of the couple visiting the village.
 청솔마을 | name | The village. 마을 means village.
@@ -635,3 +680,15 @@ when 이에요
 어디 > 어디예요
 누구 > 누구예요
 가짜 > 가짜예요
+
+=== pattern casual
+title Dropping the 요
+note Take the 요 off and it becomes casual speech (반말). Between close friends, or from a child, it is friendly. From a stranger it is rude. Listen for who uses it with you, and who doesn't.
+need 2
+when 몰라, 좋아, 싫어, 해, 가
+몰라요 > 몰라
+좋아요 > 좋아
+싫어요 > 싫어
+해요 > 해
+가요 > 가
+안녕하세요 > 안녕

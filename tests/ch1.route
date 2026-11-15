@@ -195,10 +195,28 @@ done ch1
 spot Leave it here for now
 idle
 expect @madang&clock&day=4&time:morning
+#@ Free days · the village
+# --- people: the first hello of the day counts; then small talk; nobody is where they aren't
+talk sujin
+idle
+expect rel:sujin>=1
+talk sujin
+anychoice
+idle
+map gang
+talk haraboji
+idle
+expect rel:haraboji>=1
+map golmok
+nospot Talk to 지호
 # --- free days: time passes when you wait, places close at night, sleeping starts a new day
 wait
 wait
 expect time:evening
+map jeong
+talk jiho
+idle
+expect rel:jiho>=1
 wait
 expect time:night
 map sikdang

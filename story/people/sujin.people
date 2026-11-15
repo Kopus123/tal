@@ -1,0 +1,79 @@
+# 수진: runs the guesthouse. Polite, quick, notices everything. (format: js/core/villagers.js)
+
+=== person sujin
+at morning madang 30 66
+at afternoon gongbang 30 72
+at evening madang 30 66
+greet sj_hi
+greet sj_hi2
+chat 0 sj_weather
+chat 0 sj_what
+chat 0 sj_hungry
+story 1 sj_workshop
+bye sj_bye
+
+=== scene sj_hi
+sujin[happy]: {안녕하세요}!
+(She looks up from her broom and waves.)
+
+=== scene sj_hi2
+sujin[happy]: 아, {학생}! {안녕하세요}.
+(She was already looking your way before you said anything.)
+
+=== scene sj_weather
+sujin: {오늘} {날씨}{가|이/가} {좋아요}.
+(She tilts her face up toward the sky.)
+* {네}, {좋아요}! -> sj_weather_a
+* {아니요}... -> sj_weather_b
+
+=== scene sj_weather_a
+sujin[happy]: {네}! {같이} {산}{에} {가요}?
+(She laughs before you can answer. One day, maybe.)
+! rel sujin +1
+
+=== scene sj_weather_b
+sujin[surprised]: {아니요}? 하하.
+(She looks at the sky, then at you, then at the sky again.)
+
+=== scene sj_what
+sujin: {뭐} {해요}?
+(She nods at the notebook in your hand.)
+* {탈}{을|을/를} {찾아요}. -> sj_what_a
+* {몰라요}... -> sj_what_b
+
+=== scene sj_what_a
+sujin[sad]: {네}... {저}{도} {찾아요}. {매일}.
+(She says it lightly, but she means it.)
+! rel sujin +1
+
+=== scene sj_what_b
+sujin[happy]: 하하. {저}{도} {몰라요}.
+(She goes back to sweeping, smiling to herself.)
+
+=== scene sj_hungry
+sujin: {배고파요}?
+(She has noticed you eyeing the kitchen door.)
+* {네}! {배고파요}. -> sj_hungry_a
+* {아니요}, {괜찮아요}. -> sj_hungry_b
+
+=== scene sj_hungry_a
+sujin: {식당}{에} {가요}! {김밥}{이|이/가} {맛있어요}.
+(She points over the wall, toward the right-hand path.)
+! rel sujin +1
+
+=== scene sj_hungry_b
+sujin: {네}. {물} {있어요}.
+(She pours you a cup of barley tea anyway.)
+
+=== scene sj_workshop
+sujin: {여기}{는|은/는} {엄마}{의} {공방}{이에요}.
+(She runs a finger along the edge of the workbench.)
+sujin: {저}{는|은/는} {탈}{을|을/를} {안} {만들어요}.
+(She holds up her hands and shakes her head: not a carver.)
+sujin[happy]: {저}{는|은/는} {사진}{을|을/를} {찍어요}!
+(She mimes a camera. So that is who takes the photos on the walls.)
+! rel sujin +1
+
+=== scene sj_bye
+sujin: {네}, {내일} {만나요}!
+(She has work to do. Tomorrow.)

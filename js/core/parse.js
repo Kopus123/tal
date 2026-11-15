@@ -13,7 +13,7 @@ const PARSE_WARN=[];   // lines the parser did not understand: the automatic pla
 // split "a | b | {x|y}" on the bars that aren't inside {braces}
 function splitBar(str){const out=[];let d=0,cur='';for(const c of str){if(c==='{')d++;else if(c==='}')d--;if(c==='|'&&!d){out.push(cur.trim());cur=''}else cur+=c}out.push(cur.trim());return out}
 function parseStory(src,st,file){
-  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{},calendar:[]};
+  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{},calendar:[],people:{},peopleFiles:[]};
   let sec=null,cur=null,scene=null,last=null,count=0;
   let early=[];   // effects written before a scene's first line: they run with that first line
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;if(early.length){n.fx=early;early=[]}
@@ -31,13 +31,14 @@ function parseStory(src,st,file){
       else if(sec==='phone'){cur={id:arg,m:[],fx:[]};st.phones.push(cur)}
       else if(sec==='pattern'){cur={id:arg,pairs:[],need:3};st.patterns.push(cur)}
       else if(sec==='examine')cur=st.examines[arg]={id:arg,details:[]};
+      else if(sec==='person')cur=st.people[arg]={id:arg,at:{},greet:[],chat:[],story:[],bye:null};
       return}
     let m;
     switch(sec){
       case 'meta':{const i=line.indexOf(' ');st.meta[line.slice(0,i)]=line.slice(i+1).trim();break}
       // every word and line carries a language (meta "lang", default ko); "who@ja: ..." overrides one line
       case 'cast':{const [k,n,c,v,look]=line.split('|').map(s=>s.trim());st.cast[k]={n,c,voice:!!v,look:look||''};break}
-      case 'chapters':{const [id,t,sub,file,cont]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file,cont:!!cont});break}
+      case 'chapters':{const [id,t,sub,file,cont]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file,cont:cont==='continues',free:cont==='free'});break}
       case 'map':{m=line.match(/^pin\s+(\S+)\s+([\d.]+)\s+([\d.]+)/);if(m)st.map.push({p:m[1],x:+m[2],y:+m[3]});break}
       case 'words':{m=line.match(/^(.+?)\s*=\s*(.+)$/);if(m)st.words[m[1]]=Object.assign(m[2]==='(grammar)'?{g:1}:{p:m[2]},{lang:st.meta.lang||'ko'});break}
       case 'grammar':{const i=line.indexOf('|');if(i>0)st.grammar[line.slice(0,i).trim()]=line.slice(i+1).trim();break}
@@ -49,6 +50,14 @@ function parseStory(src,st,file){
       case 'calendar':{const [head,label,note]=splitBar(line);
         if(m=head.match(/^(\w+)\s+every\s+(\d+)(?:\s+from\s+(\d+))?$/))st.calendar.push({id:m[1],every:+m[2],from:+(m[3]||m[2]),label,note:note||''});
         else if(m=head.match(/^(\w+)\s+day\s+(\d+)$/))st.calendar.push({id:m[1],day:+m[2],label,note:note||''});
+        else PARSE_WARN.push(`${file||'story'}:${ln+1}: ${line}`);break}
+      // people: ID | file in story/people/        person: see js/core/villagers.js
+      case 'people':{const [id,f]=line.split('|').map(x=>x.trim());if(id&&f)st.peopleFiles.push({id,file:f});break}
+      case 'person':{
+        if(m=line.match(/^at\s+(\w+)\s+(\w+)\s+([\d.]+)\s+([\d.]+)$/))cur.at[m[1]]={place:m[2],x:+m[3],y:+m[4]};
+        else if(m=line.match(/^greet\s+(\w+)$/))cur.greet.push(m[1]);
+        else if(m=line.match(/^(chat|story)\s+(\d+)\s+(\w+)$/))cur[m[1]].push({lv:+m[2],scene:m[3]});
+        else if(m=line.match(/^bye\s+(\w+)$/))cur.bye=m[1];
         else PARSE_WARN.push(`${file||'story'}:${ln+1}: ${line}`);break}
       case 'endings':{const i=line.indexOf('|');if(i>0)st.endings.push({k:line.slice(0,i).trim(),d:line.slice(i+1).trim()});break}
       case 'hints':{m=line.match(/^if\s+(\S+):\s*(.+)$/);st.hints.push(m?{c:m[1],t:m[2]}:{t:line});break}

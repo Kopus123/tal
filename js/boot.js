@@ -12,6 +12,7 @@ async function boot(){
     const get=async f=>{const r=await fetch('story/'+f,{cache:'no-cache'});if(!r.ok)throw new Error(f+' returned '+r.status);return r.text()};
     WORLD=parseStory(await get('world.story'),null,'world.story');CH={};
     for(const c of WORLD.chapters)if(c.file)CH[c.id]=parseStory(await get(c.file),null,c.file);
+    for(const pf of WORLD.peopleFiles){const d=parseStory(await get('people/'+pf.file),null,pf.file);Object.assign(PEOPLE,d.people);Object.assign(PNODES,d.nodes)}
     W=Object.assign({},WORLD.words,...Object.values(CH).map(c=>c.words));buildNames();
     try{sessionStorage.removeItem('tal-repair')}catch(_){}
   }catch(e){

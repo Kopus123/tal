@@ -37,6 +37,8 @@ function render(){
     h+=`<div class="exlayer" id="exam">${exam.compare&&ART[exam.compare]?`<div class="excompare">${ART[exam.compare]()}<span>1979 photo</span></div>`:''}${exam.details.map(d=>got(d)?`<span class="exmark" style="left:${d.x}%;top:${d.y}%"></span>`:EXMISS>=4?`<span class="exhint" style="left:${d.x}%;top:${d.y}%"></span>`:'').join('')}</div>`}
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
   if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
+  if(!nd)peopleHere().forEach(p=>{const a=p.at[slotName()],n=(ST.cast[p.id]||{}).n||p.id;
+    h+=`<button class="hs who" data-who="${p.id}" style="left:${a.x}%;top:${a.y}%" aria-label="Talk to ${esc(n)}"><i></i><span>${esc(n)}</span></button>`});
   if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
   if(TIMECARD){TIMECARD=false;if(!(nd&&nd.type==='card')){lastLoc=S.loc;h+=`<div class="placecard"><b>${SLOT_KO[slotName()]}</b><span>day ${S.world.day} · ${slotName()}</span></div>`}}
   if(S.loc!==lastLoc&&!(nd&&nd.type==='card'))h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
@@ -56,7 +58,8 @@ function render(){
     // free time: wait for a later time of day, and at home in the evening, go to bed
     const run=!S.world.frozen,home=S.loc===ST.meta.home;
     const timeBtn=!run?'':(home&&S.world.slot>=2?`<button class="chipbtn timechip" id="bBed">Go to bed</button>`:'')+(S.world.slot<3?`<button class="chipbtn timechip" id="bWait">Wait a while</button>`:'');
-    body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${chips}${mapBtn}${timeBtn}</div>`;
+    const who=peopleHere().map(p=>`<button class="chipbtn whochip" data-who="${p.id}">Talk to ${esc((ST.cast[p.id]||{}).n||p.id)}</button>`).join('');
+    body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${who}${chips}${mapBtn}${timeBtn}</div>`;
   }else if(nd.type==='build'){
     const tl=nd.tiles;
     body=`<div class="en">${esc(nd.en)}</div><div class="built ${nd.join?'joined':''}">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):`<span class="ph">${nd.join?'Tap the pieces to build the word':'Tap words to build a sentence'}</span>`}</div>
@@ -116,6 +119,7 @@ function render(){
   if(nd&&revealFor!==S.node){revealFor=S.node;const k=sb.querySelector('.koline,.narr');const ms=reveal(k);revealUntil=Date.now()+ms;
     const en=sb.querySelector('.en');if(en){en.classList.add('rv');en.style.animationDelay=Math.min(ms,1400)+'ms'}}
   document.querySelectorAll('#sb [data-hs],#sf [data-hs]').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
+  document.querySelectorAll('#fx [data-who],#sb [data-who]').forEach(b=>b.onclick=()=>talkTo(b.dataset.who));
   sf.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>choose(nd.ch[+b.dataset.ch]));
   const bn=$('#bNext');if(bn)bn.onclick=TFB?()=>{const t=TFB.target;TFB=null;go(t)}:next;
   if($('#bSayT')){const tin=$('#tin');$('#bSayT').onclick=()=>sayTyped(nd,tin.value);$('#tf').onsubmit=e=>{e.preventDefault();sayTyped(nd,tin.value)};

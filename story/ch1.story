@@ -1232,7 +1232,7 @@ stranger[audio]: {진짜} {탈}... {줘}.
 === scene c1_jleave
 ~ This is where Chapter 1 stops. What happens next on the mountain is for Chapter 2.
 ~ Until then, the days are yours. Time passes in the village now: wait for the evening, sleep until morning, walk around, reread your notebook.
-! place madang; time go; time sleep
+! time go; time sleep; chapter village
 
 === scene c1_jend
 halmeoni[worried]: {숨어요}...

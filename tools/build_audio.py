@@ -32,7 +32,8 @@ def collect():
         t = normalize(text)
         if t and re.search(r"\w", t):  # "..." alone has nothing to say
             keys.append(f"{who}|{t}")
-    files = sorted((ROOT / "story").glob("*.story"), key=lambda p: (p.name != "world.story", p.name))  # cast first
+    files = sorted(list((ROOT / "story").glob("*.story")) + list((ROOT / "story" / "people").glob("*.people")),
+                   key=lambda p: (p.name != "world.story", p.name))  # cast first
     for f in files:
         sec = None; join = False
         for raw in f.read_text(encoding="utf-8").splitlines():

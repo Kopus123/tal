@@ -100,7 +100,7 @@ desc The workshop. Something here has changed since yesterday.
 spot "Workbench" 50 80 -> c1_bench
 spot "Sketch on the wall" 14 38 -> c1_sketch
 spot "Empty hook" 50 40 -> c1_hook
-spot "Back to the courtyard" 50 92 => place madang
+spot "Back to the courtyard" 12 90 => place madang
 glow 탈 50 40 30
 glow 나무 50 82 14
 glow 물감 50 82 14

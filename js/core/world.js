@@ -43,9 +43,12 @@ let TIMECARD=false;                       // show the big time-of-day card on th
 // what the calendar says about a day
 const eventsOn=day=>(WORLD.calendar||[]).filter(e=>e.day?e.day===day:day>=e.from&&(day-e.from)%e.every===0);
 function passTime(){if(S.world.frozen||S.world.slot>=3)return false;missEvents();S.world.slot++;TIMECARD=true;closingTime();save();checkEvents();return true}
-// if the place you're in has just closed, you're shown out to the first place its exits lead to
+// where a spot takes you: "=> place X" directly, or a scene ("-> v_back") that moves you with "! place X"
+function spotExit(x){const m=x.t.match(/^place\s+(\S+)/);if(m)return m[1];if(!/^\w+$/.test(x.t))return null;
+  for(let i=1,id=x.t;ST.nodes[id];id=x.t+'.'+(++i)){const f=(ST.nodes[id].fx||[]).find(f=>f.k==='place');if(f)return f.a.trim()}return null}
+// if the place you're in has just closed, you're shown out to the first place its exits lead to (walking, or the bus)
 function closingTime(){if(!ST||!isClosed(S.loc))return;const l=ST.places[S.loc];
-  const out=l.spots.map(x=>(x.t.match(/^place\s+(\S+)/)||[])[1]).find(p=>p&&!isClosed(p));if(!out)return;
+  const out=l.spots.map(spotExit).find(p=>p&&ST.places[p]&&!isClosed(p));if(!out)return;
   toast(esc(l.closed.t)+' You head back outside.',4500);S.loc=out}
 function nextMorning(){missEvents();S.world.day++;S.world.slot=0;TIMECARD=true;save()}
 

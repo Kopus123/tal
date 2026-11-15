@@ -87,7 +87,7 @@ function settings(){
       <button class="btn-ink" id="rs" style="color:#e59a87">${confirmReset?'Tap again to erase all progress':'Start over'}</button>`;
     o.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.set[b.dataset.k]=+b.dataset.v;save();sfx('tap');draw();setVolumes();document.documentElement.dataset.size=S.set.size});
     o.querySelector('#tv').onclick=()=>speak('{안녕하세요}!','sujin');
-    const cps=o.querySelector('#cps');if(cps)cps.onclick=()=>{try{navigator.clipboard.writeText(JSON.stringify(S));toast('Save data copied.')}catch(e){toast('Could not copy.')}};
+    const cps=o.querySelector('#cps');if(cps)cps.onclick=()=>{const no=()=>toast('Could not copy.');try{navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Save data copied.'),no)}catch(e){no()}};
     o.querySelector('#rs').onclick=()=>{if(!confirmReset){confirmReset=true;draw()}else{S=freshKeepNotes();BACK=[];save();o.remove();title()}};
   };draw();
 }

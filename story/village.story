@@ -163,7 +163,7 @@ glow 탈 24 42 16
 ! place bus; led 청솔마을
 ~ The bus comes rattling along the river road. Where to?
 * [Ride to the market] -> v_tomarket if !time:evening
-* [Ride to the museum] -> v_tomuseum
+* [Ride to the museum] -> v_tomuseum if !time:evening
 * [Stay here] -> v_stay
 
 === scene v_stay

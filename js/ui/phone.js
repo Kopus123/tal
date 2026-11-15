@@ -4,6 +4,7 @@ const msgsOf=t=>t.m.filter(m=>cond(m.c));
 const msgCount=t=>msgsOf(t).filter(m=>!m.d).length;
 const unread=t=>(S.F['readn_'+t.id]||0)<msgCount(t);
 function openPhone(){
+  hush(true);
   const o=overlay(`<div class="phone" role="dialog" aria-label="Phone"><div class="ph-status"><span>08:47</span><span>▂▄▆ 42%</span></div><div id="phv" style="flex:1;display:flex;flex-direction:column;min-height:0"></div></div>`,'center');
   const list=()=>{
     stopAudio();

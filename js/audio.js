@@ -11,7 +11,8 @@ const vg=who=>ST&&ST.cast[who]&&ST.cast[who].voice?who:'sign';
 const clipFor=(text,who)=>window.AUDIO&&window.AUDIO[vg(who)+'|'+normT(text)];
 async function buffer(url){if(BUF[url])return BUF[url];const c=ac();const ab=await(await fetch(url)).arrayBuffer();
   const b=await new Promise((res,rej)=>c.decodeAudioData(ab,res,rej));BUF[url]=b;return b}
-function stopAudio(){TOKEN++;if(SRC){try{SRC.onended=null;SRC.stop()}catch(e){}SRC=null}if('speechSynthesis' in window)speechSynthesis.cancel()}
+function stopAudio(){TOKEN++;if(typeof duck==='function')duck(false);   // a voice cut short must not leave the music turned down
+  if(SRC){try{SRC.onended=null;SRC.stop()}catch(e){}SRC=null}if('speechSynthesis' in window)speechSynthesis.cancel()}
 // Resolves when the line finishes (or after 8s at most), so callers can wait for it.
 function speak(text,who){
   stopAudio();const my=TOKEN;

@@ -4,7 +4,7 @@
 /* ---------- overlays ---------- */
 function overlay(html,cls=''){sfx('open');const o=document.createElement('div');o.className='ov '+cls;o.innerHTML=html;o.addEventListener('click',e=>{if(e.target===o)close(o)});$('#ovs').appendChild(o);return o}
 let NB_REDRAW=null;
-function close(o){stopAudio();o.remove();render();if(NB_REDRAW&&document.querySelector('#nbb'))NB_REDRAW()}
+function close(o){stopAudio();o.remove();if(!document.querySelector('#ovs .phone'))hush(false);render();if(NB_REDRAW&&document.querySelector('#nbb'))NB_REDRAW()}
 function closeTop(){const o=$('#ovs').lastElementChild;if(o)close(o)}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTop()});
 const head=t=>`<div class="ph-head"><h2>${t}</h2><button class="x" aria-label="Close">×</button></div>`;

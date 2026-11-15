@@ -27,7 +27,10 @@ function buses(c){
   for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
 }
 // voices come first: everything else drops while someone is speaking
-function duck(on){const c=mctx();if(!c||!duckG)return;duckG.gain.setTargetAtTime(on?.38:1,c.currentTime,on?.08:.5)}
+// HUSH = the phone is open: messages and voicemails need quiet, so everything stays low, and lower still while one plays
+let HUSH=false,DUCKED=false;
+function duck(on){DUCKED=!!on;const c=mctx();if(!c||!duckG)return;duckG.gain.setTargetAtTime(on?(HUSH?.05:.3):(HUSH?.25:1),c.currentTime,on?.08:.5)}
+function hush(on){HUSH=!!on;duck(DUCKED)}
 function setVolumes(){const c=mctx();if(!c||!musBus)return;musBus.gain.setTargetAtTime(mLevel(),c.currentTime,.2);ambBus.gain.setTargetAtTime(aLevel(),c.currentTime,.2);syncScene()}
 
 /* ---------- instruments ---------- */

@@ -29,6 +29,8 @@ function render(){
   if(ak!==artKey){const w=$('#art');w.innerHTML=(ART[artName]||ART.madang)();w.classList.remove('in');void w.offsetWidth;w.classList.add('in');artKey=ak}
   const amb=exam?'none':l.ambient||'none';if(amb!==ambKey){$('#amb').innerHTML=ambientHTML(amb);ambKey=amb}
   setScene(l.music||'none',l.sound||'none');
+  $('#tint').className='tint t-'+slotName()+(exam?' own':l.light?' '+l.light:'');
+  const ck=$('#clock');ck.hidden=!S.F.started;ck.textContent=`${S.world.day}일째 · ${SLOT_KO[slotName()]}`;ck.onclick=dayPanel;
   let h='';
   if(nd&&nd.type==='camera')h+=`<div class="vf" id="vf" style="left:${cam.x}%;top:${cam.y}%"><span>Drag me</span></div>`;
   if(exam){const got=d=>S.F['ex_'+exam.id+'_'+d.id];
@@ -36,6 +38,7 @@ function render(){
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
   if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
   if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
+  if(TIMECARD){TIMECARD=false;if(!(nd&&nd.type==='card')){lastLoc=S.loc;h+=`<div class="placecard"><b>${SLOT_KO[slotName()]}</b><span>day ${S.world.day} · ${slotName()}</span></div>`}}
   if(S.loc!==lastLoc&&!(nd&&nd.type==='card'))h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
   lastLoc=S.loc;
   h+=`<div class="flash" id="flash"></div>`;
@@ -50,7 +53,10 @@ function render(){
     const d=l.desc.find(x=>cond(x.c));
     const chips=l.spots.map((x,i)=>cond(x.c)?`<button class="chipbtn" data-hs="${i}">${esc(x.l)}</button>`:'').join('');
     const mapBtn=canTravel()&&ST.map.filter(p=>S.known[p.p]&&ST.places[p.p]).length>1?`<button class="chipbtn mapchip" id="bMap">Village map</button>`:'';
-    body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${chips}${mapBtn}</div>`;
+    // free time: wait for a later time of day, and at home in the evening, go to bed
+    const run=!S.world.frozen,home=S.loc===ST.meta.home;
+    const timeBtn=!run?'':(home&&S.world.slot>=2?`<button class="chipbtn timechip" id="bBed">Go to bed</button>`:'')+(S.world.slot<3?`<button class="chipbtn timechip" id="bWait">Wait a while</button>`:'');
+    body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${chips}${mapBtn}${timeBtn}</div>`;
   }else if(nd.type==='build'){
     const tl=nd.tiles;
     body=`<div class="en">${esc(nd.en)}</div><div class="built ${nd.join?'joined':''}">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):`<span class="ph">${nd.join?'Tap the pieces to build the word':'Tap words to build a sentence'}</span>`}</div>
@@ -116,6 +122,8 @@ function render(){
     $('#bHintT').onclick=()=>{tHint=Math.min(tHint+1,3);const v=tin.value;render();const t2=$('#tin');t2.value=v;t2.focus()}}
   if($('#bSkip'))$('#bSkip').onclick=skipAhead;
   if($('#bMap'))$('#bMap').onclick=openMap;
+  if($('#bWait'))$('#bWait').onclick=()=>{sfx('page');passTime();render()};
+  if($('#bBed'))$('#bBed').onclick=()=>{sfx('page');nextMorning();render()};
   sb.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>present(nd,b.dataset.show));
   sb.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>{const k=b.dataset.cx;sfx('tap');
     if(CSEL.includes(k))CSEL=CSEL.filter(x=>x!==k);else{CSEL.push(k);if(CSEL.length>2)CSEL.shift()}

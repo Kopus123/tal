@@ -41,6 +41,7 @@ note | {찾지 마세요} | letter | The note tucked into the mask on the gate. 
 # glow WORD X% Y% R%            the spot lights up when someone says WORD
 
 === place night
+light own
 music calm
 sound night
 travel no
@@ -70,6 +71,7 @@ glow 방 45 52 12
 glow 마당 50 88 46 10
 
 === place gongbang
+light indoors
 music calm
 sound room
 name 공방
@@ -116,6 +118,7 @@ spot "Go back down" 50 88 => place golmok
 glow 산 50 30 22
 
 === place sikdang
+light indoors
 music calm
 sound room
 name 식당
@@ -150,6 +153,7 @@ spot "Back to the restaurant" 12 88 => place sikdang
 glow 버스 정류장 24 45 12
 
 === place bus
+light indoors
 music none
 sound bus
 travel no
@@ -162,6 +166,7 @@ glow 박물관 50 11 16
 glow 지하철역 50 11 16
 
 === place museum
+light indoors
 music none
 sound room
 travel no
@@ -178,6 +183,7 @@ spot "Take the bus home" 88 88 -> allSolved ? e1 : ewait if museumDone
 glow 탈 24 42 16
 
 === place gate
+light own
 music tense
 sound night
 travel no
@@ -221,6 +227,7 @@ note No name. Twice, just before midnight. She never answered.
 
 # ------------------------------------------------------------ last night
 === scene evening
+! time stop; time set evening
 @card 1장 | 탈
 ~ Three weeks ago, a letter found you at the university. Thick paper, careful handwriting, almost all of it in Korean you could barely read.
 ~ It was from 김순자, a mask carver in a village called 청솔. Months ago you had written to her for your research on traditional masks. You never expected an answer.
@@ -256,6 +263,7 @@ sujin[happy]: {잘 자요}!
 
 # ------------------------------------------------------------ morning
 === scene m1
+! time sleep
 sujin[worried]: {할머니}! {할머니}!
 (수진 runs across the courtyard, sliding doors open one after another.)
 ! place madang
@@ -660,6 +668,7 @@ sign: {탈} · 1650
 
 # ------------------------------------------------------------ evening
 === scene e1
+! time set evening
 ~ By the time the bus drops you back in the village, the lanterns are lit. The festival has started without her. Somewhere across the river, drums.
 ! place gate; set ending
 ~ 수진 is standing at the front gate, perfectly still.

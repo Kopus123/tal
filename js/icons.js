@@ -61,6 +61,8 @@ const ICON={
   lantern:()=>P('M32,4 V12','none',2.5)+`<ellipse cx="32" cy="32" rx="16" ry="20" fill="${IR}" stroke="${IK}" stroke-width="3"/>`+P('M22,20 Q32,32 22,44 M42,20 Q32,32 42,44','none',2)+Re(26,10,12,4,1,IK,0)+Re(26,50,12,4,1,IK,0)+P('M32,54 V62','none',2.5),
   calendar:()=>Re(10,12,44,44,4,IP)+Re(10,12,44,11,4,IR)+P('M20,6 V16 M44,6 V16','none',3)+[0,1,2].map(r=>[0,1,2,3].map(c=>`<rect x="${16+c*9}" y="${28+r*8}" width="6" height="5" fill="#d1c4a6"/>`).join('')).join(''),
   today:()=>ICON.calendar()+`<circle cx="34" cy="38" r="8" fill="${IO}" stroke="${IR}" stroke-width="2.5"/>`,
+  noon:()=>Ci(32,30,13,IO)+P('M32,6 V11 M32,49 V54 M8,30 H13 M51,30 H56 M15,13 L19,17 M49,13 L45,17 M15,47 L19,43 M49,47 L45,43','none',3),
+  evening:()=>P('M6,44 H58','none',3)+P('M20,44 A12,12 0 0 1 44,44Z',IR)+P('M10,52 H54 M18,58 H46','none',2.5)+P('M32,26 V20','none',3),
   morning:()=>P('M8,46 H56','none',3)+P('M16,46 A16,16 0 0 1 48,46Z',IO)+P('M32,22 V14 M16,30 L10,24 M48,30 L54,24','none',3),
   clock:()=>Ci(32,32,24,IP)+P('M32,32 V16 M32,32 H20','none',4)+Ci(32,32,2.5,IK,1),
   excuse:()=>fig(28,38,1,IG,'#2a1d18')+P('M42,40 L48,12','none',5)+Ci(48,10,4,IS,2.5),

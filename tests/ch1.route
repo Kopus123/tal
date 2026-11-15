@@ -5,6 +5,7 @@
 
 chapter prologue
 shown #bPhone no
+expect day=1&time:evening&!clock
 # --- the evening before
 choose Laugh with her
 # --- the next morning
@@ -56,7 +57,7 @@ done prologue
 
 # --- the next day (ch1.story continues the same chapter)
 #@ Day 2 · the morning
-expect started
+expect started&day=3&time:morning&!clock
 idle
 spot The mask
 choose Pick it up
@@ -186,11 +187,23 @@ choose Sit with her
 choose Call out
 choose Blow out the lantern
 idle
-expect hidden
+expect hidden&time:night
 #@ Day 2 · the last deductions
 solve d8 할머니 | 박물관 | 가짜 ; realchip + photo79
 solve d9 바꿨어요 | 마을 | 서울 ; s_reason + card
 done ch1
 spot Leave it here for now
 idle
-expect @madang
+expect @madang&clock&day=4&time:morning
+# --- free days: time passes when you wait, places close at night, sleeping starts a new day
+wait
+wait
+expect time:evening
+wait
+expect time:night
+map sikdang
+nospot Talk to the owner
+nospot The menu
+map madang
+sleep
+expect day=5&time:morning&on:market

@@ -29,17 +29,19 @@
 #    === endings            ending | note                 (the notebook's Grammar tab)
 #    === meanings           word | short English meaning  (Check my guess, and under case-board blanks)
 #    === names              name | name or sound | what tapping it says
+#    === calendar           ID every N [from D] | 한국어 | note        ID day D | 한국어 | note      (condition: on:ID)
 #    === pattern ID         title / note / need N / plain > changed    (the notebook's Patterns tab)
 #                           opens once N of the changed words are met, or N of the words under:  when A, B
 #
 #  ------------------------------------------------ a chapter file
-#    === meta               lang / start SCENE / start-place PLACE / end-title / end-text
+#    === meta               lang / start SCENE / start-place PLACE / end-title / end-text / home PLACE (where you sleep)
 #    === hints              if COND: text      (the first one that fits is the hint; a last plain line = fallback)
 #    === deduce             ID [final] if COND | sentence with {blank} words | what it means once solved
 #                           add  | needs A "what this proof is" + B/B2 "..."   for proof (evidence or statement
 #                           ids; B/B2 = either one).  "final" ends the chapter when solved.
 #    === evidence           id | label | picture | what it is | Korean written on it (optional)
 #    === place NAME         name / sub / art KEY (js/art.js) / ambient / travel no
+#                           light own (the art is already lit for its time: no tint) | light indoors (a faint tint)
 #                           music calm|tense|festival|none / sound birds|river|market|night|wind|room|bus|none  (js/music.js)
 #                           first SCENE (plays the first time you arrive) / always SCENE (every time)
 #                           desc [if COND:] text                 (the first one that fits is shown)
@@ -85,6 +87,7 @@
 #    give ID, ID            hand over evidence (with a message)     have ID, ID    the same, silently
 #    statement ID           save the line above as a statement
 #    mixup RIGHT / HEARD    record a mishearing in the notebook
+#    time stop | go | set evening | sleep | +1      the clock (see js/core/world.js)
 #    money +500 | -200 | =1000         rel WHO +1         item +NAME | -NAME
 #                           these three happen once per beat, however often you pass it;
 #                           end with "each time" for a price paid on every visit: money -1500 each time
@@ -93,7 +96,7 @@
 #    FLAG   !FLAG   A&B     a flag is on / off / both           @PLACE   you are at that place
 #    allSolved              every deduction on the board (except the final one) is solved
 #    money>=500   day>=3    numbers compare with  >=  <=  >  <  =        (also rel:WHO>=2, has:NAME>=2)
-#    time:morning           also afternoon, evening, night
+#    time:morning           also afternoon, evening, night        clock   time is passing (free time)        on:ID   a calendar entry is today
 #    g:FLAG                 a village flag            rel:WHO    friendship            has:NAME   you own it
 #    flags the game sets by itself:  started, solved_ID (deduction), read_ID and vm_ID (phone thread read /
 #    voicemail heard), st_ID (statement saved), ev_ID (evidence held), ex_EXAMINE_DETAIL (detail noticed).
@@ -180,6 +183,9 @@ sign       |               |          | SunHi  -10%  +0Hz
 어제 = calendar +past
 내일 = calendar +future
 아침 = morning
+낮 = noon
+저녁 = evening
+장날 = market
 9시 = clock
 저기요 = excuse
 안녕하세요 = wave
@@ -405,6 +411,9 @@ sign       |               |          | SunHi  -10%  +0Hz
 어제 | yesterday
 내일 | tomorrow
 아침 | morning
+낮 | daytime, afternoon
+저녁 | evening
+장날 | market day
 9시 | 9 o'clock
 저기요 | excuse me
 안녕하세요 | hello
@@ -560,6 +569,11 @@ sign       |               |          | SunHi  -10%  +0Hz
 아 | sound | Ah! / Oh! (realizing something)
 음 | sound | Hmm... (thinking)
 와 | sound | Wow!
+
+=== calendar
+# day 1 = the evening you arrive. day 2 = the festival.
+festival day 2 | {축제} | The mask festival.
+market every 5 from 5 | {장날} | Market day: the market is at its busiest.
 
 === pattern past
 title The ㅆ pattern

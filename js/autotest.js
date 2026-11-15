@@ -32,6 +32,9 @@
      knows WORD N          the word's hint level must be N (0 full hints, 1 fading, 2 known)
      guess WORD right|wrong TEXT   Check my guess must judge TEXT that way for WORD
      shown SELECTOR [no]   that element must be visible on screen (or, with "no", hidden)
+     nospot LABEL          that spot must NOT be offered here
+     wait                  press Wait a while (free time only)
+     sleep                 press Go to bed (at home, evening or night)
      switch ID             move to this chapter keeping the save, the way the story does at a chapter's end  */
 (function(){
 const out=[];let failed=false;
@@ -114,6 +117,9 @@ const STEPS={
   async leave(){const b=await until(()=>document.querySelector('#bLeave'),'a Never mind button');await clickEl(b)},
   async expect(c){if(!cond(c))fail(`expected ${c}`)},
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},
+  async nospot(l){await idle();if(vis('#sb .chipbtn[data-hs]').some(b=>txt(b)===l))fail(`"${l}" is offered here but shouldn't be`)},
+  async wait(){await idle();const b=document.querySelector('#bWait');if(!b)fail('there is no Wait button here (is the clock running, and is it before night?)');await clickEl(b)},
+  async sleep(){await idle();const b=document.querySelector('#bBed');if(!b)fail('there is no Go to bed button here (home, evening or night, clock running)');await clickEl(b)},
   async shown(a){const [sel,how]=a.split(/\s+/);const el=document.querySelector(sel);if(!el)fail(`nothing matches ${sel}`);
     const vis=getComputedStyle(el).display!=='none';if(vis!==(how!=='no'))fail(`${sel} is ${vis?'showing':'hidden'} on screen`)},
   async guess(a){const m=a.match(/^(\S+)\s+(right|wrong)\s+(.+)$/);if(!m)fail('guess WORD right|wrong TEXT');

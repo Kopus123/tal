@@ -86,9 +86,14 @@ def _fx_item(d, a, ln, f):
     if not m: err(f, ln, f"'{a}' should be +NAME or -NAME"); return
     if m.group(1) != "-": d["items_given"].append((m.group(2), ln))
 
-EFFECT_KINDS = {"flags": _fx_flags, "unflags": None, "text": None, "place": _fx_place, "evidence": _fx_evidence,
+def _fx_time(d, a, ln, f):
+    m = re.match(r"^(stop|go|sleep|\+\d+|set\s+(\w+))$", a.strip())
+    if not m: err(f, ln, f"'time {a}' should be stop, go, sleep, +1 or set SLOT")
+    elif m.group(2) and m.group(2) not in SLOTS: err(f, ln, f"'{m.group(2)}' isn't a time of day ({', '.join(sorted(SLOTS))})")
+
+EFFECT_KINDS = {"time": _fx_time, "flags": _fx_flags, "unflags": None, "text": None, "place": _fx_place, "evidence": _fx_evidence,
                 "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item}
-ADDS_UP = {"amount", "who_amount", "item"}      # these may end in "each time"
+ADDS_UP = {"amount", "who_amount", "item", "time"}      # these may end in "each time"
 
 def _c_place(d, rest, ln, f): d["placefx"].append((rest, ln))
 def _c_slot(d, rest, ln, f):
@@ -97,7 +102,9 @@ def _c_gflag(d, rest, ln, f): d["gflags_read"].append((rest, ln))
 def _c_who(d, rest, ln, f): d["who_refs"].append((rest, ln))
 def _c_item(d, rest, ln, f): d["items_read"].append((rest, ln))
 
-COND_KINDS = {"place": _c_place, "bool": None, "number": None, "slot": _c_slot, "gflag": _c_gflag, "who": _c_who, "item": _c_item}
+def _c_calendar(d, rest, ln, f): d["cal_read"].append((rest, ln))
+
+COND_KINDS = {"calendar": _c_calendar, "place": _c_place, "bool": None, "number": None, "slot": _c_slot, "gflag": _c_gflag, "who": _c_who, "item": _c_item}
 
 for _name, _kind in EFFECTS.items():
     if _kind not in EFFECT_KINDS: sys.exit(f"check_story.py: effect '{_name}' has the new kind '{_kind}'. Add it to EFFECT_KINDS.")
@@ -115,7 +122,7 @@ def parse(path):
     d = dict(meta={}, cast={}, words={}, places={}, scenes={}, deduce=[], evidence={}, phones={},
              hints=[], chapters=[], pins=[], jumps=[], flags_set=[], flags_read=[], gives=[], shows=[],
              speakers=[], tokens=[], placefx=[], statements={}, pairs=[], examines={}, exrefs=[],
-             gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
+             cal=[], cal_read=[], gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
     sec = cur = scene = None
     count = 0; join = False   # inside "@build ... | join": tiles are pieces of a word, not words
     def conds(c, ln):                       # mirror of cond() in js/core/rules.js
@@ -198,7 +205,7 @@ def parse(path):
             d["evidence"][p[0]] = dict(icon=p[2], ln=ln); tokens(p[1], ln)
             if len(p) > 4: tokens("|".join(p[4:]), ln)
         elif sec == "place":
-            if m := re.match(r"^(name|sub|art|first|always|ambient|travel|music|sound)\s+(.+)$", line):
+            if m := re.match(r"^(name|sub|art|first|always|ambient|travel|music|sound|light)\s+(.+)$", line):
                 cur[m.group(1)] = (m.group(2), ln)
                 if m.group(1) == "music" and m.group(2) not in MOODS: err(f, ln, f"no music called '{m.group(2)}' ({', '.join(sorted(MOODS))})")
                 if m.group(1) == "sound" and m.group(2) not in BEDS: err(f, ln, f"no sound called '{m.group(2)}' ({', '.join(sorted(BEDS))})")
@@ -228,6 +235,11 @@ def parse(path):
             else: err(f, ln, "examine line not understood")
         elif sec == "pattern":
             if m := re.match(r"^when\s+(.+)", line): d["tokens"] += [(x.strip(), ln) for x in m.group(1).split(",")]
+        elif sec == "calendar":
+            p = [x.strip() for x in line.split("|")]
+            m = re.match(r"^(\w+)\s+(every\s+\d+(\s+from\s+\d+)?|day\s+\d+)$", p[0])
+            if not m or len(p) < 2: err(f, ln, "calendar line should be: ID every N [from D] | 한국어 | note   or   ID day D | 한국어 | note"); continue
+            d["cal"].append(m.group(1)); tokens(p[1], ln)
         elif sec == "meanings":
             d.setdefault("meanings", {})[line.split("|")[0].strip()] = ln
         elif sec == "names":
@@ -292,6 +304,8 @@ def main():
             if x not in gset: err(name, ln, f"village flag 'g:{x}' is checked but no file ever sets it (! set g:{x})")
         for x, ln in d["items_read"]:
             if x not in items: warn(name, ln, f"'has:{x}' is checked but no story line hands it out (! item +{x})")
+        for x, ln in d["cal_read"]:
+            if x not in world["cal"]: err(name, ln, f"'on:{x}' isn't in the calendar (=== calendar in world.story)")
         for who, ln in d["who_refs"]:
             if who not in cast and who not in d["cast"]: err(name, ln, f"'{who}' isn't in the cast")
     for fname, d in chapters.values():

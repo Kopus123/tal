@@ -10,7 +10,15 @@
    money, rel and item happen once per beat, however often you pass it. For a price you pay on
    every visit, end it with "each time":   ! money -1500 each time
 
-     if money>=500    if day>=3    if time:evening    if rel:sujin>=2    if has:radio    if g:metKid   */
+     if money>=500    if day>=3    if time:evening    if rel:sujin>=2    if has:radio    if g:metKid
+
+   THE CLOCK.  A day has four steps: morning, afternoon, evening, night. Sleeping starts the next morning.
+     ! time stop           the story holds the clock: only the story changes the time now
+     ! time go             the story lets go: time passes when you wait, travel or sleep
+     ! time set evening    the story says what time it is
+     ! time sleep          the next morning (a new day)
+     ! time +1             one step later, if the clock is running (use "each time" for a bus ride)
+     if clock              the clock is running            if on:market    today is that calendar entry   */
 
 const SLOTS=['morning','afternoon','evening','night'];
 const amount=a=>{const m=String(a).trim().match(/^([+\-=]?)(\d+)$/);return m?{op:m[1]||'+',n:+m[2]}:null};
@@ -27,3 +35,19 @@ defEffect('money','amount',a=>{const am=amount(a);if(am)S.world.money=bump(S.wor
 defEffect('rel','who_amount',a=>{const [w,n]=a.trim().split(/\s+/),am=amount(n);if(w&&am)S.world.rel[w]=bump(S.world.rel[w]||0,am)},{once:1});
 defEffect('item','item',a=>{const m=a.trim().match(/^([+-]?)(\S+)$/);if(!m)return;
   const n=Math.max(0,(S.world.inv[m[2]]||0)+(m[1]==='-'?-1:1));if(n)S.world.inv[m[2]]=n;else delete S.world.inv[m[2]]},{once:1});
+
+/* ---------- the clock ---------- */
+const SLOT_KO={morning:'아침',afternoon:'낮',evening:'저녁',night:'밤'};
+const slotName=()=>SLOTS[S.world.slot]||'morning';
+let TIMECARD=false;                       // show the big time-of-day card on the next draw
+// what the calendar says about a day
+const eventsOn=day=>(WORLD.calendar||[]).filter(e=>e.day?e.day===day:day>=e.from&&(day-e.from)%e.every===0);
+function passTime(){if(S.world.frozen||S.world.slot>=3)return false;S.world.slot++;TIMECARD=true;save();return true}
+function nextMorning(){S.world.day++;S.world.slot=0;TIMECARD=true;save()}
+
+defCond('clock','bool',()=>!S.world.frozen);
+defCond('on:','calendar',id=>eventsOn(S.world.day).some(e=>e.id===id));
+defEffect('time','time',a=>{const m=a.trim().match(/^(stop|go|sleep|\+\d+|set\s+(\w+))$/);if(!m)return;
+  if(a==='stop')S.world.frozen=1;else if(a==='go')S.world.frozen=0;else if(a==='sleep')nextMorning();
+  else if(m[2]){const i=SLOTS.indexOf(m[2]);if(i>=0&&i!==S.world.slot){S.world.slot=i;TIMECARD=true}}
+  else for(let i=0;i<+a.slice(1);i++)passTime()},{once:1});

@@ -7,6 +7,7 @@
 lang ko
 start c1_open
 start-place madang
+home madang
 end-title 1장 끝
 end-text 할머니 is safe, for now. But someone followed you up the mountain in the dark, and he knows which mask is the real one. The story continues soon.
 
@@ -74,6 +75,9 @@ name 마당
 sub The courtyard, the next morning
 art madang_mask
 ambient leaves
+desc if clock&time:night: The courtyard at night. One window is still lit.
+desc if clock&time:evening: The courtyard in the evening light. The day is winding down.
+desc if clock: The courtyard. Quiet days, for now.
 desc The courtyard, the morning after. The mask lies on the wooden floor. 수진 sits next to it.
 spot "The mask" 58 70 -> c1_mask
 spot "Talk to 수진" 30 66 -> c1_sjhub
@@ -85,6 +89,7 @@ glow 손 30 64 8
 glow 집 50 44 40 22
 
 === place gongbang
+light indoors
 music tense
 sound room
 name 공방
@@ -132,6 +137,7 @@ glow 산 50 30 22
 glow 절 50 22 14
 
 === place sikdang
+light indoors
 music calm
 sound room
 name 식당
@@ -139,10 +145,11 @@ sub The little restaurant
 art sikdang
 ambient dust
 first c1_k1
+desc if time:night: The restaurant is dark. Closed for the night.
 desc The restaurant. The owner keeps glancing at the window.
-spot "Talk to the owner" 50 52 -> c1_ktalk if !talkedOwner
-spot "Talk to the owner" 50 52 -> c1_kafter if talkedOwner
-spot "The menu" 22 22 -> c1_kfeed
+spot "Talk to the owner" 50 52 -> c1_ktalk if !talkedOwner&!time:night
+spot "Talk to the owner" 50 52 -> c1_kafter if talkedOwner&!time:night
+spot "The menu" 22 22 -> c1_kfeed if !time:night
 spot "Bus stop" 85 40 => place jeong
 spot "Back to the alley" 12 88 => place golmok
 glow 김밥 11 23 7
@@ -160,15 +167,17 @@ sub The bus stop
 art jeong
 ambient leaves
 desc if knowRiver: The bus stop. Behind it, a dirt path drops down toward the water.
+desc if time:night: The bus stop. The last bus has gone.
 desc The bus stop at the edge of the village.
 spot "Route map" 28 45 -> c1_jmap
-spot "Wait for the bus" 72 72 -> c1_b0
+spot "Wait for the bus" 72 72 -> c1_b0 if !time:night
 spot "Path behind the bus stop" 40 62 => place gang if knowRiver
 spot "Back to the restaurant" 12 88 => place sikdang
 glow 버스 정류장 24 45 12
 glow 뒤에 40 62 12
 
 === place bus
+light indoors
 music none
 sound bus
 name 버스
@@ -202,6 +211,7 @@ glow 아주머니 66 60 9
 glow 천 원 66 60 9
 
 === place museum
+light indoors
 music none
 sound room
 name 박물관
@@ -238,6 +248,7 @@ glow 다리 82 40 13
 glow 할아버지 64 60 9
 
 === place jeol
+light own
 music tense
 sound night
 name 절
@@ -319,6 +330,7 @@ note@threatSent They know. Somehow they know the mask on the gate isn't the real
 
 # ------------------------------------------------------------ morning: the courtyard
 === scene c1_open
+! time stop; time sleep
 @card 다음 날 | The next morning
 ! set hasPhone; have letter, photo79, couplephoto, note
 ~ The next morning. Nobody in the guesthouse really slept.
@@ -1104,6 +1116,7 @@ haraboji: {빨리} {가요}.
 
 # ------------------------------------------------------------ temple
 === scene c1_j1
+! time set evening
 ~ The path climbs for a long time. By the time you reach the top, the sun is going down. A tiny temple sits between the pines, one lantern lit.
 ~ On its wooden step, wrapped in a blanket, sits a small old woman. In her lap is a bundle of red cloth.
 halmeoni[surprised]: {누구}... {누구}{예요|이에요}?
@@ -1204,6 +1217,7 @@ halmeoni[worried]: {아니요}! {아니요}!
 <- c1_jdusk.2
 
 === scene c1_jdark
+! time set night
 ~ You blow out the lantern. Darkness. 할머니's breathing, fast and shallow.
 halmeoni[worried]: {숨어요}! {빨리}!
 (She pulls you behind the temple, into the pines.)
@@ -1217,8 +1231,8 @@ stranger[audio]: {진짜} {탈}... {줘}.
 
 === scene c1_jleave
 ~ This is where Chapter 1 stops. What happens next on the mountain is for Chapter 2.
-~ Until then, the village is open to you as it was this afternoon: walk around, reread your notebook, finish anything you left.
-! place madang
+~ Until then, the days are yours. Time passes in the village now: wait for the evening, sleep until morning, walk around, reread your notebook.
+! place madang; time go; time sleep
 
 === scene c1_jend
 halmeoni[worried]: {숨어요}...

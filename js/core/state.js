@@ -10,10 +10,11 @@
 //                finished chapters, the map
 const KEY='tal-save-v2';
 // Save format version. When the format changes: bump SAVE_V and add a step to MIGRATE that upgrades the old shape.
-const SAVE_V=5;
+const SAVE_V=6;
 // slot = time of day: 0 morning, 1 afternoon, 2 evening, 3 night (names in SLOTS, js/core/world.js)
 // did = effects that add up (money, friendship, items) and have already happened, so a beat can't pay out twice
-const freshWorld=()=>({day:1,slot:0,money:0,rel:{},inv:{},room:{},g:{},did:{}});
+// frozen = the story is holding the clock (it sets the time itself); when it lets go, time passes as you wait and sleep
+const freshWorld=()=>({day:1,slot:0,frozen:0,money:0,rel:{},inv:{},room:{},g:{},did:{}});
 const fresh=()=>({v:SAVE_V,world:freshWorld(),m:{},tl:{},mx:{},pat:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0,music:2,amb:2,fade:1},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)
@@ -31,6 +32,11 @@ const MIGRATE={
     s.prog={};s.done={};s.ch=WORLD.chapters[0].id;s.F={};s.cs={};s.visited={};s.node=null;s.loc=null;s.log=[];return s},
   4:s=>{ // the world (days, money, friendships, things you own) now lives outside chapters; it starts on day 1 with nothing
     s.world=freshWorld();return s},
+  5:s=>{ // the clock arrived. A save in the middle of the story keeps it stopped (the story sets the time);
+         // one that has finished chapter 1 wakes up on a free morning
+    const last=WORLD.chapters[WORLD.chapters.length-1].id;s.world=Object.assign(freshWorld(),s.world);
+    if((s.done||{})[last]){s.world.day=4;s.world.slot=0;s.world.frozen=0}else{s.world.day=s.ch===WORLD.chapters[0].id?2:3;s.world.frozen=1}
+    return s},
 };
 function migrate(s){let v=s.v||(s.ch?2:1);while(v<SAVE_V&&MIGRATE[v]){s=MIGRATE[v](s);v++}s.v=Math.max(v,s.v||0);return s}
 // a stored save of any age -> a complete, current one (anything newer code expects is filled in with its default)

@@ -3,8 +3,8 @@
 # Run with: python tools/playtest.py engine
 
 chapter prologue
-# --- a new game starts on the morning of day 1 with nothing
-expect day=1&time:morning&!time:evening&money=0&!g:test&!has:radio&!rel:sujin>=1
+# --- a new game starts on the evening of day 1 with nothing, and the story holds the clock
+expect day=1&time:evening&!time:morning&!clock&money=0&!g:test&!has:radio&!rel:sujin>=1
 
 # --- money, friendship, things you own, village flags
 fx money +500; rel sujin +2; item +radio; item +radio; set g:test
@@ -38,7 +38,8 @@ expect money=1305
 
 # --- the save on the phone today (format 4) upgrades and keeps everything you wrote and learned
 oldsave v4
-expect day=1&time:morning&money=0&sawFake&hasPhone
+# (in the middle of chapter 1: the story holds the clock, on the story's day 3)
+expect day=3&!clock&money=0&sawFake&hasPhone
 note 탈 mask
 note 강 river
 saved m.탈.u
@@ -48,7 +49,7 @@ saved done.prologue
 saved w.탈.checked
 # --- a very old save (before chapters merged) still upgrades step by step, notes intact
 oldsave v2
-expect day=1&money=0
+expect !clock&money=0
 note 탈 mask
 saved m.탈
 
@@ -88,3 +89,16 @@ guess 봤어요 right saw
 guess 봤어요 wrong was
 guess 할머니 right grandma
 guess 할아버지 wrong grandma
+
+# --- the clock: the story can hold it, set it, and let it go
+chapter prologue
+fx time go; time set afternoon
+expect clock&time:afternoon&day=1
+fx time +1
+expect time:evening
+fx time +5
+expect time:night&day=1
+fx time sleep
+expect day=2&time:morning&on:festival&!on:market
+fx time stop; time +1
+expect time:morning&!clock

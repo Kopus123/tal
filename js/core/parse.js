@@ -13,7 +13,7 @@ const PARSE_WARN=[];   // lines the parser did not understand: the automatic pla
 // split "a | b | {x|y}" on the bars that aren't inside {braces}
 function splitBar(str){const out=[];let d=0,cur='';for(const c of str){if(c==='{')d++;else if(c==='}')d--;if(c==='|'&&!d){out.push(cur.trim());cur=''}else cur+=c}out.push(cur.trim());return out}
 function parseStory(src,st,file){
-  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{}};
+  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{},calendar:[]};
   let sec=null,cur=null,scene=null,last=null,count=0;
   let early=[];   // effects written before a scene's first line: they run with that first line
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;if(early.length){n.fx=early;early=[]}
@@ -45,6 +45,11 @@ function parseStory(src,st,file){
       case 'tells':{const i=line.indexOf('|');if(i>0)st.tells[line.slice(0,i).trim()]=line.slice(i+1).trim();break}
       case 'meanings':{const i=line.indexOf('|');if(i>0)st.meanings[line.slice(0,i).trim()]=line.slice(i+1).trim();break}
       case 'names':{const [n,k,d]=line.split('|').map(x=>(x||'').trim());if(n)st.names[n]={kind:k||'name',d};break}
+      // calendar: ID every N [from D] | 한국어 | note      or      ID day D | 한국어 | note
+      case 'calendar':{const [head,label,note]=splitBar(line);
+        if(m=head.match(/^(\w+)\s+every\s+(\d+)(?:\s+from\s+(\d+))?$/))st.calendar.push({id:m[1],every:+m[2],from:+(m[3]||m[2]),label,note:note||''});
+        else if(m=head.match(/^(\w+)\s+day\s+(\d+)$/))st.calendar.push({id:m[1],day:+m[2],label,note:note||''});
+        else PARSE_WARN.push(`${file||'story'}:${ln+1}: ${line}`);break}
       case 'endings':{const i=line.indexOf('|');if(i>0)st.endings.push({k:line.slice(0,i).trim(),d:line.slice(i+1).trim()});break}
       case 'hints':{m=line.match(/^if\s+(\S+):\s*(.+)$/);st.hints.push(m?{c:m[1],t:m[2]}:{t:line});break}
       // deduction: ID [final] if COND | sentence with {blank} words | what it means once solved
@@ -66,7 +71,7 @@ function parseStory(src,st,file){
       case 'pattern':{if(m=line.match(/^title\s+(.+)/))cur.title=m[1];else if(m=line.match(/^note\s+(.+)/))cur.note=m[1];
         else if(m=line.match(/^need\s+(\d+)/))cur.need=+m[1];else if(m=line.match(/^when\s+(.+)/))cur.when=m[1].split(',').map(x=>x.trim());else if(m=line.match(/^(.+?)\s*>\s*(.+)$/))cur.pairs.push([m[1],m[2]]);break}
       case 'place':{
-        if(m=line.match(/^(name|sub|art|first|always|ambient|travel|music|sound)\s+(.+)$/))cur[m[1]]=m[2];
+        if(m=line.match(/^(name|sub|art|first|always|ambient|travel|music|sound|light)\s+(.+)$/))cur[m[1]]=m[2];
         else if(m=line.match(/^desc\s+(?:if\s+(\S+):\s*)?(.+)$/))cur.desc.push({c:m[1],t:m[2]});
         else if(m=line.match(/^spot\s+"([^"]+)"\s+([\d.]+)\s+([\d.]+)\s+(->|=>)\s+(.+?)(?:\s+if\s+(\S+))?$/))
           cur.spots.push({l:m[1],x:+m[2],y:+m[3],kind:m[4],t:m[5],c:m[6]});

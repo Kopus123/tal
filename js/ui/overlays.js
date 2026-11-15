@@ -10,6 +10,15 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTop()});
 const head=t=>`<div class="ph-head"><h2>${t}</h2><button class="x" aria-label="Close">×</button></div>`;
 const STATE_LABEL={new:'New word',seen:'No note yet',guess:'Your guess',sure:'You\'re sure',gram:'Grammar piece'};
 
+// tap the clock: what day it is, the four times of day, and what the calendar says about today and the next days
+function dayPanel(){
+  const d=S.world.day,row=n=>{const ev=eventsOn(n);return `<div class="calrow"><b>${n===d?ko('{오늘}'):n===d+1?ko('{내일}'):n+'일째'}</b><span>${ev.length?ev.map(e=>ko(e.label)+(e.note?` <small class="en">${esc(e.note)}</small>`:'')).join('<br>'):'<small class="en">nothing special</small>'}</span></div>`};
+  const o=overlay(`<div class="panel paper">${head(d+'일째')}<div class="ph-body">
+    <div class="en">${d}일째 = day ${d}. ${S.world.frozen?'The story sets the time for now.':'Time passes when you wait, travel or sleep.'}</div>
+    <div class="dayrow">${SLOTS.map(s=>`<button class="w ${s===slotName()?'nowslot':''}" data-w="${SLOT_KO[s]}">${SLOT_KO[s]}</button>`).join('')}</div>
+    <div class="label">Calendar</div>${[d,d+1,d+2,d+3].map(row).join('')}</div></div>`);
+  o.querySelector('.x').onclick=()=>close(o);
+}
 function showLog(){
   const o=overlay(`<div class="panel paper">${head('기록')}<div class="ph-body" id="hb"></div></div>`);
   o.querySelector('.x').onclick=()=>close(o);

@@ -147,7 +147,7 @@ function openMap(){
   ST.map.filter(p=>ST.places[p.p]).forEach(p=>{
     const pl=ST.places[p.p],here=S.loc===p.p;
     if(!S.known[p.p]){h+=`<div class="pin unk" style="left:${p.x}%;top:${p.y}%"><i></i><b>?</b></div>`;return}
-    h+=`<button class="pin ${here?'here':''}" data-pin="${p.p}" style="left:${p.x}%;top:${p.y}%"><i></i><b>${esc(pl.name)}</b>${here?'<span class="seal w" data-w="여기">여기</span>':''}</button>`;
+    h+=`<button class="pin s-${p.side||'above'} ${here?'here':''}" data-pin="${p.p}" style="left:${p.x}%;top:${p.y}%"><i></i><b>${esc(pl.name)}</b>${here?'<span class="seal w" data-w="여기">여기</span>':''}</button>`;
   });
   o.querySelector('#mapv').innerHTML=h;
   o.querySelectorAll('[data-pin]').forEach(b=>b.onclick=()=>{

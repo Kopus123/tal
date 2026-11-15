@@ -23,7 +23,7 @@
 #                            "free" = the village between chapters: clock running, people about)
 #    === people             id | file in story/people/      (each file: === person ID, then ordinary scenes)
 #    === event ID           when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE     (free days: js/core/villagers.js)
-#    === map                pin PLACE X% Y%
+#    === map                pin PLACE X% Y% [above|left|right|below]
 #    === cast               key | name | color | voice rate pitch | look
 #    === words              word = picture [+past] [+future] [+not]      (pictures: js/icons.js)
 #                           piece = (grammar)                            (explained under === grammar)
@@ -133,16 +133,17 @@ staff    | staff.people
 ajumma   | ajumma.people
 
 === map
-# pin PLACE X% Y%  (places show on the map once you've been there)
-pin madang 40 50
-pin gongbang 50 44
-pin golmok 34 60
+# pin PLACE X% Y% [above|left|right|below]  (places show on the map once you've been there;
+#   the last word says where the name goes, for pins that sit close together. Default: above)
+pin madang 40 50 left
+pin gongbang 50 44 right
+pin golmok 34 60 left
 pin sanqil 16 27
-pin sikdang 51 70
-pin jeong 61 74
+pin sikdang 51 70 left
+pin jeong 61 74 below
 pin museum 86 30
 pin gang 79 55
-pin jeol 9 14
+pin jeol 9 14 below
 pin sijang 84 79
 
 === cast

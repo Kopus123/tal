@@ -154,6 +154,7 @@ function openMap(){
     const id=b.dataset.pin;if(id===S.loc){close(o);return}
     if(!ok){sfx('wrong');toast(S.node?'Finish what you are doing first.':'You can\'t walk there from here.');return}
     if(ST.places[id].travel==='no'){sfx('wrong');toast('You can\'t walk there. You\'ll need another way.');return}
+    if(isClosed(id)){sfx('wrong');toast(esc(ST.places[id].closed.t),3500);return}
     o.remove();sfx('page');enter(id);
   });
 }

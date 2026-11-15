@@ -47,6 +47,7 @@
 #                           music calm|tense|festival|none / sound birds|river|market|night|wind|room|bus|none  (js/music.js)
 #                           first SCENE (plays the first time you arrive) / always SCENE (every time)
 #                           desc [if COND:] text                 (the first one that fits is shown)
+#                           closed COND | message                (while COND holds you can't go in: you get the message)
 #                           spot "Label" X Y -> SCENE [if COND]  (also  => place NAME   and   => phone)
 #                           glow WORD X Y [R] [H]                (the ring when someone says WORD)
 #    === phone ID           name / avatar LETTER COLOR / on-open effects

@@ -213,6 +213,7 @@ def parse(path):
                 if m.group(1) == "music" and m.group(2) not in MOODS: err(f, ln, f"no music called '{m.group(2)}' ({', '.join(sorted(MOODS))})")
                 if m.group(1) == "sound" and m.group(2) not in BEDS: err(f, ln, f"no sound called '{m.group(2)}' ({', '.join(sorted(BEDS))})")
             elif m := re.match(r"^desc\s+(?:if\s+(\S+):\s*)?(.+)$", line): conds(m.group(1), ln)
+            elif m := re.match(r"^closed\s+(\S+)\s*\|\s*(.+)$", line): conds(m.group(1), ln)
             elif m := re.match(r'^spot\s+"([^"]+)"\s+([\d.]+)\s+([\d.]+)\s+(->|=>)\s+(.+?)(?:\s+if\s+(\S+))?$', line):
                 conds(m.group(6), ln); cur["spots"].append(dict(kind=m.group(4), t=m.group(5), ln=ln))
             elif m := re.match(r"^glow\s+(.+?)\s+[\d.]+\s+[\d.]+", line): d["tokens"].append((m.group(1), ln))

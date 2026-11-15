@@ -217,11 +217,14 @@ map jeong
 talk jiho
 idle
 expect rel:jiho>=1
-wait
-expect time:night
 map sikdang
-nospot Talk to the owner
-nospot The menu
+wait
+expect time:night&@jeong
+closed sikdang
+map golmok
+spot Right path, past the dark restaurant
+expect @jeong
+spot Back to the alley
 map madang
 sleep
 expect day=5&time:morning&on:market

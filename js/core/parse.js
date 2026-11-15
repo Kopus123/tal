@@ -82,6 +82,7 @@ function parseStory(src,st,file){
       case 'place':{
         if(m=line.match(/^(name|sub|art|first|always|ambient|travel|music|sound|light)\s+(.+)$/))cur[m[1]]=m[2];
         else if(m=line.match(/^desc\s+(?:if\s+(\S+):\s*)?(.+)$/))cur.desc.push({c:m[1],t:m[2]});
+        else if(m=line.match(/^closed\s+(\S+)\s*\|\s*(.+)$/))cur.closed={c:m[1],t:m[2]};
         else if(m=line.match(/^spot\s+"([^"]+)"\s+([\d.]+)\s+([\d.]+)\s+(->|=>)\s+(.+?)(?:\s+if\s+(\S+))?$/))
           cur.spots.push({l:m[1],x:+m[2],y:+m[3],kind:m[4],t:m[5],c:m[6]});
         // glow WORD X Y [R] [H]: a circle of radius R% of the width, or an ellipse R wide and H tall (% of the height)

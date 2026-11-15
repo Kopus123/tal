@@ -8,7 +8,10 @@ let BACK=[];const SEEN=new Set();   // lines you can step back to in the current
 function logLine(e){S.log.push(e);if(S.log.length>80)S.log.shift()}
 // lines you only heard get written down once you've acted on them (any decision or move)
 function revealHeard(){S.log.forEach(e=>{if(e.heard){e.heard=0;if(e.ko)ko(e.ko)}})}
+// a closed place ("closed COND | message") turns you away at the door: you stay where you are
+const isClosed=place=>{const l=ST.places[place];return !!(l&&l.closed&&cond(l.closed.c))};
 function enter(place){
+  if(isClosed(place)){sfx('wrong');toast(esc(ST.places[place].closed.t),3500);return false}
   S.loc=place;const l=ST.places[place];S.node=null;BACK=[];
   if(l.always){go(l.always);return}
   if(l.first&&!S.visited[place]){S.visited[place]=1;go(l.first);return}

@@ -35,6 +35,7 @@
      nospot LABEL          that spot must NOT be offered here
      talk WHO              talk to a villager who is here now
      anychoice             press the first choice on offer
+     closed PLACE          that place must turn you away right now
      wait                  press Wait a while (free time only)
      sleep                 press Go to bed (at home, evening or night)
      switch ID             move to this chapter keeping the save, the way the story does at a chapter's end  */
@@ -123,6 +124,7 @@ const STEPS={
   async talk(who){await idle();const b=document.querySelector(`#sb [data-who="${who}"]`);
     if(!b)fail(`${who} isn't here now (here: ${vis('#sb [data-who]').map(x=>x.dataset.who).join(', ')||'nobody'})`);await clickEl(b)},
   async anychoice(){await clickEl(await until(()=>vis('#sf [data-ch]')[0],'a choice'))},
+  async closed(p){await idle();const before=S.loc;if(enter(p)!==false||S.loc!==before)fail(`${p} let you in, but it should be closed`)},
   async wait(){await idle();const b=document.querySelector('#bWait');if(!b)fail('there is no Wait button here (is the clock running, and is it before night?)');await clickEl(b)},
   async sleep(){await idle();const b=document.querySelector('#bBed');if(!b)fail('there is no Go to bed button here (home, evening or night, clock running)');await clickEl(b)},
   async shown(a){const [sel,how]=a.split(/\s+/);const el=document.querySelector(sel);if(!el)fail(`nothing matches ${sel}`);

@@ -52,7 +52,8 @@ ambient leaves
 desc if time:night: The alley, lit by the last few lanterns.
 desc The alley outside the gate. The path splits left and right.
 spot "Left path" 14 76 => place sanqil
-spot "Right path" 86 76 => place sikdang
+spot "Right path" 86 76 => place sikdang if !time:night
+spot "Right path, past the dark restaurant" 86 76 => place jeong if time:night
 spot "Front gate" 50 92 => place madang
 glow 오른쪽 86 76 10
 glow 왼쪽 14 76 10
@@ -76,7 +77,7 @@ name 식당
 sub The little restaurant
 art sikdang
 ambient dust
-desc if time:night: The restaurant is dark. Closed for the night.
+closed time:night | The restaurant is dark and the door is locked. Closed for the night.
 desc The restaurant. It smells of sesame oil.
 spot "Bus stop" 85 40 => place jeong
 spot "Back to the alley" 12 88 => place golmok
@@ -95,7 +96,8 @@ ambient leaves
 desc if time:night: The bus stop. The last bus has gone.
 desc The bus stop at the edge of the village. Behind it, a dirt path drops down toward the water.
 spot "Path behind the bus stop" 40 62 => place gang
-spot "Back to the restaurant" 12 88 => place sikdang
+spot "Back to the restaurant" 12 88 => place sikdang if !time:night
+spot "Back to the alley" 12 88 => place golmok if time:night
 glow 버스 정류장 24 45 12
 
 === place gang

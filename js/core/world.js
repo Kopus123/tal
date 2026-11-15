@@ -42,7 +42,11 @@ const slotName=()=>SLOTS[S.world.slot]||'morning';
 let TIMECARD=false;                       // show the big time-of-day card on the next draw
 // what the calendar says about a day
 const eventsOn=day=>(WORLD.calendar||[]).filter(e=>e.day?e.day===day:day>=e.from&&(day-e.from)%e.every===0);
-function passTime(){if(S.world.frozen||S.world.slot>=3)return false;S.world.slot++;TIMECARD=true;save();return true}
+function passTime(){if(S.world.frozen||S.world.slot>=3)return false;S.world.slot++;TIMECARD=true;closingTime();save();return true}
+// if the place you're in has just closed, you're shown out to the first place its exits lead to
+function closingTime(){if(!ST||!isClosed(S.loc))return;const l=ST.places[S.loc];
+  const out=l.spots.map(x=>(x.t.match(/^place\s+(\S+)/)||[])[1]).find(p=>p&&!isClosed(p));if(!out)return;
+  toast(esc(l.closed.t)+' You head back outside.',4500);S.loc=out}
 function nextMorning(){S.world.day++;S.world.slot=0;TIMECARD=true;save()}
 
 defCond('clock','bool',()=>!S.world.frozen);

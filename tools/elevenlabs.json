@@ -1,0 +1,17 @@
+{
+  "_about": "Which characters are voiced by ElevenLabs (tools/build_audio.py). Everyone else keeps the free edge-tts voice from the cast in story/world.story. speed: 0.7 slow ... 1.2 fast. Changing a voice or speed re-records that character's lines.",
+  "model": "eleven_multilingual_v2",
+  "voices": {
+    "sujin":    {"name": "Anna Kim",      "id": "uyVNoMrnUku1dZyVEXwD", "speed": 1.0},
+    "ajeossi":  {"name": "Horst",         "id": "YgfD7xnpDbkAqDwKKlOz", "speed": 1.0},
+    "haraboji": {"name": "Joseph Ortman", "id": "TTyZrDYo6LQowrH8mixJ", "speed": 1.0},
+    "ajumma":   {"name": "Tosca",         "id": "fNmw8sukfGuvWVOp33Ge", "speed": 1.0},
+    "staff":    {"name": "Rangi",         "id": "CZ86sooijZ9CfwhGGEY5", "speed": 1.0},
+    "halmeoni": {"name": "Ilona",         "id": "SDm2FQORi7Hju7z9CyTa", "speed": 1.0},
+    "yuna":     {"name": "Annie",         "id": "Lb7qkOn5hF8p7qfCDH8q", "speed": 1.0},
+    "jiho":     {"name": "Piku",          "id": "EeQEodFZVtBkjtgK3HBc", "speed": 1.0},
+    "minsu":    {"name": "Mr. K",         "id": "LKOcTG4J4tYTPR9DnLeM", "speed": 0.85},
+    "junho":    {"name": "Samuel",        "id": "ylVIxKEt1B8XFktqOZLM", "speed": 1.0},
+    "stranger": {"name": "Samuel",        "id": "ylVIxKEt1B8XFktqOZLM", "speed": 1.0}
+  }
+}

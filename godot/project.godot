@@ -1,12 +1,17 @@
-﻿; Engine configuration file.
+; Engine configuration file.
 
 config_version=5
 
 [application]
 
-config/name="íƒˆ"
-run/main_scene="res://scenes/hello.tscn"
+config/name="Ã­Æ’Ë†"
+run/main_scene="res://scenes/main.tscn"
+config/icon="res://icon.png"
 config/features=PackedStringArray("4.7", "Mobile")
+
+[autoload]
+
+Game="*res://scripts/core/game.gd"
 
 [display]
 

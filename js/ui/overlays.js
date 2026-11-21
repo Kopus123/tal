@@ -83,8 +83,13 @@ function menu(){
   o.querySelector('#mSet').onclick=()=>{o.remove();settings()};
   const mj=o.querySelector('#mJump');if(mj)mj.onclick=async()=>{sfx('tap');const box=o.querySelector('#jumplist');box.hidden=false;box.textContent='Loading…';
     try{const r=await fetch('tests/ch1.route',{cache:'no-cache'});const marks=(await r.text()).split(/\r?\n/).filter(l=>l.startsWith('#@')).map(l=>l.slice(2).trim());
-      box.innerHTML=marks.map((m,i)=>`<button class="btn-ink jumpitem" data-jump="${i}"><span>${i+1}</span>${esc(m)}</button>`).join('')+'<div class="empty">Plays the story up to there in a few seconds. Your notebook stays as it is.</div>';
+      const devs=WORLD.chapters.filter(c=>c.dev&&chReady(c.id)),inDev=chInfo(S.ch).dev;
+      box.innerHTML=(inDev?`<button class="btn-ink jumpitem" data-devback="1"><span>⏏</span>Leave the test area</button>`:'')
+        +marks.map((m,i)=>`<button class="btn-ink jumpitem" data-jump="${i}"><span>${i+1}</span>${esc(m)}</button>`).join('')+'<div class="empty">Plays the story up to there in a few seconds. Your notebook stays as it is.</div>'
+        +(devs.length?`<div class="label">Test areas</div>`+devs.map(c=>`<button class="btn-ink jumpitem" data-dev="${c.id}"><span>🧪</span>${esc(c.sub||c.id)}</button>`).join('')+'<div class="empty">Work in progress. Starts fresh every time; your story save is kept.</div>':'');
       box.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{o.remove();jumpTo(marks[+b.dataset.jump])});
+      box.querySelectorAll('[data-dev]').forEach(b=>b.onclick=()=>{o.remove();if(!chInfo(S.ch).dev)S.world.g.devBack=S.ch;document.querySelectorAll('.title').forEach(t=>t.remove());startChapter(b.dataset.dev,true)});
+      box.querySelectorAll('[data-devback]').forEach(b=>b.onclick=()=>{o.remove();const back=S.world.g.devBack;delete S.world.g.devBack;startChapter(back&&CH[back]?back:WORLD.chapters[0].id,false)});
     }catch(e){box.textContent='Could not load the jump list.'}};
 }
 
@@ -145,7 +150,7 @@ function chapterList(){
     parts.forEach(p=>{if(p.id!==S.ch)delete S.prog[p.id];delete S.done[p.id]});
     startChapter(hid,true);parts.slice(1).forEach(p=>delete S.prog[p.id]);save()};
   const draw=()=>{
-    o.querySelector('#clb').innerHTML=WORLD.chapters.filter(c=>!c.cont&&!c.free).map(c=>{
+    o.querySelector('#clb').innerHTML=WORLD.chapters.filter(c=>!c.cont&&!c.free&&!c.dev).map(c=>{
       const parts=groupParts(c).filter(p=>chReady(p.id));
       const ready=parts.length>0,open=ready&&chUnlocked(c.id);
       const done=ready&&!!S.done[parts[parts.length-1].id],started=parts.some(p=>chStarted(p.id));

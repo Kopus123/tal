@@ -41,7 +41,7 @@ function parseStory(src,st,file){
       case 'meta':{const i=line.indexOf(' ');st.meta[line.slice(0,i)]=line.slice(i+1).trim();break}
       // every word and line carries a language (meta "lang", default ko); "who@ja: ..." overrides one line
       case 'cast':{const [k,n,c,v,look]=line.split('|').map(s=>s.trim());st.cast[k]={n,c,voice:!!v,look:look||''};break}
-      case 'chapters':{const [id,t,sub,file,cont]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file,cont:cont==='continues',free:cont==='free'});break}
+      case 'chapters':{const [id,t,sub,file,cont]=line.split('|').map(s=>(s||'').trim());st.chapters.push({id,t,sub,file,cont:cont==='continues',free:cont==='free',dev:cont==='dev'});break}
       case 'map':{m=line.match(/^pin\s+(\S+)\s+([\d.]+)\s+([\d.]+)(?:\s+(above|left|right|below))?/);if(m)st.map.push({p:m[1],x:+m[2],y:+m[3],side:m[4]||'above'});break}
       case 'words':{m=line.match(/^(.+?)\s*=\s*(.+)$/);if(m)st.words[m[1]]=Object.assign(m[2]==='(grammar)'?{g:1}:{p:m[2]},{lang:st.meta.lang||'ko'});break}
       case 'grammar':{const i=line.indexOf('|');if(i>0)st.grammar[line.slice(0,i).trim()]=line.slice(i+1).trim();break}

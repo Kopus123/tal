@@ -352,7 +352,18 @@ function artHall(){
   [[110,'#b5412d'],[200,'#3f7f6e'],[290,'#d9a43d']].forEach(([x,c])=>s+=`<ellipse cx="${x}" cy="252" rx="30" ry="9" fill="${c}"/>`);
   return svg(s);
 }
+// placeholder art for the test areas: planks, one light, and a label saying what this will be
+function artPH(label,o={}){
+  let s=`<rect width="400" height="300" fill="#5a4a3c"/>`;
+  for(let x=0;x<400;x+=36)s+=`<rect x="${x}" y="0" width="34" height="230" fill="${x%72?'#7a6652':'#6f5c49'}"/><line x1="${x+34}" y1="0" x2="${x+34}" y2="230" stroke="#4a3c30" stroke-width="2"/>`;
+  s+=`<rect y="230" width="400" height="70" fill="#54443a"/>`;
+  if(o.window)s+=`<rect x="280" y="20" width="80" height="60" fill="#9fb3a8" opacity=".55"/>`+[296,312,328,344].map(x=>`<line x1="${x}" y1="20" x2="${x}" y2="80" stroke="#1d1814" stroke-width="4"/>`).join('');
+  s+=`<radialGradient id="phl" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#ffe9b8" stop-opacity=".18"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient><rect width="400" height="300" fill="url(#phl)"/>`;
+  s+=`<rect x="110" y="238" width="180" height="40" rx="8" fill="#000" opacity=".6"/><text x="200" y="256" text-anchor="middle" font-family="Gowun Dodum,sans-serif" font-size="15" fill="#f4e6c8">${label}</text><text x="200" y="271" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#c9b893" letter-spacing="2">PLACEHOLDER ART</text>`;
+  return svg(s)}
 const ART={
+  ph_shed:()=>artPH('창고 · the shed',{window:1}), ph_door:()=>artPH('문 · the door'), ph_bench:()=>artPH('작업대 · the workbench'),
+  ph_shelf:()=>artPH('선반 · the shelf'), ph_window:()=>artPH('창문 · the window',{window:1}), ph_floor:()=>artPH('구석 · the dark corner'),
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
   jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate, hall:artHall,

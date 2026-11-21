@@ -20,6 +20,7 @@
 #    === meta               lang ko / title / village / blurb
 #    === chapters           id | title | subtitle | file | continues
 #                           ("continues" = plays on from the file above as one chapter;
+#                            "dev" = a test area, only reachable from Jump ahead;
 #                            "free" = the village between chapters: clock running, people about)
 #    === people             id | file in story/people/      (each file: === person ID, then ordinary scenes)
 #    === event ID           when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE     (free days: js/core/villagers.js)
@@ -126,6 +127,8 @@ blurb A mystery in Korean. Nobody will translate for you. Tap any word to see a 
 prologue   | 1장      | 탈       | prologue.story
 ch1        | 1장      | 탈       | ch1.story      | continues
 village    | 마을     | Free days | village.story + jobs.story + encounters.story | free
+# test areas ("dev"): not in the chapter list; Menu > Jump ahead > Test areas, with Playtest tools on
+shed       | 창고     | Escape room | shed.story | dev
 
 === people
 # id | file in story/people/   (who lives in the village on free days: see js/core/villagers.js)
@@ -424,6 +427,10 @@ sign       |               |          | SunHi  -10%  +0Hz
 탐정 = detective
 탐정님 = detective
 
+먼저 = first
+기름 = oil
+망치 = hammer
+
 === grammar
 # piece | what it does (shown when you tap it)
 이에요 | "is / am / are". Goes at the very end: 학생이에요 = (I) am a student. After a word ending in a vowel it shrinks to 예요: 어디예요? = where is it?
@@ -702,6 +709,10 @@ sign       |               |          | SunHi  -10%  +0Hz
 
 탐정 | detective
 탐정님 | Detective (polite: what people call you)
+
+먼저 | first
+기름 | oil
+망치 | hammer
 
 === names
 # name | kind | what tapping it says (kind: name or sound). Keep these spoiler-free.

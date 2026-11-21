@@ -1,0 +1,60 @@
+# Test area: the escape room (story/shed.story), start to finish, plus the wrong order on the hinges.
+# SPOILERS: this is the whole solution.
+
+chapter shed
+idle
+expect @shed&!free
+# --- the door won't open
+spot Door
+spot Handle
+idle
+spot Back
+# --- the window: four numbers on the fence
+spot Window
+spot Sign on the fence
+idle
+expect sawSign
+spot Back
+# --- the workbench: the note, then the drawer (a wrong code first)
+spot Workbench
+spot Note on the wall
+idle
+expect ev_sh_note
+spot Drawer
+number 1234
+idle
+expect !drawerOpen
+spot Drawer
+number 4719
+idle
+expect drawerOpen&ev_sh_light&ev_sh_driver
+spot Back
+# --- the dark corner: flashlight to see, screwdriver for the board
+spot Dark corner
+spot Floorboards
+choose Unscrew it
+idle
+expect ev_sh_key
+spot Back
+# --- the shelf: the key opens the toolbox
+spot Shelf
+spot Toolbox
+choose Try the small key
+idle
+expect ev_sh_oil&ev_sh_hammer
+spot Back
+# --- the door: hammer first doesn't work, oil then hammer does
+spot Door
+spot Hinges
+choose Hit the pins with the hammer
+idle
+expect !free
+spot Hinges
+choose Oil the hinges
+idle
+spot Hinges
+choose Hit the pins with the hammer
+idle
+expect free
+spot Go outside
+idle

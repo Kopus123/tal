@@ -31,6 +31,37 @@ func note(what: String) -> void:
 
 func _ready() -> void:
 	world = Story.parse(_read("res://story/world.story"), "world.story")
+	var saved := _read(WORDS_PATH)
+	if saved != "":
+		var w = JSON.parse_string(saved)
+		if w is Dictionary: words = w
+
+
+## ---------- your notebook: for every word you've met, your guess, whether you're sure, and lines you saw it in.
+## Kept between plays (user://words.json). There is no "check my guess" here: you work words out yourself.
+const WORDS_PATH := "user://words.json"
+var words: Dictionary = {}
+
+
+func word(w: String) -> Dictionary:
+	if not words.has(w): words[w] = {"note": "", "sure": false, "ctx": []}
+	return words[w]
+
+
+func save_words() -> void:
+	var f := FileAccess.open(WORDS_PATH, FileAccess.WRITE)
+	if f: f.store_string(JSON.stringify(words))
+
+
+## a line with words in it was shown: remember it under each of its words (the last few, newest first)
+func _met(text: String) -> void:
+	var line := plain(text)
+	for t in Story.tokens(text):
+		var r := word(t[1])
+		var ctx: Array = r.ctx
+		ctx.erase(line); ctx.push_front(line)
+		if ctx.size() > 5: ctx.resize(5)
+	save_words()
 
 
 func _read(path: String) -> String:
@@ -107,6 +138,7 @@ func go(id: String) -> void:
 		node = ""; _end_lean(); changed.emit(); return
 	node = id
 	run_fx(ch.nodes[id].get("fx", []))
+	if ch.nodes[id].has("ko"): _met(ch.nodes[id].ko)
 	changed.emit()
 
 

@@ -3,7 +3,7 @@ extends Control
 ## Overlays: the combination lock, a word's picture, the menu, the Korean keyboard test.
 ##   godot --path . -- --shots OUT_DIR     plays the escape room and saves a screenshot of every step (tools/shot_tour.gd)
 
-const BUILD := 5
+const BUILD := 6
 const INK := Color("151a24")
 const PAPER := Color("efe6cf")
 const PAPER_INK := Color("2a231d")
@@ -169,9 +169,9 @@ func _pockets() -> void:
 	for e in items:
 		var on: bool = bool(Game.F.get("lit", 0)) if e.id == "flashlight" else Game.F.get("hold", "") == e.id
 		# each thing shows its name underneath (in Korean for things labelled in Korean: 기름 on the oil can)
-		var b := Button.new(); b.custom_minimum_size = Vector2(96, 112); b.icon = _icon("#" + e.icon); b.expand_icon = true
+		var b := Button.new(); b.custom_minimum_size = Vector2(112, 112); b.icon = _icon("#" + e.icon); b.expand_icon = true
 		b.text = Game.plain(e.label); b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP; b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		b.add_theme_font_size_override("font_size", 17); b.clip_text = true
+		b.add_theme_font_size_override("font_size", 15 if b.text.length() > 6 else 18); b.clip_text = true
 		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(c, PAPER_INK)
 		var st := StyleBoxFlat.new(); st.set_corner_radius_all(12); st.bg_color = Color("efe3c4") if on else Color("fbf6e9")
 		st.border_color = PAPER_INK if on else Color("cbbf9f"); st.set_border_width_all(4 if on else 2); st.set_content_margin_all(12)
@@ -191,19 +191,54 @@ func _icon(key: String) -> Texture2D:
 	return a
 
 
-## ---------- a word's page: its picture, and the meaning if you want to check
+## ---------- a word's page (수첩): like the web game's, without "check my guess". Your guess, whether you're sure,
+## and the lines you've seen it in. Only numbers get a picture: nothing around you could tell you what 사 means;
+## every other word you work out from where it's used (the things in your pockets have their Korean names on them).
 func _word(w: String) -> void:
 	_play("tap"); Game.note("  opened word: " + w)
+	var r: Dictionary = Game.word(w)
 	var o := _overlay()
-	var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 10); o.get_child(0).add_child(box)
-	# only numbers get a picture here: nothing around you can tell you what 사 means. Every other word you work out
-	# from what's around you (the things in your pockets have their Korean names on them), so no picture gives it away.
+	var panel: PanelContainer = o.get_child(0); panel.custom_minimum_size.x = 620
+	var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 10); panel.add_child(box)
+	var top := HBoxContainer.new(); top.add_theme_constant_override("separation", 18); box.add_child(top)
 	var spec: String = Game.world.words.get(w, {}).get("p", "")
 	if spec.begins_with("sino") or spec.begins_with("nat"):
-		var pic := TextureRect.new(); pic.texture = _icon(w); pic.custom_minimum_size = Vector2(180, 180); pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; box.add_child(pic)
-	var l := _label(w, 52, PAPER_INK); l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; box.add_child(l)
-	var ok := _button("Close", true); ok.pressed.connect(o.get_parent().queue_free); box.add_child(ok)
+		var pic := TextureRect.new(); pic.texture = _icon(w); pic.custom_minimum_size = Vector2(120, 120); pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; top.add_child(pic)
+	var right := VBoxContainer.new(); right.size_flags_horizontal = Control.SIZE_EXPAND_FILL; top.add_child(right)
+	right.add_child(_label(w, 52, PAPER_INK))
+	var badge := _label("", 16, MUTE); right.add_child(badge)
+	var upd := func():
+		badge.text = ("GOT IT · you're sure" if r.sure else "YOUR GUESS · not sure yet") if r.note.strip_edges() != "" else ("NEW WORD" if r.ctx.size() <= 1 else "NO NOTE YET")
+	upd.call()
+	box.add_child(_label("What you think it means", 16, MUTE))
+	var note := LineEdit.new(); note.text = r.note; note.placeholder_text = "Your own words"; note.add_theme_font_size_override("font_size", 24)
+	note.custom_minimum_size.y = 56; note.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_DEFAULT; box.add_child(note)
+	var ns := StyleBoxFlat.new(); ns.bg_color = Color("fbf6e9"); ns.border_color = Color("cbbf9f"); ns.set_border_width_all(2); ns.set_corner_radius_all(10)
+	ns.content_margin_left = 14; ns.content_margin_right = 14
+	var nf := ns.duplicate(); nf.border_color = PAPER_INK
+	note.add_theme_stylebox_override("normal", ns); note.add_theme_stylebox_override("focus", nf)
+	note.add_theme_color_override("font_color", PAPER_INK); note.add_theme_color_override("font_placeholder_color", MUTE); note.add_theme_color_override("caret_color", PAPER_INK)
+	var sure := CheckBox.new(); sure.text = "I'm sure about this"; sure.button_pressed = r.sure; sure.disabled = r.note.strip_edges() == ""
+	sure.add_theme_font_size_override("font_size", 20)
+	for c in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color", "font_disabled_color"]:
+		sure.add_theme_color_override(c, PAPER_INK if c != "font_disabled_color" else MUTE)
+	box.add_child(sure)
+	note.text_changed.connect(func(t):
+		r.note = t
+		if t.strip_edges() == "": r.sure = false; sure.button_pressed = false
+		sure.disabled = t.strip_edges() == ""; Game.save_words(); upd.call())
+	note.text_submitted.connect(func(_t): note.release_focus(); Game.note("  wrote for %s: %s" % [w, r.note]))
+	sure.toggled.connect(func(on): r.sure = on; Game.save_words(); upd.call(); _play("solve" if on else "tap"); Game.note("  %s sure about %s" % ["is" if on else "isn't", w]))
+	box.add_child(_label("Where you've seen it", 16, MUTE))
+	if r.ctx.is_empty(): box.add_child(_label("Not seen anywhere yet.", 20, MUTE))
+	for line in r.ctx:
+		var c := RichTextLabel.new(); c.bbcode_enabled = true; c.fit_content = true; c.add_theme_font_size_override("normal_font_size", 22)
+		c.add_theme_color_override("default_color", PAPER_INK); c.text = _esc(line).replace(w, "[bgcolor=#e9c97a]%s[/bgcolor]" % w); box.add_child(c)
+	var ok := _button("Close", true); box.add_child(ok)
+	ok.pressed.connect(func():
+		if r.note != "": Game.note("  note for %s: %s" % [w, r.note])
+		o.get_parent().queue_free())
 
 
 func _overlay() -> Control:

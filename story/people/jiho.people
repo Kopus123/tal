@@ -3,7 +3,7 @@
 
 === person jiho
 at afternoon golmok 58 80
-at afternoon gang 40 70
+at afternoon sanqil 34 82
 at afternoon madang 44 82
 at evening jeong 90 86
 at evening golmok 58 80
@@ -55,6 +55,7 @@ jiho[surprised]: {진짜}...?
 === scene jh_bye
 jiho: {안녕}!
 (He is gone before you can answer.)
+! away jiho
 
 === scene jh_game
 jiho[happy]: {같이} {놀아}! {빨리}!
@@ -70,6 +71,7 @@ jiho[happy]: {좋아}! {나}{는|은/는} {진짜} {잘해}!
 === scene jh_game_b
 jiho[sad]: {바빠}? {나}{도} {바빠}... {숙제}.
 (He drags his feet off toward home.)
+! away jiho
 
 === scene jh_ask_mask
 jiho[surprised]: {탈}? {무서워}!
@@ -84,7 +86,9 @@ jiho: {그리고}... {다시} {줬어}! {강}{에}!
 === scene jh_bye2
 jiho[happy]: {내일}! {내일} {같이}!
 (He runs off, then runs back to make sure you heard, then runs off again.)
+! away jiho
 
 === scene jh_bye3
 jiho: {배고파요}...
 (He wanders off in the direction of the restaurant.)
+! away jiho

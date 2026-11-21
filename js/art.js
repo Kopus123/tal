@@ -32,7 +32,7 @@ function hanok(x,y,w,h,eve){
 }
 // A standing figure. (x,y) = feet. Options: top, bot, skin, hair (colors), hanbok, apron, bun, long, s (scale)
 let PERSON_OFF=false;   // on free days the villagers are drawn live (js/ui/render.js), so the painted ones stay out
-function person(x,y,o={}){if(PERSON_OFF)return'';
+function person(x,y,o={}){if(PERSON_OFF&&!o.keep)return'';
   const s=o.s||1,top=o.top||'#7fa89a',bot=o.bot||'#3b4a5a',skin=o.skin||'#e3c09a',hair=o.hair||'#1f1a18';
   const ln='stroke="#2a231d" stroke-width="1" stroke-linejoin="round"';
   let g=`<g transform="translate(${x},${y}) scale(${s})">`;
@@ -114,7 +114,7 @@ function artMarket(){
   // fish stall (left)
   s+=`<rect x="6" y="150" width="130" height="70" fill="#8a5a34"/><rect x="10" y="140" width="122" height="16" fill="#dfeef3"/>`;
   for(let i=0;i<6;i++)s+=`<path d="M${18+i*19},148 q8,-6 16,0 l4,-3 l0,6 l-4,-3 q-8,6 -16,0Z" fill="#9fb7c9" stroke="#2a231d" stroke-width=".6"/>`;
-  s+=person(70,150,{top:'#3b4a5a',bot:'#2a2a2a',hair:'#3a2a20',s:.9});
+  s+=person(70,150,{top:'#3b4a5a',bot:'#2a2a2a',hair:'#3a2a20',s:.9,keep:1});
   // cabbages
   for(let i=0;i<7;i++)s+=`<circle cx="${146+i*8}" cy="${206-(i%2)*8}" r="9" fill="#a8c47a" stroke="#6f8a4a"/>`;
   // paint and wood stall (right)

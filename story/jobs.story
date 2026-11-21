@@ -19,7 +19,7 @@ level easy
 client staff
 pay 5000
 thanks 2
-note Someone left a red bag at the restaurant last night, and now it's gone.
+note The museum woman left her red bag (museum keyring) at the restaurant yesterday evening. When she went back, it was gone. Ask the restaurant 아저씨 who was there.
 start bag_start
 ask ajeossi bag_ajeossi
 ask jiho bag_jiho
@@ -48,6 +48,7 @@ jiho: {가방}? {몰라}! {나} {안} {봤어}!
 === scene bag_leave
 jiho: {안녕}!
 (He's gone before you can say anything else.)
+! away jiho
 
 === scene bag_press
 @contradict Something he said doesn't fit. What does it clash with?
@@ -57,6 +58,7 @@ miss -> bag_wrong
 === scene bag_wrong
 jiho[surprised]: {뭐}? {아니야}!
 (He runs off, offended. Nobody's going to tell you anything today.)
+! away jiho
 ! job fail
 
 === scene bag_caught
@@ -95,7 +97,7 @@ level easy
 client sujin
 pay 4000
 thanks 3
-note 수진 can't find the workshop key. Retrace her steps.
+note 수진 lost the workshop key today and can't open up. She'll tell you where she thinks she went. Check her story with the people who saw her.
 start key_start
 ask sujin key_sujin
 ask ajumma key_ajumma
@@ -157,7 +159,7 @@ level easy
 client ajeossi
 pay 6000
 thanks 2
-note Every evening, a roll of gimbap goes missing from the restaurant. Who's taking it?
+note A roll of 김밥 vanishes from the restaurant's back door every evening. 아저씨 is losing money and patience. Ask the people who are around the village in the evening.
 start gimbap_start
 ask ajeossi gimbap_ajeossi
 ask jiho gimbap_jiho
@@ -218,7 +220,7 @@ level medium
 client ajumma
 pay 7000
 thanks 2
-note A letter was found on the market floor. No name on it. Work out who it's meant for, and give it to them.
+note 아주머니 found a letter on the market floor: no name, written in casual Korean, about fishing at the river. Work out who would write like that, and to whom, then deliver it.
 start letter_start
 ask ajumma letter_ajumma
 ask sujin letter_sujin
@@ -278,6 +280,7 @@ jiho[surprised]: {나}? ...{큰} {물고기}?!
 (He reads it twice, then whoops so loudly a bird flies off the roof.)
 jiho[happy]: {할아버지}! {내일}! {낚시}!
 ~ He's off at a run towards the river. You go and tell 아주머니 where her mystery letter ended up.
+! away jiho
 ! job done
 
 # ------------------------------------------------------------ 5. the cash box (medium)
@@ -287,7 +290,7 @@ level medium
 client ajumma
 pay 8000
 thanks 3
-note 아주머니's cash box is short at the end of the day. Work out how much is missing, and who still owes her.
+note 아주머니's cash box doesn't match what she sold today. Ask her what she sold and for how much, do the sum, then ask her customers who paid.
 start cash_start
 ask ajumma cash_ajumma
 ask ajeossi cash_ajeossi

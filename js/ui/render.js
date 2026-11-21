@@ -39,15 +39,16 @@ function render(){
     h+=`<div class="exlayer" id="exam">${exam.compare&&ART[exam.compare]?`<div class="excompare">${ART[exam.compare]()}<span>1979 photo</span></div>`:''}${exam.details.map(d=>got(d)?`<span class="exmark" style="left:${d.x}%;top:${d.y}%"></span>`:EXMISS>=4?`<span class="exhint" style="left:${d.x}%;top:${d.y}%"></span>`:'').join('')}</div>`}
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
   if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs ${x.x<25?'edge-l':x.x>75?'edge-r':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
-  if(!nd)peopleHere().forEach(p=>{const a=whereNow(p),n=(ST.cast[p.id]||{}).n||p.id;
-    h+=`<button class="hs who fig" data-who="${p.id}" style="left:${a.x}%;top:${a.y}%;--fs:${parseLook((ST.cast[p.id]||{}).look).size||1}" aria-label="Talk to ${esc(n)}">${figureSVG(p.id)}<span>${esc(n)}</span></button>`});
+  if(live)peopleHere().forEach(p=>{const a=whereNow(p),n=(ST.cast[p.id]||{}).n||p.id,sty=`left:${a.x}%;top:${a.y}%;--fs:${parseLook((ST.cast[p.id]||{}).look).size||1}`;
+    h+=nd?`<div class="hs fig still" style="${sty}" aria-hidden="true">${figureSVG(p.id)}</div>`   // mid-conversation: still there, just not tappable
+      :`<button class="hs who fig" data-who="${p.id}" style="${sty}" aria-label="Talk to ${esc(n)}">${figureSVG(p.id)}<span>${esc(n)}</span></button>`});
   if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
   if(TIMECARD){TIMECARD=false;if(!(nd&&nd.type==='card')){lastLoc=S.loc;h+=`<div class="placecard"><b>${SLOT_KO[slotName()]}</b><span>day ${S.world.day} · ${slotName()}</span></div>`}}
   if(S.loc!==lastLoc&&!(nd&&nd.type==='card'))h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
   lastLoc=S.loc;
   h+=`<div class="flash" id="flash"></div>`;
   $('#fx').innerHTML=h;
-  $('#fx').querySelectorAll('.hs').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
+  $('#fx').querySelectorAll('.hs[data-hs]').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
   const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict','number','examine'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';

@@ -124,7 +124,8 @@ job cash
 idle
 map jeong
 spot Take the bus
-choose Ride to the market
+choose Pay and get on
+choose Press the stop button
 idle
 expect @sijang&money=33500
 #@ Jobs · at the market

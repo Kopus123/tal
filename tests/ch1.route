@@ -196,10 +196,10 @@ spot Leave it here for now
 idle
 expect @madang&clock&day=4&time:morning
 #@ Free days · the village
-# --- people: the first hello of the day counts; then small talk; nobody is where they aren't
+# --- people: saying hello doesn't buy friendship; then small talk; nobody is where they aren't
 talk sujin
 idle
-expect rel:sujin>=1
+saved world.met.sujin
 talk sujin
 choose Just chat
 anychoice
@@ -207,7 +207,8 @@ idle
 map gang
 talk haraboji
 idle
-expect rel:haraboji>=1
+saved world.met.haraboji
+expect !rel:haraboji>=2
 map golmok
 nospot Talk to 지호
 # --- free days: time passes when you wait, places close at night, sleeping starts a new day
@@ -217,7 +218,8 @@ expect time:evening
 map jeong
 talk jiho
 idle
-expect rel:jiho>=1
+saved world.met.jiho
+expect !rel:jiho>=2
 map sikdang
 wait
 expect time:night&@jeong
@@ -230,9 +232,9 @@ map madang
 sleep
 expect day=5&time:morning&on:market
 # --- the talk menu: once you've said hello, you can bring things up
+fx rel sujin =3
 talk sujin
 idle
-expect rel:sujin>=3
 # (close enough now: her personal story comes first, then the menu)
 talk sujin
 idle
@@ -242,15 +244,22 @@ choose 할머니는
 idle
 # --- the bus, and a market-day event you're there for
 map jeong
+spot Route map
+idle
 spot Take the bus
-choose Ride to the market
+choose Pay and get on
+choose Press the stop button
 idle
 expect @sijang
 saved world.evs.haggle@5
 talk ajumma
 idle
 spot Take the bus back
-choose Pay and ride back
+choose Pay and get on
+choose Stay on
+choose Stay on
+choose Stay on
+choose Press the stop button
 idle
 expect money=16000
 map madang

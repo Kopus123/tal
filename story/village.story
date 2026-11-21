@@ -111,6 +111,7 @@ art jeong
 ambient leaves
 desc if time:night: The bus stop. The last bus has gone.
 desc The bus stop at the edge of the village. Behind it, a dirt path drops down toward the water.
+spot "Route map" 28 45 -> v_jmap
 spot "Path behind the bus stop" 40 62 => place gang
 spot "Take the bus" 72 72 -> v_bus if !time:night
 spot "Back to the restaurant" 12 88 => place sikdang if !time:night
@@ -134,7 +135,7 @@ glow 다리 82 40 13
 ! time go
 ~ A new morning in 청솔마을. Nothing is chasing you today.
 ~ People are about. Where they are changes with the time of day: tap the clock in the corner to see the day, and "Wait a while" to move it on.
-~ Talk to whoever you find. The first hello of the day counts, and people open up as they get to know you.
+~ Talk to whoever you find. What you say to people matters, and they open up as they get to know you.
 
 === place bus
 light indoors
@@ -176,11 +177,15 @@ desc The museum, cool and quiet. The big glass case glows at the far wall.
 spot "Take the bus back" 78 88 -> v_back
 glow 탈 24 42 16
 
+=== scene v_jmap
+sign: 청솔마을 → {시장} → {영화관} → {박물관} → {지하철역}
+(The route map. One fare, 1,500원, however far you ride. Press the stop button before the stop you want.)
+
 === scene v_bus
 ! place bus; led 청솔마을
-~ The bus comes rattling along the river road. A ride is 1,500원.
-* [Ride to the market · 1,500원] -> v_tomarket if !time:evening&money>=1500 ! money -1500 each time
-* [Ride to the museum · 1,500원] -> v_tomuseum if !time:evening&money>=1500 ! money -1500 each time
+~ The bus comes rattling along the river road. A ride is 1,500원, however far you go.
+* [Pay and get on · 1,500원] -> v_r1 if !time:evening&money>=1500 ! money -1500 each time
+* [It's evening: the buses only come back from town now] -> v_stay if time:evening&money>=1500
 * [You can't afford the fare] -> v_broke if money<1500
 * [Stay here] -> v_stay
 
@@ -193,26 +198,70 @@ glow 탈 24 42 16
 ~ You wave the bus on.
 ! place jeong
 
-=== scene v_tomarket
+=== scene v_r1
+! place bus
 bus: {다음} {정류장}{은|은/는} {시장}{입니다}.
 ! led 시장
+* [🔔 Press the stop button] -> v_tomarket
+* [Stay on] -> v_r2
+
+=== scene v_r2
+! place bus
+bus: {다음} {정류장}{은|은/는} {영화관}{입니다}.
+! led 영화관
+* [🔔 Press the stop button] -> v_cinema
+* [Stay on] -> v_r3
+
+=== scene v_r3
+! place bus
+bus: {다음} {정류장}{은|은/는} {박물관}{입니다}.
+! led 박물관
+* [🔔 Press the stop button] -> v_tomuseum
+* [Stay on] -> v_r4
+
+=== scene v_r4
+! place bus
+bus: {다음} {정류장}{은|은/는} {지하철역}{입니다}.
+! led 지하철역
+* [🔔 Press the stop button] -> v_subway
+* [Stay on] -> v_r5
+
+=== scene v_r5
+! place bus
+bus: {다음} {정류장}{은|은/는} 청솔마을{입니다}.
+! led 청솔마을
+* [🔔 Press the stop button] -> v_home
+* [Stay on] -> v_loop
+
+=== scene v_loop
+~ The bus turns around at the end of the village road and heads back into town. The driver gives you a look in the mirror.
+-> v_r1
+
+=== scene v_tomarket
 ~ You press the bell and hop off into the noise of the market.
 ! place sijang
 
 === scene v_tomuseum
-bus: {다음} {정류장}{은|은/는} {박물관}{입니다}.
-! led 박물관
 ~ You press the bell and hop off in front of the big glass building.
 ! place museum
 
-=== scene v_back
-~ The bus back to the village pulls up. 1,500원.
-* [Pay and ride back · 1,500원] -> v_back_bus if money>=1500 ! money -1500 each time
-* [Walk back along the river road] -> v_walk
+=== scene v_cinema
+~ You press the bell, then look out at the cinema: posters for an action film you couldn't follow yet. Not today. You stay in your seat.
+-> v_r3
 
-=== scene v_back_bus
-~ You ride back to the village.
+=== scene v_subway
+~ You press the bell, then look out at the subway station: trains to the city, crowds. Nothing for you there. You stay in your seat.
+-> v_r5
+
+=== scene v_home
+~ You press the bell and hop off at the village.
 ! place jeong
+
+=== scene v_back
+~ The bus toward the village pulls up. 1,500원, however far you go.
+* [Pay and get on · 1,500원] -> v_r2 if @sijang&money>=1500 ! money -1500 each time
+* [Pay and get on · 1,500원] -> v_r4 if @museum&money>=1500 ! money -1500 each time
+* [Walk back along the river road] -> v_walk
 
 === scene v_walk
 ~ You walk back along the river road. It's a long way, and the day moves on without you.

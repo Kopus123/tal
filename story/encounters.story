@@ -71,7 +71,7 @@ jiho: {이거} {뭐}{예요|이에요}? {뭐}{예요|이에요}?
 === scene enc_jiho_cat_ok
 jiho[happy]: {잘해}! {고양이}!
 (He looks genuinely impressed. Then he runs off to find a harder one.)
-! rel jiho +1 each time
+! rel jiho +1 each time; away jiho
 
 === scene enc_jiho_cat_no
 jiho: {아니야}! {고양이}! {고양이}!

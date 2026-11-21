@@ -3,8 +3,6 @@
 === person ajumma
 at morning sijang 66 52
 at afternoon sijang 66 52
-at afternoon sijang 66 52
-at afternoon sanqil 70 74
 at evening sikdang 64 72
 at evening madang 62 82
 greet am_hi
@@ -49,7 +47,7 @@ ajumma[happy]: 하하. {학생}! {학생}{이|이/가} {샀어요}!
 
 === scene am_paint_b
 ajumma: {네}, {네}. {내일} {와요}.
-(New paint comes tomorrow, apparently.)
+(New paint comes "tomorrow". She has been saying that for a while.)
 
 === scene am_tired
 ajumma[sad]: 아이고... {바빠요}, {바빠요}.
@@ -74,7 +72,7 @@ ajumma[happy]: {할머니}{하고} {친구}{예요|이에요}. {옛날}{에}...
 
 === scene am_ask_paint
 ajumma: {물감}{은|은/는} {여기} {있어요}. {나무}{도} {있어요}!
-(She sweeps a hand over the stall: pots of color, blocks of wood, brushes.)
+(She sweeps a hand over the stall: blocks of wood, brushes, pots of every color except red. There's a gap on the shelf where the red used to be.)
 ! rel ajumma +1
 
 === scene am_bye

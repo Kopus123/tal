@@ -7,7 +7,7 @@
      === person sujin
      at morning madang 30 78       where they stand at that time of day (place, X% Y% of their feet); no line = not around.
                                    Several lines for one time of day = they move around: each day picks one of them
-     greet sj_hi                   the first time you talk to them each day (friendship +1)
+     greet sj_hi                   the first time you talk to them each day (friendship only comes from what you say: ! rel)
      chat 0 sj_weather [if COND]   small talk, open from friendship level 0 (levels: 0 to 4)
      story 1 sj_workshop [if COND] something personal, told once, when you reach that level
      ask 할머니 sj_ask_gm [if COND] a topic you can bring up, once you've met the word
@@ -28,7 +28,11 @@ function addRel(who,n){const before=relLevel(who);S.world.rel[who]=Math.max(0,(S
 function indexPeople(){PSTART=new Set();Object.values(PEOPLE).forEach(p=>[...p.chat,...p.story,...p.ask].forEach(x=>PSTART.add(x.scene)))}
 // who is at this place right now (only on free days, when the clock is running)
 function peopleHere(){if(!ST||!ST.free||S.world.frozen)return[];
-  return Object.values(PEOPLE).filter(p=>{const a=whereNow(p);return a&&a.place===S.loc})}
+  return Object.values(PEOPLE).filter(p=>{const a=whereNow(p);return a&&a.place===S.loc&&!awayNow(p.id)})}
+// "! away jiho": he runs off, and stays gone until the time of day changes
+const nowKey=()=>S.world.day*4+S.world.slot;
+const awayNow=id=>S.world.g['away_'+id]===nowKey();
+defEffect('away','who',a=>{S.world.g['away_'+a.trim()]=nowKey()});
 // where someone is right now: one of their spots for this time of day, a different pick each day
 function whereNow(p,slot=slotName()){const o=p.at[slot];if(!o||!o.length)return null;return o[dayHash(S.world.day+'/'+p.id+'/'+slot)%o.length]}
 // nothing new to say: their goodbyes take turns, so it isn't the same line every time
@@ -42,7 +46,7 @@ const topicOf=w=>{const c=w.charCodeAt(w.length-1)-0xAC00;return `{${w}}{${c>=0&
 function talkTo(id){
   const p=PEOPLE[id];if(!p||busy)return;sfx('tap');revealHeard();
   const day=S.world.day,lv=relLevel(id),seen=S.world.seen,ok=x=>x.lv<=lv&&cond(x.c);
-  if(S.world.met[id]!==day){S.world.met[id]=day;addRel(id,1);const g=p.greet[(day+id.length)%Math.max(1,p.greet.length)];save();go(g);return}
+  if(S.world.met[id]!==day){S.world.met[id]=day;const g=p.greet[(day+id.length)%Math.max(1,p.greet.length)];save();go(g);return}
   const told=S.world.gossip[id]||[];if(told.length){const sc=told.shift();save();go(sc);return}   // someone missed something: they tell you first
   const job=jobOn(),js=job&&job.ask[id];
   const st=p.story.find(x=>ok(x)&&!seen[x.scene]);if(st&&!js){go(st.scene);return}

@@ -15,14 +15,18 @@ const STATE_LABEL={new:'New word',seen:'No note yet',guess:'Not checked yet',sur
 
 // tap the clock: what day it is, the four times of day, and what the calendar says about today and the next days
 // the notice board in the village hall: today's jobs, the one you're on, and how many you've done
+// who to ask about a job, and where they are right now
+function leads(j){const ws=Object.keys(j.ask||{});if(!ws.length)return'';
+  return `<ul class="leads">${ws.map(w=>{const p=PEOPLE[w],a=p&&!awayNow(w)&&whereNow(p),pl=a&&ST.places[a.place];
+    return `<li><b>${esc((ST.cast[w]||{}).n||w)}</b> <small>· ${pl?`${esc(pl.name)} (${esc(pl.sub||'')}) right now`:'not around right now'}</small></li>`}).join('')}</ul>`}
 function jobBoard(){
   const cur=jobOn(),list=jobsToday(),done=Object.values(ST.jobs||{}).filter(j=>jobState(j.id).done);
   const lv={easy:'쉬워요 · easy',medium:'보통 · medium'};
   const card=(j,mine)=>`<div class="jobcard${mine?' mine':''}"><div class="jobhead"><b class="ko">${esc(j.ko)}</b><span class="joblv ${j.level}">${lv[j.level]||esc(j.level)}</span></div>
-    <div class="en">${esc(j.en)} · for ${esc((ST.cast[j.client]||{}).n||j.client)} · <b style="white-space:nowrap">${wonStr(j.pay)}</b></div><p>${esc(j.note)}</p>
+    <div class="en">${esc(j.en)} · for ${esc((ST.cast[j.client]||{}).n||j.client)} · <b style="white-space:nowrap">${wonStr(j.pay)}</b></div><p>${esc(j.note)}</p>${leads(j)}
     ${mine?`<button class="btn-ink" data-quit="${j.id}">Give up for today</button>`:cur?'':`<button class="btn primary" data-take="${j.id}">Take this job</button>`}</div>`;
   const o=overlay(`<div class="panel paper">${head('의뢰 게시판')}<div class="ph-body">
-    <div class="en">The village notice board. People pin up small jobs; take one, work it out, and get paid.</div>
+    <div class="en">The village notice board. People pin up small jobs; take one, work it out, and get paid. Each one says who to ask.</div>
     ${cur?`<div class="label">You're working on</div>${card(cur,true)}`:''}
     <div class="label">${cur?'Also on the board':'On the board today'}</div>
     ${list.length?list.map(j=>card(j,false)).join(''):'<div class="empty">Nothing new today. Come back tomorrow.</div>'}

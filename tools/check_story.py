@@ -96,7 +96,7 @@ def _fx_job(d, a, ln, f):
     if a.strip() not in ("done", "fail"): err(f, ln, f"'job {a}' should be 'job done' or 'job fail'")
 
 EFFECT_KINDS = {"chapter": _fx_chapter, "time": _fx_time, "flags": _fx_flags, "unflags": None, "text": None, "place": _fx_place, "evidence": _fx_evidence,
-                "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item, "job": _fx_job}
+                "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item, "job": _fx_job, "who": lambda d, a, ln, f: d["who_refs"].append((a.strip(), ln))}
 ADDS_UP = {"amount", "who_amount", "item", "time"}      # these may end in "each time"
 
 def _c_place(d, rest, ln, f): d["placefx"].append((rest, ln))

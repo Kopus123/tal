@@ -19,7 +19,7 @@ function enter(place){
 }
 function go(id){
   id=tgt(id);const nd=ST.nodes[id];if(!nd){console.warn('no scene',id);S.node=null;BACK=[];save();render();return}
-  if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc});if(BACK.length>60)BACK.shift()}
+  if(S.node&&S.node!==id){BACK.push({id:S.node,loc:S.loc,w:JSON.stringify(S.world),F:JSON.stringify(S.F)});if(BACK.length>60)BACK.shift()}
   const replay=SEEN.has(id);SEEN.add(id);
   if(ST.free&&PSTART.has(id))S.world.seen[id]=S.world.day;   // a villager's conversation, heard today
   S.node=id;bseq=[];TFB=null;TREPLY=null;tHint=0;CSEL=[];NUMV='';EXMISS=0;runFx(nd.fx,{replay,key:id});checkPattern();
@@ -40,7 +40,7 @@ function next(){
 // step back one line in the current scene (like a visual novel's back button)
 function goBack(){
   if(busy||!BACK.length)return;const p=BACK.pop();stopAudio();sfx('page');
-  S.node=p.id;S.loc=p.loc;bseq=[];revealFor=p.id;glowFor=p.id;save();render();
+  S.node=p.id;S.loc=p.loc;if(p.w){S.world=JSON.parse(p.w);S.F=JSON.parse(p.F)}bseq=[];revealFor=p.id;glowFor=p.id;save();render();
   const nd=ST.nodes[p.id];if((S.set.auto||nd&&nd.audio)&&nd&&nd.ko)speak(nd.ko,nd.who);
 }
 // wrong turns: play the rewind effect, then put you back at the decision

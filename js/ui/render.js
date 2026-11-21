@@ -180,6 +180,10 @@ let EMPTY=0;
 // the room as a wide picture inside a tall window: the art, the darkness and the tap layer move together when you swipe
 let PANNED=false,ZOOM=null;
 // the installed app turns with the phone only in explore places (the experiment); everywhere else it stays upright
+// the installed app is stuck upright (Android keeps that setting in the app itself and updates it on its own schedule).
+// Full screen is the one place a page may decide for itself: the test area goes full screen, then may turn.
+function fullTurn(on){try{if(on&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>{TURN=null;lockTurn(true)}).catch(()=>{});
+  else if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(_){}}
 let TURN=null;function lockTurn(free){if(TURN===free)return;TURN=free;try{screen.orientation.lock(free?'any':'portrait').catch(()=>{})}catch(_){}}
 function panMode(on){const app=$('#app');if(!!on===app.classList.contains('explore'))return;app.classList.toggle('explore',!!on);
   const sc=$('#scene');let pan=$('#pan');

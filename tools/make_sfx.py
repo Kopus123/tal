@@ -33,13 +33,22 @@ def noise(buf, t0, dur, vol, cutoff):
 
 
 def creak(buf, t0, dur, vol):
-    """a rusty hinge: a buzzy tone that wobbles in pitch"""
-    n0, n = int(t0 * RATE), int(dur * RATE); ph = 0.0
-    for i in range(n):
-        f = 180 + 70 * math.sin(i / n * math.pi * 1.6) + 15 * math.sin(i / RATE * 2 * math.pi * 9)
-        ph += 2 * math.pi * f / RATE
-        env = math.sin(i / n * math.pi)
-        buf[n0 + i] += ((ph / math.pi % 2) - 1) * vol * env * (0.6 + 0.4 * random.random())
+    """a rusty hinge: metal sticking and slipping. Lots of tiny scrapes (each a short, ringing click) whose rate
+    speeds up and slows down unevenly, through a woody resonance. No steady tone, so it doesn't hum like a bee."""
+    n0, n = int(t0 * RATE), int(dur * RATE); t = 0.0
+    ring = [(820, .5), (1350, .35), (2300, .2)]                       # the metal and wood it rings through
+    while t < dur:
+        k = t / dur
+        rate = 28 + 55 * math.sin(k * math.pi) ** 2 + random.uniform(-10, 10)   # slips per second, uneven
+        amp = vol * (0.35 + 0.65 * math.sin(k * math.pi)) * random.uniform(0.6, 1.0)
+        s0 = n0 + int(t * RATE)
+        for f, a in ring:
+            f *= random.uniform(0.97, 1.03); d = int(RATE * 0.012)
+            for i in range(d):
+                if s0 + i >= len(buf): break
+                buf[s0 + i] += math.sin(2 * math.pi * f * i / RATE) * a * amp * math.exp(-i / (RATE * 0.003))
+        noise(buf, t0 + t, 0.006, amp * 0.25, 2500)
+        t += 1.0 / max(8, rate)
 
 
 def save(name, buf):
@@ -52,7 +61,7 @@ def save(name, buf):
 def main():
     OUT.mkdir(parents=True, exist_ok=True); random.seed(7)
     b = blank(1.0); noise(b, 0, .5, .5, 320); noise(b, 0, .09, .4, 1800); tone(b, 0, .45, 55, .5); tone(b, .02, .3, 82, .3); noise(b, .32, .3, .15, 600); save("slam", b)
-    b = blank(.9); creak(b, 0, .85, .35); save("creak", b)
+    b = blank(1.2); creak(b, 0, 1.1, .5); save("creak", b)
     b = blank(.35); tone(b, 0, .12, 180, .25, "square"); noise(b, 0, .08, .3, 1200); tone(b, .03, .2, 90, .3); save("clunk", b)
     b = blank(.08); noise(b, 0, .02, .4, 3200); tone(b, 0, .02, 2200, .1, "square"); save("click", b)
     b = blank(.08); tone(b, 0, .045, 1400, .12); noise(b, 0, .025, .1, 2600); save("tap", b)

@@ -3,7 +3,7 @@ extends Control
 ## Overlays: the combination lock, a word's picture, the menu, the Korean keyboard test.
 ##   godot --path . -- --shots OUT_DIR     plays the escape room and saves a screenshot of every step (tools/shot_tour.gd)
 
-const BUILD := 4
+const BUILD := 5
 const INK := Color("151a24")
 const PAPER := Color("efe6cf")
 const PAPER_INK := Color("2a231d")
@@ -168,8 +168,11 @@ func _pockets() -> void:
 	pockets_box.get_parent().visible = free_to_look and not items.is_empty()
 	for e in items:
 		var on: bool = bool(Game.F.get("lit", 0)) if e.id == "flashlight" else Game.F.get("hold", "") == e.id
-		var b := Button.new(); b.custom_minimum_size = Vector2(84, 84); b.icon = _icon("#" + e.icon); b.expand_icon = true
-		b.tooltip_text = Game.plain(e.label); b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		# each thing shows its name underneath (in Korean for things labelled in Korean: 기름 on the oil can)
+		var b := Button.new(); b.custom_minimum_size = Vector2(96, 112); b.icon = _icon("#" + e.icon); b.expand_icon = true
+		b.text = Game.plain(e.label); b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP; b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.add_theme_font_size_override("font_size", 17); b.clip_text = true
+		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(c, PAPER_INK)
 		var st := StyleBoxFlat.new(); st.set_corner_radius_all(12); st.bg_color = Color("efe3c4") if on else Color("fbf6e9")
 		st.border_color = PAPER_INK if on else Color("cbbf9f"); st.set_border_width_all(4 if on else 2); st.set_content_margin_all(12)
 		for s in ["normal", "hover", "pressed", "focus"]: b.add_theme_stylebox_override(s, st)
@@ -193,14 +196,13 @@ func _word(w: String) -> void:
 	_play("tap"); Game.note("  opened word: " + w)
 	var o := _overlay()
 	var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 10); o.get_child(0).add_child(box)
-	var pic := TextureRect.new(); pic.texture = _icon(w); pic.custom_minimum_size = Vector2(180, 180); pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; box.add_child(pic)
+	# only numbers get a picture here: nothing around you can tell you what 사 means. Every other word you work out
+	# from what's around you (the things in your pockets have their Korean names on them), so no picture gives it away.
+	var spec: String = Game.world.words.get(w, {}).get("p", "")
+	if spec.begins_with("sino") or spec.begins_with("nat"):
+		var pic := TextureRect.new(); pic.texture = _icon(w); pic.custom_minimum_size = Vector2(180, 180); pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; box.add_child(pic)
 	var l := _label(w, 52, PAPER_INK); l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; box.add_child(l)
-	var m := _label("", 22, MUTE); m.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; box.add_child(m)
-	var mean: String = Game.world.meanings.get(w, "")
-	if mean != "":
-		var chk := _button("Check what it means"); chk.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		chk.pressed.connect(func(): m.text = mean; chk.queue_free(); Game.note("  checked the meaning of " + w)); box.add_child(chk)
 	var ok := _button("Close", true); ok.pressed.connect(o.get_parent().queue_free); box.add_child(ok)
 
 

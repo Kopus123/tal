@@ -168,7 +168,7 @@ let LIGHT={x:50,y:45};
 ['pointerdown','pointermove'].forEach(t=>document.addEventListener(t,e=>{if(!S.F||!S.F.lit)return;const sc=$('#dark');if(!sc||(t==='pointermove'&&!e.buttons&&e.pointerType!=='mouse'))return;
   const r=sc.getBoundingClientRect(),v=$('#scene').getBoundingClientRect();if(e.clientX<v.left||e.clientX>v.right||e.clientY<v.top||e.clientY>v.bottom)return;if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
   LIGHT={x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};const d=$('#dark');if(d){d.style.setProperty('--lx',LIGHT.x+'%');d.style.setProperty('--ly',LIGHT.y+'%')}
-  const pan=$('#pan');if(pan&&!pan.hidden&&e.buttons){const edge=v.width*.16,inL=v.left+edge-e.clientX,inR=e.clientX-(v.right-edge),dx=inL>0?-Math.min(1,inL/edge):inR>0?Math.min(1,inR/edge):0;PANDIR=dx;   // deeper into the edge = a little fasterif(dx&&!PANT)panTick()}},{passive:true}));
+  const pan=$('#pan');if(pan&&!pan.hidden&&e.buttons){const edge=v.width*.16,inL=v.left+edge-e.clientX,inR=e.clientX-(v.right-edge),dx=inL>0?-Math.min(1,inL/edge):inR>0?Math.min(1,inR/edge):0;PANDIR=dx;/* deeper into the edge = a little faster */if(dx&&!PANT)panTick()}},{passive:true}));
 // holding the light near an edge keeps the room scrolling that way, slowly
 let PANDIR=0,PANT=0;function panTick(){const pan=$('#pan');if(!PANDIR||!pan||pan.hidden){PANT=0;return}pan.scrollLeft+=PANDIR*2.5;PANT=requestAnimationFrame(panTick)}
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{PANDIR=0}));

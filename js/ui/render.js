@@ -189,7 +189,7 @@ function panCenter(){const pan=$('#pan');if(!pan||pan.hidden)return;requestAnima
 function pocketsHTML(){const items=owned().filter(e=>e.icon!=='letter');if(!items.length)return'';
   return `<div class="label">Pockets</div><div class="pockets">${items.map(e=>{const on=e.id==='flashlight'?S.F.lit:S.F.hold===e.id;
     return `<button class="pkt ${on?'on':''}" data-pk="${e.id}" aria-pressed="${!!on}">${iconSVG(e.icon)}<span>${ko(e.label,false,false)}</span></button>`}).join('')}</div>
-    <div class="pkhint">${S.F.hold&&ST.evidence[S.F.hold]?`Holding: ${ko(ST.evidence[S.F.hold].label,false,false)}. Tap where to use it.`:S.F.lit?'Flashlight on. Touch the picture to point it.':'Swipe the picture to look around. Tap something in your pockets to take it out.'}</div>`}
+    <div class="pkhint">${S.F.hold&&ST.evidence[S.F.hold]?`Holding: ${ko(ST.evidence[S.F.hold].label,false,false)}. Tap where to use it.`:S.F.lit?'Flashlight on. Touch the picture to point it.':(matchMedia('(orientation:landscape)').matches?'':'Swipe the picture to look around. ')+'Tap something in your pockets to take it out.'}</div>`}
 function pocket(id){sfx('click');
   if(id==='flashlight')S.F.lit=S.F.lit?0:1;else S.F.hold=S.F.hold===id?null:id;
   const top=$('#sb').scrollTop;render();$('#sb').scrollTop=top}

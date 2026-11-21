@@ -1,16 +1,21 @@
 # ===================================================================
 #  탈 · TEST AREA: THE ESCAPE ROOM   (format reference: top of world.story)
 #  A work in progress, not part of the story yet. Reach it from Menu > Jump ahead > Test areas
-#  (Playtest tools on in Settings). Everything marked [placeholder] is meant to be replaced.
+#  (Playtest tools on in Settings). [placeholder] marks what's meant to be replaced.
 #
-#  THE STRUCTURE (the order things have to happen in):
-#    window: read the numbers on the fence outside ............ the drawer code
-#    workbench: open the drawer with that code ................ flashlight + screwdriver
-#    workbench: read the note on the wall ..................... "oil first, then the hammer"
-#    dark corner: flashlight to see, screwdriver for the board . small key
-#    shelf: small key opens the toolbox ....................... oil + hammer
-#    door: oil the hinges, THEN knock the pins out ............ the door comes off. You're out.
-#  Hammer before oil = the pins won't move (the note told you).
+#  Night. Nothing is labelled ("mode explore"): you find things by tapping the picture.
+#  Your flashlight is in your pockets: switch it on to see in the dark and read things.
+#  Other things you find go in your pockets too: tap one to hold it, then tap where to use it.
+#
+#  THE ORDER THINGS HAVE TO HAPPEN IN:
+#    window: the numbers on the sign outside (사 칠 일 구) .... the drawer code
+#    workbench, flashlight on: the drawer ..................... a screwdriver
+#    workbench, flashlight on: the note on the wall ........... "oil first, then the hammer"
+#    workbench, flashlight on: the newer floorboard + screwdriver  a small key
+#    shelf: the toolbox + the small key ....................... oil + hammer
+#    door: oil on the hinges, THEN the hammer ................. the door comes off
+#  Hammer before oil: the pins won't move (the note warned you). Oil on the window latch:
+#  the latch turns, but the window is nailed shut from outside.
 # ===================================================================
 
 === meta
@@ -20,197 +25,225 @@ start-place shed
 home shed
 
 === hints
-if !sawSign: The door won't budge. Look around the whole shed: window, workbench, shelf, the dark corner.
+if !lit&!drawerOpen: It's too dark to see much. Your flashlight is in your pockets, under the picture.
+if !sawSign: The door won't budge. Look around: what can you see through the window?
 if !drawerOpen: The workbench drawer has a four-number lock. Did you see four numbers anywhere?
-if !ev_sh_key: The corner is too dark to see. Something from the drawer might help.
-if !boxOpen: The toolbox on the shelf has a little padlock. You found a little key.
+if !ev_sh_key: Shine your light around the workbench, low down. Something there is newer than the rest.
+if !boxOpen: The toolbox on the shelf has a little padlock.
 if !oiled: The note over the workbench says what to do first.
 if !free: Now the hammer.
 You're out. (End of the test area: Menu > Jump ahead > Leave the test area.)
 
 === evidence
+flashlight | Flashlight | light | Your flashlight. You never go anywhere without it. |
 sh_note | {먼저} {기름} | letter | The note pinned over the workbench. Shaky handwriting. | {먼저} {기름}. {다음} {망치}.
-sh_light | Flashlight | light | A small flashlight from the workbench drawer. [placeholder] |
-sh_driver | Screwdriver | make | A screwdriver from the workbench drawer. [placeholder] |
-sh_key | {열쇠} | key | A small key from under the loose floorboard. |
+sh_driver | Screwdriver | make | A screwdriver from the workbench drawer. |
+sh_key | {열쇠} | key | A small key from under a floorboard. |
 sh_oil | {기름} | oil | A can of oil from the toolbox. |
 sh_hammer | {망치} | hammer | A heavy hammer from the toolbox. |
 
-# ------------------------------------------------------------ the shed (all placeholder art)
+# ------------------------------------------------------------ the shed
 === place shed
 light own
+mode explore
+dark 0.86
 music tense
 sound wind
 name 창고
 sub The shed
-art ph_shed
+art shed
 travel no
-desc if free: The shed. The door is off its hinges, and daylight is coming in.
-desc An old shed, dim and dusty. The door slammed shut behind you, and you heard the latch drop on the outside.
-spot "Door" 50 44 => place sh_door
-spot "Workbench" 18 64 => place sh_bench
-spot "Shelf" 84 46 => place sh_shelf
-spot "Window" 78 20 => place sh_window
-spot "Dark corner" 20 88 => place sh_floor
+desc if free: The door is off its hinges. Cold air is coming in.
+desc Dark. A little moonlight comes in through one dirty window. It smells of rust and old paint.
+spot "Door" 50 49 => place sh_door
+spot "Window" 81 25 => place sh_window
+spot "Workbench" 17 58 => place sh_bench
+spot "Shelf" 85 55 => place sh_shelf
 
 === place sh_door
 light own
+mode explore
+dark 0.8
+back shed
 music tense
 sound wind
 name 문
 sub The door
-art ph_door
+art shed_door
 travel no
 desc if free: The door leans against the wall. The doorway is open.
-desc if oiled: The hinges are dripping with oil. Rust runs down the wood in orange streaks.
-desc The door. Old planks, and two iron hinges rusted solid. The latch is on the outside, where you can't reach it.
-spot "Handle" 72 54 -> sh_handle if !free
-spot "Hinges" 22 50 -> sh_hinge if !free
-spot "Go outside" 50 60 -> sh_out if free
-spot "Back" 50 92 => place shed
-
-=== place sh_bench
-light own
-music tense
-sound wind
-name 작업대
-sub The workbench
-art ph_bench
-travel no
-desc A workbench covered in sawdust. A note is pinned to the wall above it. The drawer has a lock with four little number wheels.
-spot "Note on the wall" 50 24 -> sh_note
-spot "Drawer" 50 70 -> sh_drawer if !drawerOpen
-spot "Drawer" 50 70 -> sh_drawer_empty if drawerOpen
-spot "Back" 50 92 => place shed
-
-=== place sh_shelf
-light own
-music tense
-sound wind
-name 선반
-sub The shelf
-art ph_shelf
-travel no
-desc Shelves of old paint tins, rope, and a metal toolbox with a small padlock.
-spot "Toolbox" 50 56 -> sh_box if !boxOpen
-spot "Toolbox" 50 56 -> sh_box_empty if boxOpen
-spot "Back" 50 92 => place shed
+desc if oiled: Oil drips from the hinges. Rust runs down the wood in orange streaks.
+desc The door. Heavy planks.
+spot "Top hinge" 36 21 -> sh_oil if hold:sh_oil&!oiled
+spot "Top hinge" 36 21 -> sh_hammer_ok if hold:sh_hammer&oiled&!free
+spot "Top hinge" 36 21 -> sh_hammer_early if hold:sh_hammer&!oiled
+spot "Top hinge" 36 21 -> sh_hinge if !free
+spot "Bottom hinge" 36 71 -> sh_oil if hold:sh_oil&!oiled
+spot "Bottom hinge" 36 71 -> sh_hammer_ok if hold:sh_hammer&oiled&!free
+spot "Bottom hinge" 36 71 -> sh_hammer_early if hold:sh_hammer&!oiled
+spot "Bottom hinge" 36 71 -> sh_hinge if !free
+spot "Handle" 64 51 -> sh_handle if !free
+spot "Doorway" 50 50 -> sh_out if free
 
 === place sh_window
 light own
+mode explore
+dark 0.45
+back shed
 music tense
 sound wind
 name 창문
 sub The window
-art ph_window
+art shed_window
 travel no
-desc A small window with iron bars. Through the dirty glass: weeds, a broken fence, nobody.
-spot "Sign on the fence" 50 44 -> sh_sign
-spot "Back" 50 92 => place shed
+desc A small window in a heavy wooden frame. Outside: weeds, a broken fence, nobody.
+spot "Latch" 50 51 -> sh_latch_oil if hold:sh_oil&!latchOiled
+spot "Latch" 50 51 -> sh_latch2 if latchOiled
+spot "Latch" 50 51 -> sh_latch
+spot "Glass" 28 30 -> sh_glass
+spot "Sign" 67 63 -> sh_sign
 
-=== place sh_floor
+=== place sh_bench
 light own
+mode explore
+dark 0.9
+back shed
 music tense
 sound wind
-name 구석
-sub The dark corner
-art ph_floor
+name 작업대
+sub The workbench
+art shed_bench
 travel no
-desc if ev_sh_key: The corner. The loose board is lifted, and the hole underneath is empty.
-desc if ev_sh_light: The flashlight picks out the floorboards. One of them is newer than the others, and screwed down.
-desc Too dark to see anything back here.
-spot "Floorboards" 50 64 -> sh_board if ev_sh_light&!ev_sh_key
-spot "Back" 50 92 => place shed
+desc A workbench, thick with sawdust.
+spot "Note" 50 22 -> sh_note if lit
+spot "Drawer" 50 63 -> sh_drawer if lit&!drawerOpen
+spot "Drawer" 50 63 -> sh_drawer_dark if !lit&!drawerOpen
+spot "Drawer" 50 63 -> sh_drawer_empty if drawerOpen
+spot "Floorboard" 71 91 -> sh_board_ok if lit&hold:sh_driver&!ev_sh_key
+spot "Floorboard" 71 91 -> sh_board if lit&!ev_sh_key
+
+=== place sh_shelf
+light own
+mode explore
+dark 0.88
+back shed
+music tense
+sound wind
+name 선반
+sub The shelf
+art shed_shelf
+travel no
+desc Shelves of old paint tins and rope.
+spot "Toolbox" 50 42 -> sh_box_ok if hold:sh_key&!boxOpen
+spot "Toolbox" 50 42 -> sh_box if !boxOpen
+spot "Toolbox" 50 42 -> sh_box_empty if boxOpen
 
 # ------------------------------------------------------------ scenes
 === scene sh_open
-! time stop; time set afternoon
+! time stop; time set night; have flashlight
 @card 시험 | 창고
-~ [Placeholder story] Something about the mask leads you out of the village, to an old shed at the end of an overgrown track. Nobody around for miles.
-~ You step inside. Behind you the door swings shut with a bang, and outside, you hear the iron latch drop into place.
-~ You push. You pull. The door doesn't move. The hinges are rusted solid.
+~ [Placeholder story] Something about the mask leads you out of the village at night, to an old shed at the end of an overgrown track. Nobody around for miles.
+~ You step inside.
+~ Behind you, the door slams shut.
+! sfx slam
+~ Outside, metal scrapes on metal. The latch dropping into place.
+! sfx clunk
+~ You push. You pull. Nothing.
 ! place shed
 
 === scene sh_handle
-~ You rattle the handle. The door shifts a few millimeters and stops dead against the latch outside. It isn't opening from this side.
+! sfx clunk
+~ You rattle the handle. The door shifts a few millimeters and stops dead. Something is holding it from outside.
+~ You put your eye to the crack by the handle. Moonlight, and a black iron latch, dropped into its hook on the outside. You can't reach it from in here.
 
 === scene sh_hinge
-~ Two iron hinges, rusted solid. Each has a pin you could knock out from underneath, if it would move.
-* [Oil the hinges] -> sh_oil if ev_sh_oil&!oiled
-* [Hit the pins with the hammer] -> sh_hammer_early if ev_sh_hammer&!oiled
-* [Hit the pins with the hammer] -> sh_hammer_ok if ev_sh_hammer&oiled
-* [Leave them] -> sh_hinge_bye
-
-=== scene sh_hinge_bye
-~ You leave them for now.
+~ A long iron hinge, rusted almost solid. A pin runs down through it. If the pins came out, the door would come off.
+! unset hold
 
 === scene sh_hammer_early
+! sfx clunk; unset hold
 ~ You swing. The hammer bounces off with a clang that stings your whole arm. The pin hasn't moved at all: it's rusted in.
 ~ The note over the workbench said something about this.
 
 === scene sh_oil
-~ You pour oil over both hinges, right into the joints, and wait. Orange rust runs down the wood.
-! set oiled
+! sfx creak; set oiled; unset hold
+~ You pour oil over both hinges, right into the joints, and wait. Orange rust runs down the wood. Somewhere inside the iron, something creaks.
 
 === scene sh_hammer_ok
+! sfx clunk; unset hold
 ~ You set the hammer under the top pin and hit it. Once, twice. On the third swing it slides up and out. Then the bottom one.
-~ The door sags, swings out on the latch side, and drops against the frame. There's a gap. Daylight.
-! set free
+! sfx slam; set free
+~ The door sags, swings loose on the latch side, and crashes down against the frame. There's a gap. Night air.
 
 === scene sh_out
-~ You squeeze through the gap and out into the light.
+~ You squeeze through the gap and out into the dark.
 ~ [Placeholder] What you find outside, and what it has to do with the mask, goes here.
 ~ (End of the test area. Menu > Jump ahead > Leave the test area.)
+
+=== scene sh_latch
+! unset hold
+~ The latch between the two halves of the window. It's rusted into one solid lump. It won't turn.
+
+=== scene sh_latch_oil
+! sfx creak; set latchOiled; unset hold
+~ You work oil into the latch. After a while it turns, grinding.
+~ You push the window. It doesn't move. Through the glass you can see the heads of nails: it's been nailed shut from outside.
+
+=== scene sh_latch2
+~ The latch turns now. The window still doesn't budge. Nailed shut from outside.
+
+=== scene sh_glass
+! sfx clunk; unset hold
+~ You knock on the glass. Thick, old, and solid. You hit it harder with the side of your fist. It doesn't even rattle.
+
+=== scene sh_sign
+~ Out past the weeds, a sign hangs on the broken fence. In the moonlight you can just about read it.
+sign: {사} {칠} {일} {구}
+(Four numbers painted by hand. [Placeholder: words around the numbers later.])
+! set sawSign
 
 === scene sh_note
 sign: {먼저} {기름}. {다음} {망치}.
 (A scrap of paper pinned over the workbench. Shaky handwriting, like whoever wrote it was in a hurry.)
 ! give sh_note
 
+=== scene sh_drawer_dark
+~ A drawer. There's some kind of lock on it, but it's too dark to see how it works.
+
 === scene sh_drawer
-~ A drawer with a lock: four little wheels with numbers on them.
+~ The drawer has a lock with four little number wheels.
 @number Try a code. | count
 answer: 4719 -> sh_drawer_ok
 miss -> sh_drawer_no
 
 === scene sh_drawer_no
+! sfx click
 ~ Click. Nothing. The drawer stays shut.
 
 === scene sh_drawer_ok
-~ The lock clicks, and the drawer slides open. Inside: a small flashlight and a screwdriver.
-! give sh_light, sh_driver; set drawerOpen
+! sfx click
+~ The last wheel clicks into place, and the drawer slides open. Inside, in the sawdust: a screwdriver.
+! give sh_driver; set drawerOpen
 
 === scene sh_drawer_empty
 ~ The drawer is empty now. Sawdust and a dead spider.
 
-=== scene sh_sign
-~ Through the bars, on the broken fence outside, a sign. The paint is peeling, but you can still read it.
-sign: {사} {칠} {일} {구}
-(Four numbers painted by hand. [Placeholder: this becomes a real sign later, with words around the numbers.])
-! set sawSign
-
 === scene sh_board
-~ One board is newer than the others, held down by two screws.
-* [Unscrew it] -> sh_board_ok if ev_sh_driver
-* [Pull at it with your fingers] -> sh_board_no
-
-=== scene sh_board_no
-~ You pull until your fingertips hurt. The screws don't care.
+! unset hold
+~ One floorboard under the bench is paler than the rest. Newer. It's held down by two screws.
 
 === scene sh_board_ok
+! unset hold
 ~ Two screws, and the board lifts. Underneath, in the dust: a small key.
 ! give sh_key
 
 === scene sh_box
-~ A metal toolbox with a little padlock.
-* [Try the small key] -> sh_box_ok if ev_sh_key
-* [Leave it] -> sh_box_bye
-
-=== scene sh_box_bye
-~ You leave it.
+! unset hold
+~ A metal toolbox with a little padlock on it.
 
 === scene sh_box_ok
-~ The key turns. Inside: a can of oil and a heavy hammer.
+! sfx click; unset hold
+~ The little key turns. Inside: a can of oil and a heavy hammer.
 ! give sh_oil, sh_hammer; set boxOpen
 
 === scene sh_box_empty

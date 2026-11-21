@@ -54,6 +54,11 @@
 #                           desc [if COND:] text                 (the first one that fits is shown)
 #                           closed COND | message                (while COND holds you can't go in: you get the message)
 #                           spot "Label" X Y -> SCENE [if COND]  (also  => place NAME,  => phone,  => board)
+#                           mode explore    nothing is labelled: you find things by tapping the picture; no list of
+#                                           options under it; your pockets instead (evidence you carry, to use)
+#                                           (several spots with the same label: the first one whose COND holds)
+#                           dark 0.9        night: the picture is that dark, and your flashlight lights where you tap
+#                           back PLACE      a small back arrow in the picture
 #                           glow WORD X Y [R] [H]                (the ring when someone says WORD)
 #    === phone ID           name / avatar LETTER COLOR / on-open effects
 #                           day[@COND] text / them[@COND] TIME text / me[@COND] TIME text / sys[@COND] text
@@ -93,6 +98,7 @@
 #    place PLACE            move to a place           led TEXT     the bus sign
 #    toast TEXT             a short message           learn ...    old, does nothing
 #    give ID, ID            hand over evidence (with a message)     have ID, ID    the same, silently
+#    sfx NAME               a sound effect (js/audio.js: slam, creak, clunk, ...)
 #    statement ID           save the line above as a statement
 #    mixup RIGHT / HEARD    record a mishearing in the notebook
 #    time stop | go | set evening | sleep | +1      the clock (see js/core/world.js)
@@ -107,6 +113,7 @@
 #    money>=500   day>=3    numbers compare with  >=  <=  >  <  =        (also rel:WHO>=2, has:NAME>=2)
 #    time:morning           also afternoon, evening, night        clock   time is passing (free time)        on:ID   a calendar entry is today
 #    g:FLAG                 a village flag            rel:WHO    friendship            has:NAME   you own it
+#    lit                    your flashlight is on            hold:ID    you're holding that thing from your pockets
 #    flags the game sets by itself:  started, solved_ID (deduction), read_ID and vm_ID (phone thread read /
 #    voicemail heard), st_ID (statement saved), ev_ID (evidence held), ex_EXAMINE_DETAIL (detail noticed).
 #    The phone button appears once the story sets hasPhone.

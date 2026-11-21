@@ -128,6 +128,11 @@ const STEPS={
   async talk(who){await idle();let b=document.querySelector(`#sb [data-who="${who}"]`);
     const w=!b&&PEOPLE[who]&&whereNow(PEOPLE[who]);if(w&&w.place!==S.loc&&canTravel()&&S.known[w.place]){await STEPS.map(w.place);await idle();b=document.querySelector(`#sb [data-who="${who}"]`)}
     if(!b)fail(`${who} isn't here now (here: ${vis('#sb [data-who]').map(x=>x.dataset.who).join(', ')||'nobody'})`);await clickEl(b)},
+  // explore mode (nothing labelled): tap a hidden spot by its name, take something out of your pockets, the back arrow
+  async tap(l){await idle();const b=[...document.querySelectorAll('#fx .hs.hid')].find(b=>b.getAttribute('aria-label')===l);
+    if(!b)fail(`nothing called "${l}" to tap here (here: ${[...document.querySelectorAll('#fx .hs.hid')].map(b=>b.getAttribute('aria-label')).join(', ')||'nothing'})`);await clickEl(b)},
+  async pocket(id){await idle();const b=document.querySelector(`#sb [data-pk="${id}"]`);if(!b)fail(`"${id}" isn't in your pockets`);await clickEl(b)},
+  async back(){await idle();const b=document.querySelector('#bBackPl');if(!b)fail('no back arrow here');await clickEl(b)},
   async anychoice(){await clickEl(await until(()=>vis('#sf [data-ch]')[0],'a choice'))},
   async job(id){await idle();const b=vis('#sb .chipbtn[data-hs]').find(b=>txt(b)==='Notice board');if(!b)fail('no notice board here');await clickEl(b);
     const t=document.querySelector(`[data-take="${id}"]`);const on=vis('[data-take]').map(x=>x.dataset.take);

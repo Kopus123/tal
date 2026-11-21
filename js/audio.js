@@ -48,6 +48,12 @@ function noise(t0,dur,vol,freq){const c=ac();if(!c)return;const len=Math.floor(c
   for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(),t=c.currentTime+t0;
   s.buffer=b;f.type='bandpass';f.frequency.value=freq;f.Q.value=.8;g.gain.value=vol;s.connect(f).connect(g).connect(c.destination);s.start(t)}
 const SFX={
+  slam:()=>{noise(0,.5,.5,320);noise(0,.09,.4,1800);tone(55,0,.4,'sine',.35);tone(82,.02,.25,'sine',.2);noise(.32,.25,.12,600)},
+  creak:()=>{const c=ac();if(!c)return;const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter(),t=c.currentTime;o.type='sawtooth';
+    o.frequency.setValueAtTime(190,t);o.frequency.linearRampToValueAtTime(260,t+.35);o.frequency.linearRampToValueAtTime(170,t+.7);f.type='bandpass';f.frequency.value=900;f.Q.value=6;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.09,t+.08);g.gain.linearRampToValueAtTime(0,t+.75);o.connect(f);f.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.8)},
+  clunk:()=>{tone(180,0,.12,'square',.08);noise(0,.08,.2,1200);tone(90,.03,.2,'sine',.15)},
+  click:()=>{noise(0,.02,.15,3200);tone(2200,0,.02,'square',.04)},
   tap:()=>{tone(1400,0,.045,'sine',.05);noise(0,.025,.05,2600)},
   page:()=>noise(0,.16,.05,1600),
   open:()=>noise(0,.1,.04,900),

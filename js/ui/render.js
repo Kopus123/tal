@@ -31,24 +31,31 @@ function render(){
   const amb=exam?'none':l.ambient||'none';if(amb!==ambKey){$('#amb').innerHTML=ambientHTML(amb);ambKey=amb}
   setScene(l.music||'none',l.sound||'none');
   $('#tint').className='tint t-'+slotName()+(exam?' own':l.light?' '+l.light:'');
-  const ck=$('#clock');ck.hidden=!S.F.started;ck.textContent=`${S.world.day}일째 · ${SLOT_KO[slotName()]}`;ck.onclick=dayPanel;
-  const wl=$('#wallet');wl.hidden=!S.F.started;wl.textContent=wonStr(S.world.money);wl.onclick=dayPanel;
+  const ck=$('#clock');ck.hidden=!S.F.started||l.mode==='explore';ck.textContent=`${S.world.day}일째 · ${SLOT_KO[slotName()]}`;ck.onclick=dayPanel;
+  const wl=$('#wallet');wl.hidden=!S.F.started||l.mode==='explore';wl.textContent=wonStr(S.world.money);wl.onclick=dayPanel;
   let h='';
   if(nd&&nd.type==='camera')h+=`<div class="vf" id="vf" style="left:${cam.x}%;top:${cam.y}%"><span>Drag me</span></div>`;
   if(exam){const got=d=>S.F['ex_'+exam.id+'_'+d.id];
     h+=`<div class="exlayer" id="exam">${exam.compare&&ART[exam.compare]?`<div class="excompare">${ART[exam.compare]()}<span>1979 photo</span></div>`:''}${exam.details.map(d=>got(d)?`<span class="exmark" style="left:${d.x}%;top:${d.y}%"></span>`:EXMISS>=4?`<span class="exhint" style="left:${d.x}%;top:${d.y}%"></span>`:'').join('')}</div>`}
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
-  if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs ${x.x<25?'edge-l':x.x>75?'edge-r':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
+  const xp=!nd&&l.mode==='explore';
+  if(xp){const seen=new Set();l.spots.forEach((x,i)=>{if(seen.has(x.l)||!cond(x.c))return;seen.add(x.l);   // the first spot with this label whose COND holds
+    h+=`<button class="hs hid ${S.F['f_'+S.loc+'_'+x.l]?'seen':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"></button>`});
+    if(l.back)h+=`<button class="backbtn" id="bBackPl" aria-label="Back">‹</button>`}
+  if(!nd&&!xp)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs ${x.x<25?'edge-l':x.x>75?'edge-r':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
   if(live)peopleHere().forEach(p=>{const a=whereNow(p),n=(ST.cast[p.id]||{}).n||p.id,sty=`left:${a.x}%;top:${a.y}%;--fs:${parseLook((ST.cast[p.id]||{}).look).size||1}`;
     h+=nd?`<div class="hs fig still" style="${sty}" aria-hidden="true">${figureSVG(p.id)}</div>`   // mid-conversation: still there, just not tappable
       :`<button class="hs who fig" data-who="${p.id}" style="${sty}" aria-label="Talk to ${esc(n)}">${figureSVG(p.id)}<span>${esc(n)}</span></button>`});
   if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
   if(TIMECARD){TIMECARD=false;if(!(nd&&nd.type==='card')){lastLoc=S.loc;h+=`<div class="placecard"><b>${SLOT_KO[slotName()]}</b><span>day ${S.world.day} · ${slotName()}</span></div>`}}
-  if(S.loc!==lastLoc&&!(nd&&nd.type==='card'))h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
+  if(S.loc!==lastLoc&&!(nd&&nd.type==='card')&&l.mode!=='explore')h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
   lastLoc=S.loc;
   h+=`<div class="flash" id="flash"></div>`;
+  darkLayer(l);
   $('#fx').innerHTML=h;
-  $('#fx').querySelectorAll('.hs[data-hs]').forEach(b=>b.onclick=()=>spot(+b.dataset.hs));
+  $('#fx').querySelectorAll('.hs[data-hs]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(xp)S.F['f_'+S.loc+'_'+l.spots[+b.dataset.hs].l]=1;spot(+b.dataset.hs)});
+  $('#fx').onclick=xp?e=>{if(e.target===$('#fx'))emptyTap(e,l)}:null;
+  if($('#bBackPl'))$('#bBackPl').onclick=e=>{e.stopPropagation();sfx('tap');enter(l.back)};
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
   const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict','number','examine'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
@@ -61,7 +68,7 @@ function render(){
     const run=!S.world.frozen,home=S.loc===ST.meta.home;
     const timeBtn=!run?'':(home&&S.world.slot>=2?`<button class="chipbtn timechip" id="bBed">Go to bed</button>`:'')+(S.world.slot<3?`<button class="chipbtn timechip" id="bWait">Wait a while</button>`:'');
     const who=peopleHere().map(p=>`<button class="chipbtn whochip" data-who="${p.id}">Talk to ${esc((ST.cast[p.id]||{}).n||p.id)}</button>`).join('');
-    body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${who}${chips}${timeBtn}</div>`;
+    body=xp?`<div class="narr">${esc(d?d.t:'')}</div>${pocketsHTML()}`:`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${who}${chips}${timeBtn}</div>`;
   }else if(nd.type==='build'){
     const tl=nd.tiles;
     body=`<div class="en">${esc(nd.en)}</div><div class="built ${nd.join?'joined':''}">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):`<span class="ph">${nd.join?'Tap the pieces to build the word':'Tap words to build a sentence'}</span>`}</div>
@@ -127,6 +134,7 @@ function render(){
   if($('#bSayT')){const tin=$('#tin');$('#bSayT').onclick=()=>sayTyped(nd,tin.value);$('#tf').onsubmit=e=>{e.preventDefault();sayTyped(nd,tin.value)};
     $('#bHintT').onclick=()=>{tHint=Math.min(tHint+1,3);const v=tin.value;render();const t2=$('#tin');t2.value=v;t2.focus()}}
   if($('#bSkip'))$('#bSkip').onclick=skipAhead;
+  sb.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>pocket(b.dataset.pk));
   if($('#bWait'))$('#bWait').onclick=()=>{sfx('page');passTime();if(!S.node)render()};
   if($('#bBed'))$('#bBed').onclick=()=>{sfx('page');nextMorning();render()};
   sb.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>present(nd,b.dataset.show));
@@ -147,6 +155,28 @@ function render(){
   if($('#bShut'))$('#bShut').onclick=()=>shoot(nd);
   dots();save();
 }
+/* ---------- explore mode: darkness, the flashlight, pockets ---------- */
+// night: a dark layer over the picture. With the flashlight on, a circle of light follows your finger.
+function darkLayer(l){let d=$('#dark');const lvl=l&&l.dark?+l.dark:0;
+  if(!d){d=document.createElement('div');d.id='dark';d.className='dark';$('#scene').insertBefore(d,$('#fx'))}
+  d.hidden=!lvl;d.style.setProperty('--dk',lvl);d.classList.toggle('lit',!!S.F.lit)}
+let LIGHT={x:50,y:45};
+['pointerdown','pointermove'].forEach(t=>document.addEventListener(t,e=>{if(!S.F||!S.F.lit)return;const sc=$('#scene');if(!sc||(t==='pointermove'&&!e.buttons&&e.pointerType!=='mouse'))return;
+  const r=sc.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
+  LIGHT={x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};const d=$('#dark');if(d){d.style.setProperty('--lx',LIGHT.x+'%');d.style.setProperty('--ly',LIGHT.y+'%')}},{passive:true}));
+// tapping where there's nothing: a ripple, and in the dark, a reminder that you can't see
+function emptyTap(e,l){const fx=$('#fx'),r=fx.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*100,py=(e.clientY-r.top)/r.height*100;
+  const p=document.createElement('span');p.className='exripple';p.style.left=px+'%';p.style.top=py+'%';fx.appendChild(p);setTimeout(()=>p.remove(),600);sfx('tap');
+  if(l.dark&&!S.F.lit&&+l.dark>.6){EMPTY++;if(EMPTY%3===1)toast('Too dark to make anything out.',2200)}}
+let EMPTY=0;
+// what you're carrying: tap the flashlight to switch it on and off; tap anything else to hold it, then tap where to use it
+function pocketsHTML(){const items=owned().filter(e=>e.icon!=='letter');if(!items.length)return'';
+  return `<div class="label">Pockets</div><div class="pockets">${items.map(e=>{const on=e.id==='flashlight'?S.F.lit:S.F.hold===e.id;
+    return `<button class="pkt ${on?'on':''}" data-pk="${e.id}" aria-pressed="${!!on}">${iconSVG(e.icon)}<span>${ko(e.label,false,false)}</span></button>`}).join('')}</div>
+    <div class="pkhint">${S.F.hold&&ST.evidence[S.F.hold]?`Holding: ${ko(ST.evidence[S.F.hold].label,false,false)}. Tap where to use it.`:S.F.lit?'Flashlight on. Touch the picture to point it.':'Tap something to take it out.'}</div>`}
+function pocket(id){sfx('click');
+  if(id==='flashlight')S.F.lit=S.F.lit?0:1;else S.F.hold=S.F.hold===id?null:id;
+  const top=$('#sb').scrollTop;render();$('#sb').scrollTop=top}
 // a line you only hear: a listen button, and pictures for the words you've already looked up (no text)
 function heardHTML(nd){
   const pics=(HEARD[nd.id]||0)<2?'':idsIn(nd.ko).filter((id,i,a)=>a.indexOf(id)===i&&W[id]&&!W[id].g&&S.nb[id]).map(id=>iconSVG(W[id].p,'hicon')).join('');

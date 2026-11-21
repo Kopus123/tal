@@ -47,6 +47,8 @@ function cond(c){if(!c)return true;return c.split('&').every(t=>{t=t.trim();
 function tgt(t){const m=String(t).match(/^(.+?)\s*\?\s*(\S+)\s*:\s*(\S+)$/);return m?(cond(m[1])?m[2]:m[3]):String(t).trim()}
 
 defCond('@','place',p=>S.loc===p);
+defCond('lit','bool',()=>!!S.F.lit);                 // your flashlight is on
+defCond('hold:','held',id=>S.F.hold===id);         // holding that thing from your pockets
 defCond('allSolved','bool',()=>caseReadyNow());
 
 /* ---------- effects ----------
@@ -56,7 +58,8 @@ function runFx(list,x){x=x||{};(list||[]).forEach((e,i)=>{
   if(e.c&&!cond(e.c))return;
   const d=EFFECTS[e.k];if(!d){console.warn('unknown effect',e.k,e.a);return}
   let a=e.a;
-  if(d.once){const m=a.match(/^(.*?)\s+each time$/);   // "! money -1500 each time": a fare, a price: it repeats
+  // (setting the clock, stopping or starting it, is the same however often it happens: only moving it on adds up)
+  if(d.once&&!(e.k==='time'&&/^(stop|go|set\s)/.test(a))){const m=a.match(/^(.*?)\s+each time$/);   // "! money -1500 each time": a fare, a price: it repeats
     if(m)a=m[1];else if(x.key){const k=S.ch+':'+x.key+':'+i;if(S.world.did[k])return;S.world.did[k]=1}}
   d.fn(a,x)})}
 const eachOf=(a,fn)=>a.split(',').forEach(v=>{v=v.trim();if(v)fn(v)});
@@ -65,6 +68,7 @@ defEffect('set','flags',a=>eachOf(a,f=>{if(f.startsWith('g:'))S.world.g[f.slice(
 defEffect('unset','unflags',a=>eachOf(a,f=>{if(f.startsWith('g:'))delete S.world.g[f.slice(2)];else delete S.F[f]}));
 defEffect('place','place',a=>{S.loc=a});
 defEffect('led','text',a=>{S.F.led=a});
+defEffect('sfx','sfx',(a,x)=>{if(!x.replay)sfx(a.trim())});
 defEffect('toast','text',(a,x)=>{if(!x.replay)toast(esc(a),5000)});
 defEffect('learn','text',()=>{}); // from before the notebook was yours: harmless, does nothing
 defEffect('mixup','mixup',(a,x)=>{const [r,h]=a.split('/').map(v=>v.trim());const k=r+'/'+h;

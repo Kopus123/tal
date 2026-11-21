@@ -352,6 +352,85 @@ function artHall(){
   [[110,'#b5412d'],[200,'#3f7f6e'],[290,'#d9a43d']].forEach(([x,c])=>s+=`<ellipse cx="${x}" cy="252" rx="30" ry="9" fill="${c}"/>`);
   return svg(s);
 }
+/* ---------- the shed (escape room test area). Drawn lit; the night darkness is a layer on top (js/ui/render.js) ---------- */
+const planks=(y0,y1,c1='#8a7056',c2='#7d6650')=>{let s='';for(let x=0;x<400;x+=34)s+=`<rect x="${x}" y="${y0}" width="33" height="${y1-y0}" fill="${(x/34)%2?c1:c2}"/><line x1="${x+33}" y1="${y0}" x2="${x+33}" y2="${y1}" stroke="#4d3b2c" stroke-width="2"/>`+(x%68?`<circle cx="${x+16}" cy="${y0+18}" r="1.6" fill="#3a2c20"/>`:'');return s};
+const rust=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#6b3a22"/><rect x="${x+2}" y="${y+2}" width="${w-4}" height="${h-4}" rx="2" fill="#8a4a2a" opacity=".8"/><circle cx="${x+w*.3}" cy="${y+h*.5}" r="2" fill="#b06a3a"/><circle cx="${x+w*.7}" cy="${y+h*.4}" r="1.5" fill="#4a2414"/>`;
+const winPanes=(x,y,w,h,out)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${out}"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c9d4c8" opacity=".18"/>`+
+  `<rect x="${x-6}" y="${y-6}" width="${w+12}" height="${h+12}" fill="none" stroke="#5a4532" stroke-width="10"/><line x1="${x+w/2}" y1="${y}" x2="${x+w/2}" y2="${y+h}" stroke="#5a4532" stroke-width="6"/><line x1="${x}" y1="${y+h/2}" x2="${x+w}" y2="${y+h/2}" stroke="#5a4532" stroke-width="6"/>`;
+function artShed(){
+  let s=planks(0,226);
+  s+=`<rect y="226" width="400" height="74" fill="#5e4a38"/>`;for(let y=236;y<300;y+=14)s+=`<line x1="0" y1="${y}" x2="400" y2="${y}" stroke="#4a3a2c" stroke-width="1.5"/>`;
+  // the door, back wall centre
+  s+=`<rect x="158" y="68" width="84" height="158" fill="#6f5640" stroke="#3e2f22" stroke-width="3"/>`;for(let x=170;x<242;x+=14)s+=`<line x1="${x}" y1="70" x2="${x}" y2="224" stroke="#4d3b2c" stroke-width="1.5"/>`;
+  s+=rust(158,90,26,8)+rust(158,196,26,8)+`<circle cx="230" cy="150" r="4" fill="#6b3a22"/>`;
+  // the window, upper right: an ordinary four-pane window, moonlight coming in
+  s+=winPanes(292,46,66,58,'#3c5060')+`<circle cx="306" cy="58" r="7" fill="#e9eedd" opacity=".85"/>`;
+  s+=`<path d="M292,104 L250,226 L380,226 L358,104Z" fill="#dfe8f0" opacity=".08"/>`;
+  // the workbench, left, with its drawer and a note on the wall above
+  s+=`<rect x="8" y="166" width="128" height="12" fill="#a0825f" stroke="#4d3b2c" stroke-width="2"/><rect x="16" y="178" width="8" height="48" fill="#6f5640"/><rect x="120" y="178" width="8" height="48" fill="#6f5640"/>`;
+  s+=`<rect x="48" y="180" width="48" height="16" fill="#8a6c4e" stroke="#4d3b2c" stroke-width="1.5"/><rect x="66" y="185" width="12" height="6" fill="#b8b8b0"/>`;
+  s+=`<rect x="52" y="114" width="30" height="34" fill="#efe6cf" transform="rotate(-4 67 131)"/><circle cx="66" cy="116" r="2" fill="#b5412d"/>`;
+  s+=`<rect x="20" y="152" width="40" height="14" rx="2" fill="#7a6a5a"/><rect x="100" y="156" width="22" height="10" fill="#b8a07a"/>`;
+  // the shelf, right, with the toolbox in the middle
+  [138,174,210].forEach(y=>s+=`<rect x="286" y="${y}" width="108" height="7" fill="#a0825f" stroke="#4d3b2c" stroke-width="1.5"/>`);
+  s+=`<rect x="294" y="118" width="16" height="20" fill="#7d8a96"/><rect x="314" y="122" width="14" height="16" fill="#b5412d" opacity=".8"/><circle cx="356" cy="130" r="10" fill="none" stroke="#c9b07a" stroke-width="4"/>`;
+  s+=`<rect x="312" y="152" width="46" height="22" rx="2" fill="#3f6b8a" stroke="#22394a" stroke-width="2"/><rect x="331" y="158" width="8" height="9" rx="1" fill="#c9a04a"/>`;
+  s+=`<rect x="296" y="192" width="22" height="18" fill="#8d877b"/><rect x="340" y="196" width="30" height="14" fill="#6a5a4a"/>`;
+  return svg(s)}
+function artShedDoor(){
+  let s=planks(0,262,'#7d6650','#735d49')+`<rect y="262" width="400" height="38" fill="#5e4a38"/>`;
+  s+=`<rect x="112" y="14" width="176" height="248" fill="#6f5640" stroke="#3e2f22" stroke-width="5"/>`;for(let x=134;x<288;x+=22)s+=`<line x1="${x}" y1="16" x2="${x}" y2="260" stroke="#4d3b2c" stroke-width="2"/>`;
+  s+=`<path d="M118,40 L282,236 M118,236 L282,40" stroke="#5a4532" stroke-width="10" opacity=".55"/>`;
+  // two long strap hinges on the left, rusted through
+  s+=rust(100,54,90,16)+rust(100,206,90,16)+`<rect x="100" y="48" width="14" height="28" rx="3" fill="#5a2e1a"/><rect x="100" y="200" width="14" height="28" rx="3" fill="#5a2e1a"/>`;
+  s+=`<path d="M108,76 q2,14 -1,24 M108,228 q3,12 0,22" stroke="#9a5a30" stroke-width="2" fill="none"/>`;
+  // the handle on the right; through the crack, the latch on the outside
+  s+=`<rect x="250" y="134" width="12" height="36" rx="5" fill="#3a3a3a"/><rect x="246" y="140" width="20" height="5" rx="2" fill="#555"/>`;
+  s+=`<rect x="287" y="120" width="4" height="60" fill="#120e0a"/><rect x="288" y="146" width="6" height="8" fill="#6b3a22"/>`;
+  return svg(s)}
+function artShedWindow(){
+  let s=planks(0,300,'#7d6650','#735d49');
+  // outside: the night, weeds, a broken fence with a hand-painted sign
+  let out=`<rect x="64" y="34" width="272" height="226" fill="#1e2c3a"/><circle cx="110" cy="72" r="16" fill="#e9eedd"/><circle cx="104" cy="68" r="15" fill="#1e2c3a" opacity=".25"/>`;
+  out+=`<rect x="64" y="200" width="272" height="60" fill="#2c3a2a"/>`;for(let i=0;i<30;i++)out+=`<path d="M${68+i*9},260 q${i%2?3:-3},-14 ${i%2?1:-1},-${16+(i%4)*5}" stroke="#46603e" stroke-width="2" fill="none"/>`;
+  [90,150,210,300].forEach((x,i)=>out+=`<rect x="${x}" y="${170+(i%2)*6}" width="9" height="${60-(i%2)*6}" fill="#5a4a3a" transform="rotate(${i===2?14:i*2-2} ${x} 230)"/>`);
+  out+=`<rect x="80" y="190" width="240" height="6" fill="#5a4a3a" transform="rotate(-3 200 193)"/>`;
+  out+=`<rect x="222" y="168" width="92" height="44" fill="#b9ad92" stroke="#4a3a2c" stroke-width="2" transform="rotate(4 268 190)"/><text x="268" y="198" text-anchor="middle" font-family="Gowun Dodum,sans-serif" font-weight="700" font-size="19" fill="#2f2a24" transform="rotate(4 268 190)" opacity=".82">사 칠 일 구</text>`;
+  s+=out+`<rect x="64" y="34" width="272" height="226" fill="#c9d4c8" opacity=".13"/>`;
+  // grime on the glass
+  for(let i=0;i<9;i++)s+=`<ellipse cx="${80+i*31}" cy="${50+(i*53)%190}" rx="${18+(i%3)*8}" ry="${10+(i%2)*6}" fill="#8a7d63" opacity=".16"/>`;
+  // a solid wooden frame: two sashes, and the latch between them, rusted into a lump
+  s+=`<rect x="58" y="28" width="284" height="238" fill="none" stroke="#5a4532" stroke-width="14"/><line x1="200" y1="28" x2="200" y2="266" stroke="#5a4532" stroke-width="12"/><line x1="58" y1="148" x2="342" y2="148" stroke="#5a4532" stroke-width="9"/>`;
+  s+=rust(186,140,30,18)+`<path d="M196,158 q2,10 -1,18" stroke="#9a5a30" stroke-width="2" fill="none"/>`;
+  s+=`<rect x="40" y="266" width="320" height="14" fill="#8a7056" stroke="#4d3b2c" stroke-width="2"/>`;
+  return svg(s)}
+function artShedBench(){
+  let s=planks(0,232)+`<rect y="232" width="400" height="68" fill="#5e4a38"/>`;
+  for(let x=0;x<400;x+=50)s+=`<rect x="${x}" y="246" width="49" height="54" fill="${x===250?'#7a6148':'#54432f'}" stroke="#3e2f22" stroke-width="1.5"/>`+(x===250?`<circle cx="${x+8}" cy="273" r="2.5" fill="#999"/><circle cx="${x+41}" cy="273" r="2.5" fill="#999"/>`:'');
+  // the note pinned to the wall
+  s+=`<rect x="166" y="34" width="70" height="62" fill="#efe6cf" transform="rotate(-3 201 65)"/><circle cx="200" cy="38" r="3" fill="#b5412d"/>`;
+  s+=`<path d="M178,56 q10,-3 20,0 q8,2 16,-1 M178,72 q12,-2 22,1 q6,1 12,-2 M180,86 q8,-2 16,0" stroke="#3a3028" stroke-width="2.2" fill="none" transform="rotate(-3 201 65)" opacity=".75"/>`;
+  // hanging tools
+  s+=`<path d="M60,40 L60,110 M50,40 L70,40" stroke="#555" stroke-width="3"/><path d="M330,36 q12,30 0,60 q-12,-30 0,-60Z" fill="none" stroke="#7a6a5a" stroke-width="4"/>`;
+  // the bench top, the drawer with its four-wheel lock
+  s+=`<rect x="20" y="140" width="360" height="22" fill="#a0825f" stroke="#4d3b2c" stroke-width="2.5"/><rect x="36" y="162" width="14" height="80" fill="#6f5640"/><rect x="350" y="162" width="14" height="80" fill="#6f5640"/>`;
+  s+=`<rect x="128" y="166" width="144" height="44" fill="#8a6c4e" stroke="#4d3b2c" stroke-width="2"/>`;
+  [0,1,2,3].forEach(i=>s+=`<rect x="${176+i*13}" y="178" width="11" height="20" rx="2" fill="#c9c9c0" stroke="#555" stroke-width="1"/><line x1="${178+i*13}" y1="188" x2="${185+i*13}" y2="188" stroke="#555" stroke-width="1"/>`);
+  s+=`<ellipse cx="300" cy="138" rx="30" ry="4" fill="#c9b893" opacity=".7"/><rect x="80" y="126" width="40" height="14" rx="2" fill="#7a6a5a"/>`;
+  return svg(s)}
+function artShedShelf(){
+  let s=planks(0,300,'#7d6650','#735d49');
+  [70,150,230].forEach(y=>s+=`<rect x="40" y="${y}" width="320" height="10" fill="#a0825f" stroke="#4d3b2c" stroke-width="2"/><rect x="50" y="${y+10}" width="6" height="14" fill="#6f5640"/><rect x="344" y="${y+10}" width="6" height="14" fill="#6f5640"/>`);
+  // paint tins, rope, jars
+  [[60,'#7d8a96'],[92,'#b5412d'],[122,'#3f7f6e'],[262,'#d9a43d'],[296,'#7d8a96']].forEach(([x,c],i)=>s+=`<rect x="${x}" y="${40-(i%2)*6}" width="26" height="${30+(i%2)*6}" fill="${c}" opacity=".85" stroke="#2a231d" stroke-width="1.5"/><ellipse cx="${x+13}" cy="${40-(i%2)*6}" rx="13" ry="3" fill="#ccc" opacity=".6"/>`);
+  s+=`<circle cx="210" cy="52" r="17" fill="none" stroke="#c9b07a" stroke-width="7"/><circle cx="210" cy="52" r="7" fill="none" stroke="#c9b07a" stroke-width="4"/>`;
+  // the toolbox, middle shelf, with a little padlock
+  s+=`<rect x="146" y="104" width="108" height="46" rx="3" fill="#3f6b8a" stroke="#22394a" stroke-width="3"/><rect x="146" y="104" width="108" height="12" fill="#335a76"/><path d="M180,104 q20,-16 40,0" stroke="#22394a" stroke-width="5" fill="none"/>`;
+  s+=`<path d="M194,118 q6,-10 12,0" stroke="#8a8a8a" stroke-width="3" fill="none"/><rect x="190" y="118" width="20" height="16" rx="2" fill="#c9a04a" stroke="#7a5a20" stroke-width="1.5"/><circle cx="200" cy="126" r="2" fill="#3a2a10"/>`;
+  s+=`<rect x="62" y="124" width="40" height="26" fill="#8d877b"/><rect x="290" y="118" width="34" height="32" fill="#6a5a4a"/>`;
+  // bottom shelf: sacks, an old lantern with no oil
+  s+=`<path d="M70,230 q-6,-40 26,-44 q30,4 24,44Z" fill="#b8a07a"/><path d="M260,230 L262,200 L290,200 L292,230Z" fill="#5a5a5a"/><circle cx="276" cy="196" r="6" fill="none" stroke="#5a5a5a" stroke-width="3"/>`;
+  return svg(s)}
 // placeholder art for the test areas: planks, one light, and a label saying what this will be
 function artPH(label,o={}){
   let s=`<rect width="400" height="300" fill="#5a4a3c"/>`;
@@ -362,6 +441,7 @@ function artPH(label,o={}){
   s+=`<rect x="110" y="238" width="180" height="40" rx="8" fill="#000" opacity=".6"/><text x="200" y="256" text-anchor="middle" font-family="Gowun Dodum,sans-serif" font-size="15" fill="#f4e6c8">${label}</text><text x="200" y="271" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#c9b893" letter-spacing="2">PLACEHOLDER ART</text>`;
   return svg(s)}
 const ART={
+  shed:artShed, shed_door:artShedDoor, shed_window:artShedWindow, shed_bench:artShedBench, shed_shelf:artShedShelf,
   ph_shed:()=>artPH('창고 · the shed',{window:1}), ph_door:()=>artPH('문 · the door'), ph_bench:()=>artPH('작업대 · the workbench'),
   ph_shelf:()=>artPH('선반 · the shelf'), ph_window:()=>artPH('창문 · the window',{window:1}), ph_floor:()=>artPH('구석 · the dark corner'),
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,

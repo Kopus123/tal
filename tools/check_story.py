@@ -96,7 +96,7 @@ def _fx_job(d, a, ln, f):
     if a.strip() not in ("done", "fail"): err(f, ln, f"'job {a}' should be 'job done' or 'job fail'")
 
 EFFECT_KINDS = {"chapter": _fx_chapter, "time": _fx_time, "flags": _fx_flags, "unflags": None, "text": None, "place": _fx_place, "evidence": _fx_evidence,
-                "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item, "job": _fx_job, "who": lambda d, a, ln, f: d["who_refs"].append((a.strip(), ln))}
+                "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item, "job": _fx_job, "sfx": None, "who": lambda d, a, ln, f: d["who_refs"].append((a.strip(), ln))}
 ADDS_UP = {"amount", "who_amount", "item", "time"}      # these may end in "each time"
 
 def _c_place(d, rest, ln, f): d["placefx"].append((rest, ln))
@@ -109,7 +109,7 @@ def _c_item(d, rest, ln, f): d["items_read"].append((rest, ln))
 def _c_calendar(d, rest, ln, f): d["cal_read"].append((rest, ln))
 def _c_job(d, rest, ln, f): d["jobrefs"].append((rest, ln))
 
-COND_KINDS = {"calendar": _c_calendar, "place": _c_place, "bool": None, "number": None, "slot": _c_slot, "gflag": _c_gflag, "who": _c_who, "item": _c_item, "job": _c_job}
+COND_KINDS = {"held": None, "calendar": _c_calendar, "place": _c_place, "bool": None, "number": None, "slot": _c_slot, "gflag": _c_gflag, "who": _c_who, "item": _c_item, "job": _c_job}
 
 for _name, _kind in EFFECTS.items():
     if _kind not in EFFECT_KINDS: sys.exit(f"check_story.py: effect '{_name}' has the new kind '{_kind}'. Add it to EFFECT_KINDS.")
@@ -215,7 +215,7 @@ def parse(path):
             d["evidence"][p[0]] = dict(icon=p[2], ln=ln); tokens(p[1], ln)
             if len(p) > 4: tokens("|".join(p[4:]), ln)
         elif sec == "place":
-            if m := re.match(r"^(name|sub|art|first|always|ambient|travel|music|sound|light)\s+(.+)$", line):
+            if m := re.match(r"^(name|sub|art|first|always|ambient|travel|music|sound|light|mode|dark|back)\s+(.+)$", line):
                 cur[m.group(1)] = (m.group(2), ln)
                 if m.group(1) == "music" and m.group(2) not in MOODS: err(f, ln, f"no music called '{m.group(2)}' ({', '.join(sorted(MOODS))})")
                 if m.group(1) == "sound" and m.group(2) not in BEDS: err(f, ln, f"no sound called '{m.group(2)}' ({', '.join(sorted(BEDS))})")

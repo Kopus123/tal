@@ -183,12 +183,17 @@ let PANNED=false,ZOOM=null;
 // the installed app is stuck upright (Android keeps that setting in the app itself and updates it on its own schedule).
 // Full screen is the one place a page may decide for itself: the rotate button goes full screen, then turns.
 function fullTurn(on){try{if(on&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>{TURN=null;lockTurn(true)}).catch(()=>{});
-  else if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(_){}}
+  else if(!on){SIDEWAYS=false;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}}catch(_){}}
 // the rotate button (explore places): flip between sideways and upright without auto-rotate
 async function turnToggle(){sfx('tap');const side=matchMedia('(orientation:landscape)').matches;
   try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});
-    await screen.orientation.lock(side?'portrait':'landscape');TURN=null}
+    await screen.orientation.lock(side?'portrait':'landscape');TURN=null;SIDEWAYS=!side}
   catch(_){toast('This phone or browser doesn’t let the game turn itself. Try auto-rotate.',4000)}}
+// sleeping the phone drops full screen, and with it the sideways lock. A page can't go full screen again on its own:
+// it needs a tap. So the first tap after that turns it back.
+let SIDEWAYS=false;
+document.addEventListener('click',()=>{if(!SIDEWAYS||document.fullscreenElement||!$('#app').classList.contains('explore'))return;
+  try{document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>screen.orientation.lock('landscape')).catch(()=>{})}catch(_){}},true);
 let TURN=null;function lockTurn(free){if(TURN===free)return;TURN=free;try{screen.orientation.lock(free?'any':'portrait').catch(()=>{})}catch(_){}}
 function panMode(on){const app=$('#app');if(!!on===app.classList.contains('explore'))return;app.classList.toggle('explore',!!on);
   const sc=$('#scene');let pan=$('#pan');

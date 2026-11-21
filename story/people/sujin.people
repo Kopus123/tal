@@ -27,7 +27,7 @@ sujin[happy]: {안녕하세요}!
 (She looks up from her broom and waves.)
 
 === scene sj_hi2
-sujin[happy]: 아, {학생}! {안녕하세요}.
+sujin[happy]: 아, {탐정님}! {안녕하세요}.
 (She was already looking your way before you said anything.)
 
 === scene sj_weather

@@ -16,7 +16,7 @@ bye am_bye2
 bye am_bye3
 
 === scene am_hi
-ajumma[happy]: 아이고, {학생}! {어서 오세요}, {어서 오세요}!
+ajumma[happy]: 아이고, {탐정님}! {어서 오세요}, {어서 오세요}!
 (She waves you over to her stall as if you were a long-lost nephew.)
 
 === scene am_price
@@ -41,7 +41,7 @@ ajumma: {빨간} {물감}{이|이/가} {없어요}. {없어요}!
 * {괜찮아요}. -> am_paint_b
 
 === scene am_paint_a
-ajumma[happy]: 하하. {학생}! {학생}{이|이/가} {샀어요}!
+ajumma[happy]: 하하. {탐정님}! {탐정님}{이|이/가} {샀어요}!
 (She points at you. You did buy the last pot.)
 ! rel ajumma +1
 
@@ -80,7 +80,7 @@ ajumma: {바빠요}, {바빠요}! {내일} {와요}!
 (A queue has formed behind you.)
 
 === scene am_bye2
-ajumma[happy]: {학생}! {오늘} {날씨}{가|이/가} {좋아요}!
+ajumma[happy]: {탐정님}! {오늘} {날씨}{가|이/가} {좋아요}!
 (She pats your arm twice and moves on.)
 
 === scene am_bye3

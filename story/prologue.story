@@ -31,7 +31,7 @@ p3 if museumDone | But at the museum, she {안} {왔어요}. | She got on the bu
 p4 final if ending | 할머니 is 수진's {엄마}, and her note says: {찾지 마세요}. | Not just the village grandmother. Her mother. And she doesn't want to be found.
 
 === evidence
-letter | {편지} | letter | 할머니's letter. The reason you came to 청솔마을. | {학생}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
+letter | {편지} | letter | 할머니's reply to your letter. The reason you came to 청솔마을. | {탐정님}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
 photo79 | {사진} · 1979 | photo | A faded photo from the workshop: a young woman with a grinning mask pushed up on her head. Look closely and the mask has a small chip in its left eyebrow. |
 museumtext | {박물관} · {핸드폰} | phone | The museum's text to 할머니, sent the evening before she vanished. | 김순자 {선생님}, {내일} {아침} {9시}, {박물관}{에서} {만나요}!
 couplephoto | {사진} · {버스 정류장} | photo | The couple's selfie at the bus stop. Behind them, a little blurry: 할머니, holding a bundle in red cloth. |
@@ -229,12 +229,12 @@ note No name. Twice, just before midnight. She never answered.
 === scene evening
 ! time stop; time set evening
 @card 1장 | 탈
-~ Three weeks ago, a letter found you at the university. Thick paper, careful handwriting, almost all of it in Korean you could barely read.
-~ It was from 김순자, a mask carver in a village called 청솔. Months ago you had written to her for your research on traditional masks. You never expected an answer.
-sign: {학생}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
+~ You investigate art crime. For a year, old Korean masks have been turning up at auctions abroad: beautiful, convincing, and fake. Every trail you followed ended at one tiny village: 청솔.
+~ You wrote to the village's mask carver, 김순자. Nobody else would answer you. Three weeks later, she did: careful handwriting, all in Korean. Your translation app managed one line.
+sign: {탐정님}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
 (At the bottom of the letter, a little drawing: a mask with long eyebrows, a huge grin, and a tiny chip in one eyebrow.)
 ! give letter
-~ So you came. The last bus drops you at the edge of the village after dark. You find the guesthouse by its lanterns.
+~ So you came, alone, with a phrasebook and a translation app that gives up on anything longer than a sentence. The last bus drops you at the edge of the village after dark. You find the guesthouse by its lanterns.
 sujin[happy]: {안녕하세요}! {저}{는|은/는} 수진{이에요}.
 (A woman about your mom's age bows and takes your bag. She talks slowly, like she can tell you're still learning.)
 sujin: {여기}{는|은/는} {마당}{이에요}. {마당}.
@@ -243,7 +243,7 @@ sujin: {여기}{는|은/는} {방}{이에요}. {방}!
 (She slides open a paper door. Inside: a folded blanket, a low table, a lamp.)
 halmeoni[happy]: {안녕하세요}~
 (An old woman comes out of the workshop, brushing wood dust off her hands.)
-halmeoni[surprised]: 아! {학생}! {편지}!
+halmeoni[surprised]: 아! {탐정님}! {편지}!
 (She points at the letter sticking out of your bag and beams. She's been waiting for you.)
 sujin: {할머니}{예요|이에요}.
 halmeoni: {이거} {탈}{이에요}. {탈}!

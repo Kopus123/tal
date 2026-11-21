@@ -56,7 +56,7 @@ card | {명함} · {서울} | card | A business card from a mask appraiser in Se
 nochip | {가짜} · {눈썹} | eyebrow | The copy's left eyebrow: one clean, unbroken line. No chip. |
 freshwood | {새} {나무} | wood | Inside the copy's eye holes, the wood is pale and raw. Cut yesterday. |
 realchip | {진짜} · {눈썹} | eyebrow | The old mask's left eyebrow: a small chip, exactly like in the 1979 photo. |
-letter | {편지} | letter | 할머니's letter. The reason you came to 청솔마을. | {학생}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
+letter | {편지} | letter | 할머니's reply to your letter. The reason you came to 청솔마을. | {탐정님}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.
 photo79 | {사진} · 1979 | photo | A faded photo from the workshop: a young woman with a grinning mask pushed up on her head. Look closely and the mask has a small chip in its left eyebrow. |
 couplephoto | {사진} · {버스 정류장} | photo | The couple's selfie at the bus stop. Behind them, a little blurry: 할머니, holding a bundle in red cloth. |
 note | {찾지 마세요} | letter | The note tucked into the mask on the gate. Shaky handwriting. | {찾지 마세요}.
@@ -269,7 +269,7 @@ glow 불 12 92 10
 === examine fakemask
 art mask_fake
 compare photo_old
-prompt Look it over like a researcher. Tap anything that catches your eye.
+prompt Look it over like an investigator. Tap anything that catches your eye.
 detail eyebrow 37 29 8 key | The left {눈썹} is one clean, unbroken line. The mask in the 1979 photo has a chip right here. ! give nochip
 detail paint 35 59 8 key | The red on the cheeks is still tacky. It comes off on your thumb. ! set paintWet
 detail eyes 60 39 7 | Inside the eye holes the wood is pale and raw: cut yesterday, not three hundred years ago. ! give freshwood
@@ -947,7 +947,7 @@ staff[happy]: {네}?
 ~ Behind the bus stop, a dirt path drops down to the river. Reeds, flat stones, and a wooden bridge further down. An old man sits on a rock with a fishing rod.
 haraboji: {누구}{예요|이에요}?
 (He asks without looking up from the water.)
-* {학생}{이에요}. -> c1_g2
+* {탐정}{이에요}. -> c1_g2
 * {할머니}{예요|이에요}. -> c1_gwrong1
 * {가짜}{예요|이에요}. -> c1_gwrong2
 
@@ -965,7 +965,7 @@ haraboji[surprised]: {가짜}...?
 <- c1_g1.2
 
 === scene c1_g2
-haraboji: {학생}... {네}.
+haraboji: {탐정}... {네}.
 (He nods once and goes back to watching his line.)
 ~ What do you ask him?
 * {할머니} {봤어요}? -> c1_g3
@@ -1023,7 +1023,7 @@ show: couplephoto -> c1_gphoto
 miss -> c1_gnope
 
 === scene c1_gletter
-haraboji[sad]: {학생}... {편지}...
+haraboji[sad]: {탐정님}... {편지}...
 (He reads it slowly and hands it back, gently. He knows her handwriting.)
 haraboji[worried]: ...{몰라요}. {낚시}{하거든요|거든요}.
 ~ It moved him. But not enough.
@@ -1080,7 +1080,7 @@ sujin[surprised]: {잠깐만요}... {집}? {절}{이|이/가} {아니에요}?
 ~ You'll have to go back to the river and ask him again.
 
 === scene c1_gagain
-haraboji[worried]: {학생}! {절}! {절}{이에요}! {산}{에}!
+haraboji[worried]: {탐정님}! {절}! {절}{이에요}! {산}{에}!
 (He's packing up his rod. He jabs a finger at the mountain, half angry and half frightened, and says it far too loudly.)
 ! set toldMountain, grampsLeft
 ~ Then he picks up his bucket and stumps off up the path toward the village without another word. Whatever else he knows, you won't hear it today.
@@ -1138,7 +1138,7 @@ halmeoni[worried]: {가짜}...?!
 <- c1_j1.4
 
 === scene c1_j2
-halmeoni[happy]: 아... {제} {편지}! {학생}!
+halmeoni[happy]: 아... {제} {편지}! {탐정님}!
 (She recognizes her own handwriting, then you, and her whole face relaxes.)
 halmeoni[worried]: 수진{은|은/는}... {괜찮아요}?
 * {네}, {괜찮아요}. -> c1_j3
@@ -1202,7 +1202,7 @@ halmeoni[happy]: {할아버지}... {친구}{예요|이에요}. {좋은} {친구}
 ~ Then, on the dark mountain path, a light is coming up. Slowly. Someone is climbing.
 halmeoni[worried]: {누구}...? {불}...!
 (She grabs your sleeve and points at the light.)
-halmeoni[worried]: {학생}... {누구}{하고} {왔어요}?!
+halmeoni[worried]: {탐정님}... {누구}{하고} {왔어요}?!
 (She stares at you. You came alone. Didn't you?)
 ~ The lantern on the temple eave is still burning. Anyone on the path can see it.
 * [Call out to the light] -> c1_jcall

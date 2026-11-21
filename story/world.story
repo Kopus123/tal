@@ -421,6 +421,9 @@ sign       |               |          | SunHi  -10%  +0Hz
 줘요 = please
 한테 = (grammar)
 
+탐정 = detective
+탐정님 = detective
+
 === grammar
 # piece | what it does (shown when you tap it)
 이에요 | "is / am / are". Goes at the very end: 학생이에요 = (I) am a student. After a word ending in a vowel it shrinks to 예요: 어디예요? = where is it?
@@ -696,6 +699,9 @@ sign       |               |          | SunHi  -10%  +0Hz
 감사합니다 | thank you (formal)
 고맙습니다 | thank you (formal)
 거든요 | the "you see" ending (an excuse)
+
+탐정 | detective
+탐정님 | Detective (polite: what people call you)
 
 === names
 # name | kind | what tapping it says (kind: name or sound). Keep these spoiler-free.

@@ -40,7 +40,7 @@ haraboji: {네}. {없어요}.
 (A long, comfortable silence.)
 
 === scene hb_know
-haraboji: {학생}{은|은/는} {낚시} {알아요}?
+haraboji: {탐정님}{은|은/는} {낚시} {알아요}?
 (He holds the rod out an inch in your direction.)
 * {네}, {알아요}. -> hb_know_a
 * {아니요}, {몰라요}. -> hb_know_b

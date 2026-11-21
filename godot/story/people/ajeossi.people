@@ -1,0 +1,95 @@
+# 식당 아저씨: laughs a lot, and everything comes back to food. (format: js/core/villagers.js)
+
+=== person ajeossi
+at morning sikdang 50 64
+at afternoon sikdang 50 64
+at evening sikdang 50 64
+greet aj_hi
+chat 0 aj_special
+chat 0 aj_gramps
+chat 0 aj_order
+ask 할아버지 aj_ask_gramps
+ask 김밥 aj_ask_kimbap
+bye aj_bye
+bye aj_bye2
+bye aj_bye3
+
+=== scene aj_hi
+ajeossi[happy]: {어서 오세요}! {먹었어요}?
+(He is already reaching for a plate.)
+
+=== scene aj_special
+ajeossi[happy]: {오늘}{은|은/는} {떡볶이}{가|이/가} {맛있어요}!
+(He lifts the lid off a pan. It is very, very red.)
+* {떡볶이} {주세요}! -> aj_special_a
+* {매워요}...? -> aj_special_b
+
+=== scene aj_special_a
+ajeossi[happy]: 하하! {네}! {여기} {있어요}.
+(A plate lands in front of you before you finish the sentence.)
+! rel ajeossi +1
+
+=== scene aj_special_b
+ajeossi: {매워요}? {아니요}, {아니요}. {안} {매워요}!
+(It is extremely spicy. He watches you find that out, delighted.)
+
+=== scene aj_gramps
+ajeossi[worried]: {할아버지} {봤어요}? {오늘} {안} {왔어요}.
+(He glances at the empty stool by the window.)
+* {강}{에} {있어요}. -> aj_gramps_a
+* {몰라요}. -> aj_gramps_b
+
+=== scene aj_gramps_a
+ajeossi[happy]: 아, {강}! {낚시}! 하하. {고마워요}.
+(He mimes casting a line and shakes his head, smiling.)
+! rel ajeossi +1
+
+=== scene aj_gramps_b
+ajeossi: {네}... {이상해요}.
+(He wipes the same spot on the counter three times.)
+
+=== scene aj_order
+ajeossi: {뭐} {먹어요}?
+(He taps the menu on the wall with his cloth.)
+@build Order something.
+tiles: {라면} | {비빔밥} | {김밥} | {물} | {주세요}
+answer: {라면} | {주세요} -> aj_order_a
+answer: {비빔밥} | {주세요} -> aj_order_a
+answer: {김밥} | {주세요} -> aj_order_a
+answer: {물} | {주세요} -> aj_order_w
+miss -> aj_order_no
+
+=== scene aj_order_no
+ajeossi[surprised]: {네}?
+~ The food first, then 주세요.
+<- aj_order.2
+
+=== scene aj_order_a
+ajeossi[happy]: {네}! {맛있어요}! 하하.
+(He says it is delicious before you have tasted it. He is right.)
+! rel ajeossi +1
+
+=== scene aj_order_w
+ajeossi: {물}? {네}... {여기} {있어요}.
+(He looks a little hurt. Water, in his restaurant.)
+
+=== scene aj_bye
+ajeossi: {바빠요}! 하하. {내일} {오세요}!
+(The lunch crowd is coming in. Tomorrow.)
+
+=== scene aj_ask_gramps
+ajeossi: {할아버지}? 하하. {매일} {김밥} {두 개}!
+(He holds up two fingers. One to eat now, one for later, every single day.)
+! rel ajeossi +1
+
+=== scene aj_ask_kimbap
+ajeossi[happy]: {김밥}{은|은/는}... {비밀}{이에요}!
+(He taps his nose. The recipe is not for sale.)
+
+=== scene aj_bye2
+ajeossi[happy]: 아이고, {탐정님}! {배고파요}? 하하!
+(He doesn't wait for an answer. He never does.)
+
+=== scene aj_bye3
+ajeossi: {오늘}{도} {바빠요}... {내일} {오세요}!
+(He wipes his hands on his apron and gets back to work.)

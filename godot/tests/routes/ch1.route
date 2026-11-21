@@ -1,0 +1,282 @@
+# Chapter 1, start to finish (both story files: prologue.story then ch1.story).
+# SPOILERS: this is the whole solution.
+# Run with: python tools/playtest.py
+# '#@ Label' lines are checkpoints for Menu > Jump ahead (Playtest tools on). Put them where you're free to look around.
+
+chapter prologue
+shown #bPhone no
+expect day=1&time:evening&!clock
+# --- the evening before
+choose Laugh with her
+# --- the next morning
+choose 아니요
+choose Start searching
+idle
+phone museum
+spot Workshop
+idle
+spot Old photo
+examine chip
+spot Back to the courtyard
+#@ Day 1 · leaving the house
+spot Front gate
+choose Take the phone
+camera
+choose 할머니
+choose 버스 정류장
+idle
+spot Right path
+type 고마워요
+type 안녕하세요
+idle
+spot Talk to the owner
+type 할머니 봤어요?
+type 안녕하세요
+type 고마워요
+build 찾 | 어요
+build 찾 | 아요
+idle
+#@ Day 1 · the bus
+spot Bus stop
+spot Wait for the bus
+choose Stay on
+choose Stay on
+choose Press the stop
+type 안녕하세요
+build 김순자 | 선생님 | 봤어요?
+idle
+#@ Day 1 · the museum, case board
+solve p1 박물관 | 9시 | 탈
+solve p2 버스
+solve p3 안 | 왔어요 ; s_notcame + s_bus
+spot Take the bus home
+idle
+expect ending
+solve p4 엄마 | 찾지 마세요
+done prologue
+
+# --- the next day (ch1.story continues the same chapter)
+#@ Day 2 · the morning
+expect started&day=3&time:morning&!clock
+idle
+spot The mask
+choose Pick it up
+examine strap | eyebrow | paint
+idle
+expect sawFake&threatSent
+phone unknown
+expect read_threat
+spot Talk to 수진
+choose 할머니 어디
+choose Show her something
+present threat
+build 가 | 아요
+build 가 | 요
+idle
+spot Back wall
+spot Workshop
+spot Workbench
+spot Sketch on the wall
+spot Back to the courtyard
+spot Front gate
+spot The couple
+choose 네
+idle
+spot Right path
+choose Shake your head
+idle
+spot Talk to the owner
+build 김밥 | 두 개 | 누구예요?
+type 할아버지 어디예요
+idle
+spot Talk to the owner
+choose 전화
+idle
+spot The menu
+build 김밥 | 주세요
+choose 맛있어요
+idle
+#@ Day 2 · the market
+spot Bus stop
+spot Wait for the bus
+choose Press the stop
+type 안녕하세요
+idle
+spot The paint stall
+build 빨간 | 물감 | 주세요
+number 10000
+number 1000
+choose 할머니 봤어요
+type 할아버지는 어디예요?
+choose 산에
+choose 강에
+idle
+expect marketDone&knowRiver
+phone junho
+#@ Day 2 · leaving the market
+spot Take the bus back
+spot Wait for the bus
+choose Stay on
+choose Stay on
+choose Press the stop
+choose Shake your head
+idle
+spot The big glass case
+contradict s_staff + fakemask
+expect !doubtMuseum
+spot The big glass case
+contradict s_staff + photo79
+idle
+spot Front desk
+idle
+expect gotCard
+expect doubtMuseum
+#@ Day 2 · leaving the museum
+spot Take the bus back
+spot Path behind the bus stop
+choose 탐정이에요
+choose 할머니 봤어요
+contradict s_gramps + s_couple
+leave
+spot The old man
+contradict s_gramps + s_market
+present threat
+choose 강에
+choose 집에
+idle
+expect misheard&!toldMountain
+map gang
+spot The old man
+idle
+expect toldMountain&caughtGramps&grampsLeft
+spot The bridge
+examine ticket | tread | ring
+idle
+map madang
+spot Talk to 수진
+choose 준호
+number 800
+choose 준호
+number 900
+choose Leave her be
+idle
+expect knowJunhoTime
+#@ Day 2 · case board before the climb
+nosolve d1 가짜 | 만들었어요 | 어제 ; fakemask + sketch
+solve d1 가짜 | 만들었어요 | 어제 ; photo79 + fakemask
+solve d2 진짜 | 다리 | 혼자
+solve dw 뒤에 | 산 ; wall + s_sujin
+solve d3 시장 | 할아버지 ; s_kimbap + s_market
+solve d4 나무 | 빨간 | 물감
+solve d5 남자 | 불 | 다리 ; bootprint + s_couple
+solve d6 가짜
+solve dt 는데요
+solve d7 절 | 산
+solve dg 장화 ; gramboots + bootprint
+solve do 아들 ; s_junho + s_ownercall
+solve dc 서울 ; threat + card
+#@ Day 2 · the mountain
+map golmok
+spot Left path
+spot Keep climbing
+present letter
+choose 괜찮아요
+examine chip
+choose 서울
+choose Sit with her
+choose Call out
+choose Blow out the lantern
+idle
+expect hidden&time:night
+#@ Day 2 · the last deductions
+solve d8 할머니 | 박물관 | 가짜 ; realchip + photo79
+solve d9 바꿨어요 | 마을 | 서울 ; s_reason + card
+done ch1
+spot Leave it here for now
+idle
+expect @madang&clock&day=4&time:morning
+#@ Free days · the village
+# --- people: saying hello doesn't buy friendship; then small talk; nobody is where they aren't
+talk sujin
+idle
+saved world.met.sujin
+talk sujin
+choose Just chat
+anychoice
+idle
+map gang
+talk haraboji
+idle
+saved world.met.haraboji
+expect !rel:haraboji>=2
+map golmok
+nospot Talk to 지호
+# --- free days: time passes when you wait, places close at night, sleeping starts a new day
+wait
+wait
+expect time:evening
+map jeong
+talk jiho
+idle
+saved world.met.jiho
+expect !rel:jiho>=2
+map sikdang
+wait
+expect time:night&@jeong
+closed sikdang
+map golmok
+spot Right path, past the dark restaurant
+expect @jeong
+spot Back to the alley
+map madang
+sleep
+expect day=5&time:morning&on:market
+# --- the talk menu: once you've said hello, you can bring things up
+fx rel sujin =3
+talk sujin
+idle
+# (close enough now: her personal story comes first, then the menu)
+talk sujin
+idle
+saved world.seen.sj_workshop
+talk sujin
+choose 할머니는
+idle
+# --- the bus, and a market-day event you're there for
+map jeong
+spot Route map
+idle
+spot Take the bus
+choose Pay and get on
+choose Press the stop button
+idle
+expect @sijang
+saved world.evs.haggle@5
+talk ajumma
+idle
+spot Take the bus back
+choose Pay and get on
+choose Stay on
+choose Stay on
+choose Stay on
+choose Press the stop button
+idle
+expect money=16000
+map madang
+wait
+wait
+sleep
+# --- day 6: you don't go to the river in the evening, so you miss what happens there
+wait
+wait
+wait
+expect time:night&day=6
+saved world.gossip.jiho.0
+sleep
+wait
+map golmok
+talk jiho
+idle
+talk jiho
+idle
+expect !g:bigfish

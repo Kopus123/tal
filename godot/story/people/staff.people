@@ -1,0 +1,89 @@
+# 박물관 직원: proud of her museum, goes stiff and formal (-습니다) when she's nervous. (format: js/core/villagers.js)
+
+=== person staff
+at morning museum 40 90
+at afternoon museum 40 90
+at evening sikdang 30 70
+at evening sikdang 30 70
+at evening gang 40 70
+greet st_hi
+chat 0 st_quiet
+chat 0 st_masks
+chat 0 st_dinner
+ask 탈 st_ask_mask
+ask 할머니 st_ask_gm
+bye st_bye
+bye st_bye2
+bye st_bye3
+
+=== scene st_hi
+staff[happy]: {안녕하세요}! {어서 오세요}.
+(She straightens a stack of leaflets that was already straight.)
+
+=== scene st_quiet
+staff: {오늘}{은|은/는}... {사람}{이|이/가} {없어요}.
+(She looks around the empty hall and sighs.)
+* {괜찮아요}. {저}{는|은/는} {여기} {있어요}. -> st_quiet_a
+* {이상해요}. -> st_quiet_b
+
+=== scene st_quiet_a
+staff[happy]: 하하. {네}! {고마워요}.
+(For a moment she forgets to be formal.)
+! rel staff +1
+
+=== scene st_quiet_b
+staff[worried]: {네}... {이상해요}.
+(She glances at the glass case and quickly looks away.)
+
+=== scene st_masks
+staff: {이거}{는|은/는} {옛날} {탈}{입니다}.
+(She waves at a row of masks along the wall, very proudly.)
+* {예뻐요}! -> st_masks_a
+* {진짜}{예요|이에요}? -> st_masks_b
+
+=== scene st_masks_a
+staff[happy]: {네}! {예뻐요}!
+(She beams, as if you'd said it about her own children.)
+! rel staff +1
+
+=== scene st_masks_b
+staff[worried]: {진짜}... {입니다}. {진짜}{입니다}.
+(She says it a little too quickly.)
+
+=== scene st_dinner
+staff: {저녁}{에}{는|은/는}... {식당}{에서} {먹어요}.
+(She has a book open next to her bowl. Alone, every evening, by the look of it.)
+* {같이} {먹어요}! -> st_dinner_a
+* {맛있어요}? -> st_dinner_b
+
+=== scene st_dinner_a
+staff[surprised]: {같이}{요}? ...{네}! {좋아요}.
+(She moves her book to make room.)
+! rel staff +2
+
+=== scene st_dinner_b
+staff[happy]: {네}. {김밥}{이|이/가} {맛있어요}.
+(She lifts a piece with her chopsticks to show you.)
+
+=== scene st_ask_mask
+staff[worried]: {탈}... {탈}{은|은/는}...
+(She looks at the glass case, then at the door, and lowers her voice.)
+staff: {서울} {선생님}{은|은/는}... {안} {왔어요}. {오늘}{도}.
+(She says it like it's good news. Then she changes the subject.)
+
+=== scene st_ask_gm
+staff[sad]: 김순자 {선생님}... {좋은} {선생님}{입니다}.
+(She means it. There's a small photo of the two of them pinned behind the desk.)
+! rel staff +1
+
+=== scene st_bye
+staff: {네}. {안녕히 가세요}.
+(She goes back to her leaflets.)
+
+=== scene st_bye2
+staff[happy]: {내일} {만나요}.
+(A small, polite bow.)
+
+=== scene st_bye3
+staff: {오늘} {날씨}{가|이/가} {좋아요}.
+(She says it the way you'd say it to a visitor: polite, and finished.)

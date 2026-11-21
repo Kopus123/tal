@@ -1,0 +1,94 @@
+# 지호: a school kid. Talks to everyone without 요 (반말), which from a kid is cheeky, not rude.
+# (format: js/core/villagers.js)
+
+=== person jiho
+at afternoon golmok 58 80
+at afternoon sanqil 34 82
+at afternoon madang 44 82
+at evening jeong 90 86
+at evening golmok 58 80
+greet jh_hi
+chat 0 jh_what
+chat 0 jh_homework
+chat 0 jh_game
+ask 탈 jh_ask_mask
+bye jh_bye
+bye jh_bye2
+bye jh_bye3
+
+=== scene jh_hi
+jiho[happy]: {안녕}!
+(A kid with a school bag as big as he is. No 요 anywhere: he talks to you like you're in his class.)
+
+=== scene jh_what
+jiho: {뭐} {해}?
+(He tries to read your notebook upside down.)
+* {탈}{을|을/를} {찾아요}. -> jh_what_a
+* {몰라요}. -> jh_what_b
+
+=== scene jh_what_a
+jiho[surprised]: {탈}? {진짜}?
+(His eyes go wide.)
+jiho[happy]: {좋아}! {같이} {가}!
+(He marches off three steps, realizes he has no idea where, and comes back.)
+! rel jiho +1
+
+=== scene jh_what_b
+jiho[happy]: {몰라}? 하하. {나}{도} {몰라}.
+(He shrugs with his whole body.)
+
+=== scene jh_homework
+jiho[sad]: {숙제} {싫어}.
+(He gives his school bag a small kick.)
+* {저}{도} {싫어요}. -> jh_homework_a
+* {숙제} {좋아요}! -> jh_homework_b
+
+=== scene jh_homework_a
+jiho[happy]: 하하! {좋아}!
+(At last, an adult who understands.)
+! rel jiho +1
+
+=== scene jh_homework_b
+jiho[surprised]: {진짜}...?
+(He looks at you the way you would look at someone who likes the dentist.)
+
+=== scene jh_bye
+jiho: {안녕}!
+(He is gone before you can answer.)
+! away jiho
+
+=== scene jh_game
+jiho[happy]: {같이} {놀아}! {빨리}!
+(He has a pebble in each hand and a look of great seriousness.)
+* {네}! -> jh_game_a
+* {바빠요}. -> jh_game_b
+
+=== scene jh_game_a
+jiho[happy]: {좋아}! {나}{는|은/는} {진짜} {잘해}!
+(He throws both pebbles. They land nowhere in particular. He declares himself the winner.)
+! rel jiho +1
+
+=== scene jh_game_b
+jiho[sad]: {바빠}? {나}{도} {바빠}... {숙제}.
+(He drags his feet off toward home.)
+! away jiho
+
+=== scene jh_ask_mask
+jiho[surprised]: {탈}? {무서워}!
+(He pulls an enormous grin with his fingers, then shivers dramatically.)
+
+=== scene ev_bigfish_told
+jiho[surprised]: {할아버지}{가|이/가} {큰} {물고기} {잡았어}! {진짜}!
+(He spreads his arms as wide as they go. Then a bit wider.)
+jiho: {그리고}... {다시} {줬어}! {강}{에}!
+(He can't believe it either: caught it, and let it go.)
+
+=== scene jh_bye2
+jiho[happy]: {내일}! {내일} {같이}!
+(He runs off, then runs back to make sure you heard, then runs off again.)
+! away jiho
+
+=== scene jh_bye3
+jiho: {배고파요}...
+(He wanders off in the direction of the restaurant.)
+! away jiho

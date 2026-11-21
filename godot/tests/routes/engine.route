@@ -1,0 +1,113 @@
+# Engine checks: the rules story files can use (effects and conditions), the world that carries on
+# between chapters, and old saves upgrading. No story in here, so no spoilers.
+# Run with: python tools/playtest.py engine
+
+chapter prologue
+# --- a new game starts on the evening of day 1 with nothing, and the story holds the clock
+expect day=1&time:evening&!time:morning&!clock&money=20000&!g:test&!has:radio&!rel:sujin>=1
+fx money =0
+
+# --- money, friendship, things you own, village flags
+fx money +500; rel sujin +2; item +radio; item +radio; set g:test
+expect money=500&money>=500&!money>500&money<501&rel:sujin>=2&rel:sujin=2&has:radio&has:radio=2&g:test&!has:camera
+fx money -200; item -radio; rel sujin -1; unset g:test
+expect money=300&has:radio=1&rel:sujin=1&!g:test
+fx money -999
+expect money=0
+fx money =1000
+expect money=1000
+
+# --- effects that add up pay out once per beat, unless they say "each time"
+fx @beatA money +100
+fx @beatA money +100
+expect money=1100
+fx @beatA money +100 each time
+fx @beatA money +100 each time
+expect money=1300
+
+# --- "if" on an effect, mixing chapter flags and world ones
+fx set localFlag; money +1 if localFlag&g:nope; money +5 if localFlag&money>=1300
+expect money=1305&localFlag
+
+# --- the world carries on into the next chapter; chapter flags don't
+switch ch1
+expect money=1305&!localFlag&started&rel:sujin=1
+# --- replaying a chapter can't farm a once-only effect
+switch prologue
+fx @beatA money +100
+expect money=1305
+
+# --- the save on the phone today (format 4) upgrades and keeps everything you wrote and learned
+oldsave v4
+# (in the middle of chapter 1: the story holds the clock, on the story's day 3)
+expect day=3&!clock&money=20000&sawFake&hasPhone
+note 탈 mask
+note 강 river
+saved m.탈.u
+saved tl.는데요
+saved mx.절/집
+saved done.prologue
+saved w.탈.checked
+# --- a very old save (before chapters merged) still upgrades step by step, notes intact
+oldsave v2
+expect !clock&money=20000
+note 탈 mask
+saved m.탈
+
+# --- hint fading: right uses in a row make a word's hints fade; one slip brings them back
+chapter prologue
+knows 탈 0
+used 탈
+used 탈
+knows 탈 1
+used 탈
+used 탈
+knows 탈 2
+used 탈 wrong
+knows 탈 0
+
+# --- pattern pages open when enough of their words have been met
+chapter prologue
+choose Laugh with her
+saved pat.is
+
+# --- Check my guess judges the guess: it never accepts just anything
+guess 탈 wrong H
+guess 탈 wrong thing
+guess 탈 right mask
+guess 탈 right a Mask!
+guess 탈 right masks
+guess 없어요 right dont have
+guess 없어요 right isn't there
+guess 없어요 wrong there
+guess 괜찮아요 right it's ok i think? okay
+guess 할머니 right grandmother
+guess 할머니 wrong grandpa
+guess 강 right river
+guess 강 wrong r
+guess 빨리 right quick
+guess 봤어요 right saw
+guess 봤어요 wrong was
+guess 할머니 right grandma
+guess 할아버지 wrong grandma
+
+# --- the clock: the story can hold it, set it, and let it go
+chapter prologue
+fx time go; time set afternoon
+expect clock&time:afternoon&day=1
+fx time +1
+expect time:evening
+fx time +5
+expect time:night&day=1
+fx time sleep
+expect day=2&time:morning&on:festival&!on:market
+fx time stop; time +1
+expect time:morning&!clock
+
+# --- a save that finished chapter 1 before the village existed wakes up in the village, nothing lost
+oldsave v6
+expect day=5&clock&@madang
+note 탈 mask
+saved prog.ch1.F.solved_d9
+saved done.ch1
+saved pat.past

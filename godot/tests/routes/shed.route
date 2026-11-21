@@ -1,0 +1,79 @@
+# Test area: the escape room (story/shed.story), start to finish, plus the wrong turns.
+# SPOILERS: this is the whole solution.
+
+chapter shed
+idle
+expect @shed&!free&time:night&ev_flashlight&!lit
+#@ Escape room · locked in
+# --- the door won't open
+tap Door
+tap Handle
+idle
+back
+# --- the window: it won't open or break; the sign outside has four numbers
+tap Window
+tap Latch
+idle
+tap Glass
+idle
+tap Sign
+idle
+expect sawSign
+back
+# --- the workbench: in the dark you can't make out the drawer; with the flashlight on, you can
+tap Workbench
+tap Drawer
+idle
+pocket flashlight
+expect lit
+tap Note
+idle
+expect ev_sh_note
+tap Drawer
+number 1234
+idle
+expect !drawerOpen
+tap Drawer
+number 4719
+idle
+expect drawerOpen&ev_sh_driver
+#@ Escape room · drawer open
+# --- the newer floorboard: look first, then the screwdriver
+tap Floorboard
+idle
+pocket sh_driver
+expect hold:sh_driver
+tap Floorboard
+idle
+expect ev_sh_key&!hold:sh_driver
+back
+# --- the shelf: the key opens the toolbox
+tap Shelf
+pocket sh_key
+tap Toolbox
+idle
+expect ev_sh_oil&ev_sh_hammer
+back
+# --- the window latch takes oil, but the window is nailed shut
+tap Window
+pocket sh_oil
+tap Latch
+idle
+expect latchOiled
+back
+# --- the door: hammer first doesn't work; oil, then hammer, does
+tap Door
+pocket sh_hammer
+tap Top hinge
+idle
+expect !oiled&!free
+pocket sh_oil
+tap Bottom hinge
+idle
+expect oiled
+pocket sh_hammer
+tap Top hinge
+idle
+expect free
+tap Doorway
+idle

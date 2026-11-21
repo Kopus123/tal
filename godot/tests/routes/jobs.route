@@ -1,0 +1,208 @@
+# Jobs from the notice board, start to finish, plus the money around them (fares, food).
+# SPOILERS: the answers to every job.
+# Starts the village chapter fresh: day 1, 20,000원 in your pocket.
+# Day 1's board: key, gimbap, bag.  Day 2's: whatever's left (gimbap, letter, cash).
+
+chapter village
+idle
+expect money=20000&day=1&time:morning
+spot Front gate
+spot Village hall
+expect @hall
+#@ Jobs · the notice board
+job key
+idle
+expect job:key
+noboard key
+
+# --- the missing key: 수진 (wherever she is this morning); the river is where she really was
+spot Back to the alley
+spot Front gate
+talk sujin
+idle
+talk sujin
+choose About the job
+choose I don't know yet
+idle
+map golmok
+spot Right path
+spot Bus stop
+spot Path behind the bus stop
+talk haraboji
+idle
+talk haraboji
+choose About the job
+idle
+expect key_asked&st_key_river
+map madang
+talk sujin
+choose About the job
+choose 강에 있어요
+idle
+expect jobdone:key&!job:key&money=24000
+
+# --- the gimbap thief, answered wrong on purpose: it's off the board for today
+map hall
+job gimbap
+idle
+map sikdang
+talk ajeossi
+idle
+talk ajeossi
+choose About the job
+choose I don't know yet
+idle
+map gang
+talk haraboji
+choose About the job
+idle
+map sikdang
+talk ajeossi
+choose About the job
+choose 지호예요
+idle
+expect !job:gimbap&!jobdone:gimbap
+noboard gimbap
+
+# --- the lost bag: 아저씨 saw a kid take it; 지호 says he didn't; the owner gets it back in the evening
+map hall
+job bag
+idle
+map sikdang
+talk ajeossi
+choose About the job
+idle
+expect st_bag_kid
+wait
+map golmok
+talk jiho
+idle
+talk jiho
+choose About the job
+choose Point out what doesn't add up
+contradict bag_lie + bag_kid
+idle
+expect ev_bag_bag
+#@ Jobs · bag found, evening coming
+wait
+map sikdang
+talk staff
+idle
+talk staff
+choose About the job
+present bag_bag
+idle
+expect jobdone:bag&money=29000
+map madang
+sleep
+expect day=2&time:morning
+
+# --- day 2: the gimbap thief is back on the board, and starts over clean
+map hall
+expect st_gimbap_cat
+job gimbap
+idle
+expect !st_gimbap_cat&!gimbap_asked
+map gang
+talk haraboji
+idle
+talk haraboji
+choose About the job
+idle
+map sikdang
+talk ajeossi
+idle
+talk ajeossi
+choose About the job
+choose 고양이예요
+idle
+expect jobdone:gimbap&money=35000
+
+# --- the cash box: a bus ride to the market (1,500원), a snack, and no bus fare home on purpose: walk
+map hall
+job cash
+idle
+map jeong
+spot Take the bus
+choose Pay and get on
+choose Press the stop button
+idle
+expect @sijang&money=33500
+#@ Jobs · at the market
+talk ajumma
+idle
+talk ajumma
+choose About the job
+choose Go and ask the customers first
+idle
+spot 호떡 cart
+choose 호떡 하나 주세요
+number 1000
+idle
+expect money=32500
+spot Take the bus back
+choose Walk back along the river road
+idle
+expect @jeong&time:afternoon
+map sikdang
+talk ajeossi
+choose About the job
+idle
+map madang
+spot Workshop
+talk sujin
+idle
+talk sujin
+choose About the job
+idle
+expect cash_asked
+wait
+map sikdang
+talk ajumma
+choose About the job
+choose Tell her how much is missing
+number 3000
+choose 수진이에요
+idle
+expect jobdone:cash&money=40500
+
+# --- dinner: order in Korean, pay with the number pad (wrong first), then treat the table
+#@ Jobs · dinner at the restaurant
+map sikdang
+spot Order food
+choose 라면 주세요
+number 4000
+number 4500
+expect money=36000
+# (buying for the table is only offered when 아주머니 or the museum woman is here; tonight one of them is)
+choose Buy 김밥 for
+idle
+expect money=33000
+
+# --- the letter: casual Korean, fishing, and the one who goes fishing with 할아버지
+map hall
+job letter
+idle
+map madang
+talk sujin
+choose About the job
+idle
+map jeong
+talk jiho
+idle
+talk jiho
+choose About the job
+choose Give it to him
+idle
+expect jobdone:letter&money=40000
+map hall
+noboard letter
+noboard bag
+
+# --- too broke for the bus: it tells you, and you stay put
+fx money =1000
+map jeong
+spot Take the bus
+choose You can't afford the fare
+idle
+expect @jeong&money=1000

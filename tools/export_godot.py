@@ -16,7 +16,7 @@ import http.server, json, pathlib, re, shutil, socketserver, subprocess, sys, th
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GODOT = ROOT / "godot"
-STORIES = ["world.story", "shed.story"]          # the files the Godot version reads so far
+STORIES = ["world.story", "prologue.story", "ch1.story", "village.story", "jobs.story", "encounters.story", "shed.story"]
 BROWSERS = [r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"]
 ICON, COLS = 128, 16
@@ -65,6 +65,8 @@ def main():
         for d in ["story", "art", "icons"]:
             shutil.rmtree(GODOT / d, ignore_errors=True); (GODOT / d).mkdir(parents=True)
         for s in STORIES: shutil.copy(ROOT / "story" / s, GODOT / "story" / s)
+        shutil.copytree(ROOT / "story" / "people", GODOT / "story" / "people")
+        shutil.rmtree(GODOT / "tests" / "routes", ignore_errors=True); shutil.copytree(ROOT / "tests", GODOT / "tests" / "routes", ignore=shutil.ignore_patterns("saves", "*.json"))
 
         tmp[1].write_text(ART_PAGE, encoding="utf-8")
         for k in info["arts"]:

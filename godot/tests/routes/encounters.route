@@ -1,0 +1,42 @@
+# Village encounters: little things that happen as you walk around.
+# SPOILERS: the answers.
+# Which encounters come up depends on the day. Day 1: the hiker in the alley (morning), the hiker at the bus
+# stop (morning), 할아버지's fish (afternoon, river). Day 2: 지호's quiz (afternoon, alley). Day 3: the fish (morning).
+
+chapter village
+idle
+encounters on
+expect day=1&time:morning&money=20000
+#@ Encounters · day 1 morning
+spot Front gate
+choose 오른쪽이에요
+idle
+expect money=21000&@golmok
+spot Right path
+spot Bus stop
+number 13:00
+idle
+spot Path behind the bus stop
+expect !rel:haraboji>=1
+wait
+choose 일곱 마리
+idle
+expect rel:haraboji=1&@gang&time:afternoon
+map madang
+wait
+sleep
+expect day=2&time:morning
+#@ Encounters · day 2
+wait
+map golmok
+choose 가방이에요
+idle
+expect rel:jiho=1
+map madang
+wait
+sleep
+# --- day 3: the fish again, and a wrong count earns nothing
+map gang
+choose 다섯 마리
+idle
+expect rel:haraboji=1

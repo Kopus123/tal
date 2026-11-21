@@ -3,7 +3,7 @@ extends Control
 ## Overlays: the combination lock, a word's picture, the menu, the Korean keyboard test.
 ##   godot --path . -- --shots OUT_DIR     plays the escape room and saves a screenshot of every step (tools/shot_tour.gd)
 
-const BUILD := 2
+const BUILD := 3
 const INK := Color("151a24")
 const PAPER := Color("efe6cf")
 const PAPER_INK := Color("2a231d")
@@ -190,7 +190,7 @@ func _icon(key: String) -> Texture2D:
 
 ## ---------- a word's page: its picture, and the meaning if you want to check
 func _word(w: String) -> void:
-	_play("tap")
+	_play("tap"); Game.note("  opened word: " + w)
 	var o := _overlay()
 	var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 10); o.get_child(0).add_child(box)
 	var pic := TextureRect.new(); pic.texture = _icon(w); pic.custom_minimum_size = Vector2(180, 180); pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -200,7 +200,7 @@ func _word(w: String) -> void:
 	var mean: String = Game.world.meanings.get(w, "")
 	if mean != "":
 		var chk := _button("Check what it means"); chk.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		chk.pressed.connect(func(): m.text = mean; chk.queue_free()); box.add_child(chk)
+		chk.pressed.connect(func(): m.text = mean; chk.queue_free(); Game.note("  checked the meaning of " + w)); box.add_child(chk)
 	var ok := _button("Close", true); ok.pressed.connect(o.get_parent().queue_free); box.add_child(ok)
 
 
@@ -218,9 +218,9 @@ func _menu() -> void:
 	var o := _overlay()
 	var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 10); o.get_child(0).add_child(box)
 	var hint := _label("", 20, PAPER_INK); hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x = 380
-	var b1 := _button("💡  Think (a nudge)"); b1.pressed.connect(func(): hint.text = Game.hint()); box.add_child(b1); box.add_child(hint)
+	var b1 := _button("💡  Think (a nudge)"); b1.pressed.connect(func(): hint.text = Game.hint(); Game.note("  HINT: " + hint.text)); box.add_child(b1); box.add_child(hint)
 	var b2 := _button("⌨  Korean keyboard test"); b2.pressed.connect(func(): o.get_parent().queue_free(); _keyboard()); box.add_child(b2)
-	var b3 := _button("↺  Start the shed over"); b3.pressed.connect(func(): o.get_parent().queue_free(); room._art_key = ""; Game.start(STORY)); box.add_child(b3)
+	var b3 := _button("↺  Start the shed over"); b3.pressed.connect(func(): Game.note("  started over")); b3.pressed.connect(func(): o.get_parent().queue_free(); room._art_key = ""; Game.start(STORY)); box.add_child(b3)
 	var b4 := _button("Close", true); b4.pressed.connect(func(): o.get_parent().queue_free()); box.add_child(b4)
 
 

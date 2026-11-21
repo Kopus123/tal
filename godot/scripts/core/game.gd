@@ -16,6 +16,18 @@ var node := ""                 ## the beat on screen ("" = looking around)
 var time_slot := "night"
 var _leaning := false
 
+## ---------- the play log: everything you do, with the time, so a playtest can be read afterwards.
+## On the phone it's in the app's files; from the laptop:  adb shell run-as com.kopus123.tal cat files/playlog.txt
+const LOG_PATH := "user://playlog.txt"
+var _t0 := 0
+
+
+func note(what: String) -> void:
+	var s := (Time.get_ticks_msec() - _t0) / 1000
+	var f := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE if FileAccess.file_exists(LOG_PATH) else FileAccess.WRITE)
+	if f == null: return
+	f.seek_end(); f.store_line("%02d:%02d  %s" % [s / 60, s % 60, what]); f.close()
+
 
 func _ready() -> void:
 	world = Story.parse(_read("res://story/world.story"), "world.story")
@@ -29,6 +41,9 @@ func _read(path: String) -> String:
 ## start a story file from the top
 func start(file: String) -> void:
 	ch = Story.parse(_read("res://story/" + file), file)
+	_t0 = Time.get_ticks_msec()
+	note("
+===== new playthrough of %s, %s =====" % [file, Time.get_datetime_string_from_system(false, true)])
 	for w in ch.warnings: push_warning("story line not understood: " + w)
 	F = {"started": 1}; loc = ch.meta.get("start-place", ""); node = ""; _leaning = false
 	go(ch.meta.get("start", ""))
@@ -105,6 +120,7 @@ func next() -> void:
 
 
 func choose(o: Dictionary) -> void:
+	note("  chose: " + plain(o.get("en", o.get("ko", ""))))
 	sound.emit("tap"); run_fx(o.fx); go(o.go)
 
 
@@ -112,7 +128,9 @@ func choose(o: Dictionary) -> void:
 func answer(value: String) -> void:
 	var b := beat()
 	for a in b.ans:
-		if _digits(a[0]) == _digits(value): go(a[1]); return
+		if _digits(a[0]) == _digits(value):
+			note("  tried %s: right" % value); go(a[1]); return
+	note("  tried %s: wrong" % value)
 	go(b.get("miss", ""))
 
 
@@ -125,12 +143,14 @@ func _digits(s: String) -> String:
 
 ## walk away from a beat that's waiting on you (the lock's "Leave it")
 func leave() -> void:
+	note("  walked away from it")
 	node = ""; _end_lean(); changed.emit()
 
 
 func enter(p: String) -> void:
 	if not ch.places.has(p): return
 	loc = p; node = ""; _end_lean()
+	note("went to: %s (%s)" % [ch.places[p].get("sub", p), p])
 	var pl := place()
 	if pl.has("first") and not F.has("visited_" + p):
 		F["visited_" + p] = 1; go(pl.first); return
@@ -148,6 +168,8 @@ func spots_now() -> Array:
 
 
 func tap_spot(s: Dictionary) -> void:
+	var h: String = F.get("hold", "")
+	note("  tapped: %s%s%s" % [s.l, (" holding " + h) if h != "" else "", " (flashlight on)" if F.get("lit", 0) else ""])
 	F["found_%s_%s" % [loc, s.l]] = 1
 	sound.emit("tap")
 	if s.kind == "=>":
@@ -186,6 +208,7 @@ func pockets() -> Array:
 
 func pocket(id: String) -> void:
 	sound.emit("click")
+	note("  pocket: " + ("flashlight " + ("off" if F.get("lit", 0) else "on") if id == "flashlight" else ("put away " if F.get("hold", "") == id else "took out ") + id))
 	if id == "flashlight": F["lit"] = 0 if F.get("lit", 0) else 1
 	elif F.get("hold", "") == id: F.erase("hold")
 	else: F["hold"] = id

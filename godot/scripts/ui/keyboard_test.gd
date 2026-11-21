@@ -72,6 +72,7 @@ func _toggle_shift() -> void:
 
 
 func _check() -> void:
+	Game.note("  keyboard: typed %s for %s: %s" % [h.text(), target, "right" if h.text().strip_edges() == target else "wrong"])
 	if h.text().strip_edges() == target:
 		Game.sound.emit("solve"); Game.toast.emit("맞아요! " + target)
 		round_i += 1; _next_word()

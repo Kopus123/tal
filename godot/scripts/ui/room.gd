@@ -112,6 +112,7 @@ func _tap(p: Vector2) -> void:
 	if not best.is_empty():
 		Game.tap_spot(best); return
 	_ripple(p)
+	Game.note("  tapped nothing at %d%%, %d%%%s" % [pct.x, pct.y, " in the dark" if float(Game.place().get("dark", "0")) > 0.6 and not Game.F.get("lit", 0) else ""])
 	var pl: Dictionary = Game.place()
 	if float(pl.get("dark", "0")) > 0.6 and not Game.F.get("lit", 0):
 		_empty += 1

@@ -10,7 +10,12 @@ function resume(){
   if(S.node&&!ST.nodes[S.node])S.node=null;
   revealFor=S.node;lastLoc=S.loc;
 }
+const BUILD='48';   // same number as <meta name="tal-build"> in index.html: bump both together
 async function boot(){
+  // an old copy of the page with new code (the browser kept the page): fetch the page fresh, once
+  const pb=(document.querySelector('meta[name="tal-build"]')||{}).content;
+  if(pb!==BUILD){let tried=false;try{tried=sessionStorage.getItem('tal-build')===BUILD;sessionStorage.setItem('tal-build',BUILD)}catch(_){}
+    if(!tried){try{await fetch(location.pathname,{cache:'reload'})}catch(_){}location.reload();return}}
   try{
     const get=async f=>{const r=await fetch('story/'+f,{cache:'no-cache'});if(!r.ok)throw new Error(f+' returned '+r.status);return r.text()};
     WORLD=parseStory(await get('world.story'),null,'world.story');CH={};

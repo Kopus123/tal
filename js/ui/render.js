@@ -162,11 +162,15 @@ function render(){
 // night: a dark layer over the picture. With the flashlight on, a circle of light follows your finger.
 function darkLayer(l){let d=$('#dark');const lvl=l&&l.dark?+l.dark:0;
   if(!d){d=document.createElement('div');d.id='dark';d.className='dark'}if(d.nextSibling!==$('#fx'))$('#fx').parentNode.insertBefore(d,$('#fx'))
-  d.hidden=!lvl;d.style.setProperty('--dk',lvl);d.classList.toggle('lit',!!S.F.lit)}
+  d.hidden=!lvl;d.style.setProperty('--dk',lvl);d.classList.toggle('lit',!!S.F.lit);$('#app').classList.toggle('lit',!!S.F.lit&&!!lvl)}
 let LIGHT={x:50,y:45};
 ['pointerdown','pointermove'].forEach(t=>document.addEventListener(t,e=>{if(!S.F||!S.F.lit)return;const sc=$('#dark');if(!sc||(t==='pointermove'&&!e.buttons&&e.pointerType!=='mouse'))return;
   const r=sc.getBoundingClientRect(),v=$('#scene').getBoundingClientRect();if(e.clientX<v.left||e.clientX>v.right||e.clientY<v.top||e.clientY>v.bottom)return;if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
-  LIGHT={x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};const d=$('#dark');if(d){d.style.setProperty('--lx',LIGHT.x+'%');d.style.setProperty('--ly',LIGHT.y+'%')}},{passive:true}));
+  LIGHT={x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};const d=$('#dark');if(d){d.style.setProperty('--lx',LIGHT.x+'%');d.style.setProperty('--ly',LIGHT.y+'%')}
+  const pan=$('#pan');if(pan&&!pan.hidden&&e.buttons){const edge=v.width*.16,dx=e.clientX<v.left+edge?-1:e.clientX>v.right-edge?1:0;PANDIR=dx;if(dx&&!PANT)panTick()}},{passive:true}));
+// holding the light near an edge keeps the room scrolling that way, slowly
+let PANDIR=0,PANT=0;function panTick(){const pan=$('#pan');if(!PANDIR||!pan||pan.hidden){PANT=0;return}pan.scrollLeft+=PANDIR*6;PANT=requestAnimationFrame(panTick)}
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{PANDIR=0}));
 // tapping where there's nothing: a ripple, and in the dark, a reminder that you can't see
 function emptyTap(e,l){const fx=$('#fx'),r=fx.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*100,py=(e.clientY-r.top)/r.height*100;
   const p=document.createElement('span');p.className='exripple';p.style.left=px+'%';p.style.top=py+'%';fx.appendChild(p);setTimeout(()=>p.remove(),600);sfx('tap');

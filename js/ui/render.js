@@ -20,6 +20,7 @@ const hasPhone=()=>!!S.F.hasPhone&&ST.phones.length>0;
 function render(){
   const l=ST.places[S.loc]||Object.values(ST.places)[0];const nd=S.node?ST.nodes[S.node]:null;
   document.documentElement.dataset.size=S.set.size;
+  panMode(l.mode==='explore');
   $('#locKo').textContent=l.name||'';$('#locSub').textContent=l.sub||'';
   if(S.loc)S.known[S.loc]=1;
   $('#bPhone').hidden=!hasPhone();
@@ -40,14 +41,14 @@ function render(){
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
   const xp=!nd&&l.mode==='explore';
   if(xp){const seen=new Set();l.spots.forEach((x,i)=>{if(seen.has(x.l)||!cond(x.c))return;seen.add(x.l);   // the first spot with this label whose COND holds
-    h+=`<button class="hs hid ${S.F['f_'+S.loc+'_'+x.l]?'seen':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"></button>`});
-    if(l.back)h+=`<button class="backbtn" id="bBackPl" aria-label="Back">‹</button>`}
+    h+=`<button class="hs hid ${S.F['f_'+S.loc+'_'+x.l]?'seen':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"></button>`});}
   if(!nd&&!xp)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs ${x.x<25?'edge-l':x.x>75?'edge-r':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
   if(live)peopleHere().forEach(p=>{const a=whereNow(p),n=(ST.cast[p.id]||{}).n||p.id,sty=`left:${a.x}%;top:${a.y}%;--fs:${parseLook((ST.cast[p.id]||{}).look).size||1}`;
     h+=nd?`<div class="hs fig still" style="${sty}" aria-hidden="true">${figureSVG(p.id)}</div>`   // mid-conversation: still there, just not tappable
       :`<button class="hs who fig" data-who="${p.id}" style="${sty}" aria-label="Talk to ${esc(n)}">${figureSVG(p.id)}<span>${esc(n)}</span></button>`});
   if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
   if(TIMECARD){TIMECARD=false;if(!(nd&&nd.type==='card')){lastLoc=S.loc;h+=`<div class="placecard"><b>${SLOT_KO[slotName()]}</b><span>day ${S.world.day} · ${slotName()}</span></div>`}}
+  if(S.loc!==lastLoc&&l.mode==='explore')panCenter();
   if(S.loc!==lastLoc&&!(nd&&nd.type==='card')&&l.mode!=='explore')h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
   lastLoc=S.loc;
   h+=`<div class="flash" id="flash"></div>`;
@@ -55,7 +56,9 @@ function render(){
   $('#fx').innerHTML=h;
   $('#fx').querySelectorAll('.hs[data-hs]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(xp)S.F['f_'+S.loc+'_'+l.spots[+b.dataset.hs].l]=1;spot(+b.dataset.hs)});
   $('#fx').onclick=xp?e=>{if(e.target===$('#fx'))emptyTap(e,l)}:null;
-  if($('#bBackPl'))$('#bBackPl').onclick=e=>{e.stopPropagation();sfx('tap');enter(l.back)};
+  // the back arrow sits on the window, not on the picture (which scrolls)
+  let bb=$('#bBackPl');if(xp&&l.back){if(!bb){bb=document.createElement('button');bb.className='backbtn';bb.id='bBackPl';bb.setAttribute('aria-label','Back');bb.textContent='‹';$('#scene').appendChild(bb)}
+    bb.onclick=e=>{e.stopPropagation();sfx('tap');enter(l.back)}}else if(bb)bb.remove();
   if(nd&&nd.type==='camera')dragFrame($('#vf'));
   const sb=$('#sb'),sf=$('#sf');let body='',foot='';
   const devSkip=S.set.dev&&nd&&!nd.ch&&!['build','type','present','contradict','number','examine'].includes(nd.type)?`<button class="btn dev" id="bSkip">⏭ Skip to next decision</button>`:'';
@@ -158,22 +161,31 @@ function render(){
 /* ---------- explore mode: darkness, the flashlight, pockets ---------- */
 // night: a dark layer over the picture. With the flashlight on, a circle of light follows your finger.
 function darkLayer(l){let d=$('#dark');const lvl=l&&l.dark?+l.dark:0;
-  if(!d){d=document.createElement('div');d.id='dark';d.className='dark';$('#scene').insertBefore(d,$('#fx'))}
+  if(!d){d=document.createElement('div');d.id='dark';d.className='dark'}if(d.nextSibling!==$('#fx'))$('#fx').parentNode.insertBefore(d,$('#fx'))
   d.hidden=!lvl;d.style.setProperty('--dk',lvl);d.classList.toggle('lit',!!S.F.lit)}
 let LIGHT={x:50,y:45};
-['pointerdown','pointermove'].forEach(t=>document.addEventListener(t,e=>{if(!S.F||!S.F.lit)return;const sc=$('#scene');if(!sc||(t==='pointermove'&&!e.buttons&&e.pointerType!=='mouse'))return;
-  const r=sc.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
+['pointerdown','pointermove'].forEach(t=>document.addEventListener(t,e=>{if(!S.F||!S.F.lit)return;const sc=$('#dark');if(!sc||(t==='pointermove'&&!e.buttons&&e.pointerType!=='mouse'))return;
+  const r=sc.getBoundingClientRect(),v=$('#scene').getBoundingClientRect();if(e.clientX<v.left||e.clientX>v.right||e.clientY<v.top||e.clientY>v.bottom)return;if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;
   LIGHT={x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100};const d=$('#dark');if(d){d.style.setProperty('--lx',LIGHT.x+'%');d.style.setProperty('--ly',LIGHT.y+'%')}},{passive:true}));
 // tapping where there's nothing: a ripple, and in the dark, a reminder that you can't see
 function emptyTap(e,l){const fx=$('#fx'),r=fx.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*100,py=(e.clientY-r.top)/r.height*100;
   const p=document.createElement('span');p.className='exripple';p.style.left=px+'%';p.style.top=py+'%';fx.appendChild(p);setTimeout(()=>p.remove(),600);sfx('tap');
   if(l.dark&&!S.F.lit&&+l.dark>.6){EMPTY++;if(EMPTY%3===1)toast('Too dark to make anything out.',2200)}}
 let EMPTY=0;
+// the room as a wide picture inside a tall window: the art, the darkness and the tap layer move together when you swipe
+let PANNED=false;
+function panMode(on){const app=$('#app');if(!!on===app.classList.contains('explore'))return;app.classList.toggle('explore',!!on);
+  const sc=$('#scene');let pan=$('#pan');
+  if(on){if(!pan){pan=document.createElement('div');pan.id='pan';pan.className='pan';pan.innerHTML='<div class="panin" id="panin"></div>';sc.insertBefore(pan,sc.firstChild)}
+    const pin=$('#panin');['#art','#tint','#amb','#dark','#fx'].forEach(q=>{const e=$(q);if(e)pin.appendChild(e)});pan.hidden=false;PANNED=false}
+  else if(pan){['#art','#tint','#amb','#dark','#fx'].forEach(q=>{const e=$(q);if(e)sc.insertBefore(e,pan)});pan.hidden=true}}
+// a new view starts looking at the middle of the room
+function panCenter(){const pan=$('#pan');if(!pan||pan.hidden)return;requestAnimationFrame(()=>{pan.scrollLeft=(pan.scrollWidth-pan.clientWidth)/2})}
 // what you're carrying: tap the flashlight to switch it on and off; tap anything else to hold it, then tap where to use it
 function pocketsHTML(){const items=owned().filter(e=>e.icon!=='letter');if(!items.length)return'';
   return `<div class="label">Pockets</div><div class="pockets">${items.map(e=>{const on=e.id==='flashlight'?S.F.lit:S.F.hold===e.id;
     return `<button class="pkt ${on?'on':''}" data-pk="${e.id}" aria-pressed="${!!on}">${iconSVG(e.icon)}<span>${ko(e.label,false,false)}</span></button>`}).join('')}</div>
-    <div class="pkhint">${S.F.hold&&ST.evidence[S.F.hold]?`Holding: ${ko(ST.evidence[S.F.hold].label,false,false)}. Tap where to use it.`:S.F.lit?'Flashlight on. Touch the picture to point it.':'Tap something to take it out.'}</div>`}
+    <div class="pkhint">${S.F.hold&&ST.evidence[S.F.hold]?`Holding: ${ko(ST.evidence[S.F.hold].label,false,false)}. Tap where to use it.`:S.F.lit?'Flashlight on. Touch the picture to point it.':'Swipe the picture to look around. Tap something in your pockets to take it out.'}</div>`}
 function pocket(id){sfx('click');
   if(id==='flashlight')S.F.lit=S.F.lit?0:1;else S.F.hold=S.F.hold===id?null:id;
   const top=$('#sb').scrollTop;render();$('#sb').scrollTop=top}

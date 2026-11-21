@@ -181,7 +181,7 @@ let EMPTY=0;
 let PANNED=false,ZOOM=null;
 // the installed app turns with the phone only in explore places (the experiment); everywhere else it stays upright
 // the installed app is stuck upright (Android keeps that setting in the app itself and updates it on its own schedule).
-// Full screen is the one place a page may decide for itself: the test area goes full screen, then may turn.
+// Full screen is the one place a page may decide for itself: the rotate button goes full screen, then turns.
 function fullTurn(on){try{if(on&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>{TURN=null;lockTurn(true)}).catch(()=>{});
   else if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(_){}}
 // the rotate button (explore places): flip between sideways and upright without auto-rotate

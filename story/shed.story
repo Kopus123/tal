@@ -58,6 +58,7 @@ desc Dark. A little moonlight comes in through one dirty window. It smells of ru
 spot "Door" 50 49 => place sh_door
 spot "Window" 81 25 => place sh_window
 spot "Workbench" 17 58 => place sh_bench
+spot "Note above the workbench" 17 43 => place sh_bench
 spot "Shelf" 85 55 => place sh_shelf
 
 === place sh_door

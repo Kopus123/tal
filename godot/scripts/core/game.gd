@@ -363,6 +363,7 @@ func next() -> void:
 
 
 func choose(o: Dictionary) -> void:
+	if o.get("ko", "").contains("안녕"): S.F["said_hi_" + S.loc] = W.day
 	note("  chose: " + plain(o.get("en", o.get("ko", ""))))
 	sound.emit("tap"); run_fx(o.get("fx", []), S.node + ">" + o.go); go(o.go)
 
@@ -433,11 +434,18 @@ func answer_type(val: String) -> String:
 		var d := jamo_dist(v, _tnorm(a[0]))
 		if d < bd: bd = d; best = a; bn = jamo(_tnorm(a[0])).size()
 	if not best.is_empty():
-		var lim := maxi(1, int(bn * 0.15))
+		# beginners misspell: about a third of the letters can be off (안녕하세요 with 3 slips still counts)
+		var lim := maxi(2, int(round(bn * 0.3)))
+		if bd <= lim and _tnorm(best[0]).contains("안녕"): S.F["said_hi_" + S.loc] = W.day
 		if bd == 0: go(best[1]); return "exact"
 		if bd <= lim: typed_close = {"yours": val, "correct": plain(best[0]), "target": best[1]}; changed.emit(); return "close"
 	for c in COMMON:
-		if jamo_dist(v, _tnorm(c[0])) <= 1: reply.emit(c[1], c[2]); return "chat"
+		if jamo_dist(v, _tnorm(c[0])) <= 1:
+			# hello again, after you've already said it here today: they just wait for what you came to say
+			if c[0].begins_with("안녕") and S.F.get("said_hi_" + S.loc, -1) == W.day:
+				reply.emit("{네}?", "You've already said hello. They're waiting for what you came to say."); return "chat"
+			if c[0].begins_with("안녕"): S.F["said_hi_" + S.loc] = W.day
+			reply.emit(c[1], c[2]); return "chat"
 	go(b.get("miss", "")); return "miss"
 
 

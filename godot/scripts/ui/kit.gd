@@ -119,18 +119,49 @@ static func figure(who: String) -> Texture2D:
 	return a
 
 
-## ---------- text with tappable Korean words: "{봤어요}" becomes an underlined link to its notebook page
+## ---------- text with tappable Korean words: "{봤어요}" becomes a link to its notebook page, colored by how well you
+## know it (new, seen, your guess, sure; grammar pieces quieter). Names and sounds (수진, 아이고) are tappable too.
+const STATUS_COLORS := {"new": "a8620f", "seen": "3d5f9a", "guess": "7a4a9a", "sure": "3f8b77", "gram": "6b6255"}
+const STATUS_DARK := {"new": "f0b35a", "seen": "9db8ea", "guess": "c9a3e6", "sure": "8fd3c0", "gram": "c9cfdb"}
+
 static func esc(s: String) -> String: return s.replace("[", "[lb]")
 
-static func ko(s: String) -> String:
+
+static func status(w: String) -> String:
+	if Game.world.words.get(w, {}).get("g", false): return "gram"
+	var r: Dictionary = Game.words.get(w, {})
+	if r.is_empty(): return "new"
+	if r.note.strip_edges() != "": return "sure" if r.sure else "guess"
+	return "new" if r.ctx.size() <= 1 else "seen"
+
+
+static var _names_re: RegEx
+static func _names(s: String, dark: bool) -> String:
+	if _names_re == null:
+		var ns: Array = Game.world.names.keys()
+		ns.sort_custom(func(a, b): return a.length() > b.length())
+		_names_re = RegEx.create_from_string("(?<![가-힣])(" + "|".join(ns.map(func(n): return _rx(n))) + ")") if not ns.is_empty() else RegEx.create_from_string("(?!x)x")
+	var c: String = STATUS_DARK.gram if dark else STATUS_COLORS.gram
+	return _names_re.sub(s, "[url=n:$1][color=#%s]$1[/color][/url]" % c, true)
+
+
+static func _rx(s: String) -> String:
+	var out := ""
+	for ch in s: out += ("\\" + ch) if ".*+?^${}()|[]\\".contains(ch) else ch
+	return out
+
+
+static func ko(s: String, dark := false) -> String:
 	var re := Story.R("\\{([^}|]+)(?:\\|([^}]+))?\\}")
 	var out := ""; var at := 0
+	var cols: Dictionary = STATUS_DARK if dark else STATUS_COLORS
 	for m in re.search_all(s):
-		out += esc(s.substr(at, m.get_start() - at))
+		out += _names(esc(s.substr(at, m.get_start() - at)), dark)
 		var entry := m.get_string(2) if m.get_string(2) != "" else m.get_string(1)
-		out += "[url=%s][color=#%s][u]%s[/u][/color][/url]" % [entry, WORD.to_html(false), esc(m.get_string(1))]
+		var st := status(entry)
+		out += "[url=w:%s][color=#%s]%s%s%s[/color][/url]" % [entry, cols[st], "[b]" if st == "new" else "", esc(m.get_string(1)), "[/b]" if st == "new" else ""]
 		at = m.get_end()
-	return (out + esc(s.substr(at))).replace("\n", "\n")
+	return out + _names(esc(s.substr(at)), dark)
 
 
 static func rich(sz := 24, c: Color = PAPER_INK) -> RichTextLabel:

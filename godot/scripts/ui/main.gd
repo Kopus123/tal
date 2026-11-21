@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := 8
+const BUILD := 9
 
 var room: Control
 var paper: PanelContainer
@@ -29,6 +29,7 @@ var _numpad := ""
 var _reply: Array = []               ## small talk while typing: [ko, en]
 var _shown_node := ""
 var voice := Voice.new()
+var busy := false                    ## your own line is playing: wait for it
 
 
 func _ready() -> void:
@@ -73,8 +74,8 @@ func _build() -> void:
 	var names := VBoxContainer.new(); names.size_flags_horizontal = Control.SIZE_EXPAND_FILL; names.add_theme_constant_override("separation", -4); head.add_child(names)
 	title_ko = Kit.label("", 28); names.add_child(title_ko)
 	title_en = Kit.label("", 14, Kit.MUTE); title_en.clip_text = true; names.add_child(title_en)
-	for k in [["note", "수첩"], ["board", "사건"], ["phone", "📱"], ["map", "지도"], ["menu", "☰"]]:
-		var b := Kit.button(k[1], true, 17); b.custom_minimum_size = Vector2(52, 52); head.add_child(b); bar_btns[k[0]] = b
+	for k in [["note", "수첩"], ["board", "사건"], ["phone", "폰"], ["map", "지도"], ["menu", "☰"]]:
+		var b := Kit.button(k[1], true, 17); b.custom_minimum_size = Vector2(52, 52); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; head.add_child(b); bar_btns[k[0]] = b
 	bar_btns.note.pressed.connect(func(): _open("notebook"))
 	bar_btns.board.pressed.connect(func(): _open("board"))
 	bar_btns.phone.pressed.connect(func(): _open("phone"))
@@ -192,8 +193,10 @@ func _say_beat(b: Dictionary) -> void:
 		shown += 1
 		var t: String = ("“%s”" % Game.plain(o.ko)) if o.has("ko") else o.get("en", "")
 		_act(t, func():
-			if o.has("ko"): voice.say(o.ko, "you")
-			Game.choose(o))
+			if busy: return
+			if o.has("ko"):
+				busy = true; voice.say_then(o.ko, "you", func(): busy = false; Game.choose(o))
+			else: Game.choose(o))
 	if shown == 0: _cont("Continue" if (b.has("next") or b.has("rewind")) else "Look around")
 
 
@@ -253,7 +256,8 @@ func _build_beat(b: Dictionary) -> void:
 	var say := Kit.button("Say it", true); say.size_flags_horizontal = Control.SIZE_EXPAND_FILL; say.disabled = _build_seq.is_empty()
 	say.pressed.connect(func():
 		var seq: Array = _build_seq.map(func(i): return b.tiles[i])
-		voice.say(" ".join(seq) if not b.join else "".join(seq), "you"); Game.answer_build(seq))
+		if busy: return
+		busy = true; voice.say_then(" ".join(seq) if not b.join else "".join(seq), "you", func(): busy = false; Game.answer_build(seq)))
 	row.add_child(say)
 	_leave_btn()
 
@@ -269,7 +273,9 @@ func _type_beat(b: Dictionary) -> void:
 	if kb == null:
 		kb = load("res://scripts/ui/korean_keyboard.gd").new(); add_child(kb)
 		kb.hint_text = Game.plain(b.ans[0][0]) if not b.ans.is_empty() else ""
-		kb.submitted.connect(func(t): voice.say(t, "you"); Game.answer_type(t))
+		kb.submitted.connect(func(t):
+			if busy: return
+			busy = true; voice.say_then(t, "you", func(): busy = false; Game.answer_type(t)))
 		kb.closed.connect(func(): kb = null; Game.leave())
 
 
@@ -354,8 +360,9 @@ func _open(what: String) -> void:
 
 
 func _word(w: String) -> void:
-	_play("tap"); Game.note("  opened word: " + w)
-	load("res://scripts/ui/notebook.gd").open(self, w)
+	_play("tap")
+	if w.begins_with("n:"): load("res://scripts/ui/notebook.gd").name_page(self, w.substr(2)); return
+	load("res://scripts/ui/notebook.gd").open(self, w.trim_prefix("w:"))
 
 
 func _menu() -> void:

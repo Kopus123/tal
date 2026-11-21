@@ -37,3 +37,12 @@ func say(text: String, who: String) -> void:
 
 
 func stop() -> void: _player.stop()
+
+
+## say it, then do something (your line plays before the story moves on); right away if there's no recording
+func say_then(text: String, who: String, then: Callable) -> void:
+	var f: String = _index.get(key(text, who), "") if on else ""
+	if f == "": then.call(); return
+	say(text, who)
+	await _player.finished
+	then.call()

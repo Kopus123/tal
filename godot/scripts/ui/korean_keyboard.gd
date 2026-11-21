@@ -73,13 +73,34 @@ func _toggle_shift() -> void:
 			keys[i].text = SHIFTED.get(j, j) if shift else j; i += 1
 
 
-## the answer with only the first letters of each word showing, more each time
+## hints help with spelling without handing over whole syllables: each tap shows one more letter in two or three
+## different syllables (a first consonant, then a vowel, then a final consonant), spread across the answer
+var _shown := {}      ## syllable index -> how many of its letters are showing
+
+func _letters(i: int) -> int:   ## how many letters this syllable has
+	return 3 if (hint_text.unicode_at(i) - 0xAC00) % 28 else 2
+
+
 func _hint() -> void:
-	hint_level = mini(hint_level + 1, 3); Game.sound.emit("tap"); Game.note("  keyboard hint %d" % hint_level)
-	if hint_level >= 3: hint_l.text = hint_text; return
-	var out := []
-	for w in hint_text.split(" "):
-		var s := ""
-		for i in w.length(): s += w[i] if i < hint_level or ".?!~,…".contains(w[i]) else "_"
-		out.append(s)
-	hint_l.text = " ".join(out)
+	Game.sound.emit("tap")
+	var syl := []
+	for i in hint_text.length():
+		var c := hint_text.unicode_at(i) - 0xAC00
+		if c >= 0 and c < 11172: syl.append(i)
+	var open: Array = syl.filter(func(i): return _shown.get(i, 0) < _letters(i))
+	if open.is_empty(): return
+	open.sort_custom(func(a, b): return _shown.get(a, 0) < _shown.get(b, 0) or (_shown.get(a, 0) == _shown.get(b, 0) and (a * 7) % 5 < (b * 7) % 5))
+	for i in open.slice(0, mini(3, maxi(2, open.size() / 3))): _shown[i] = _shown.get(i, 0) + 1
+	hint_level += 1; Game.note("  keyboard hint %d" % hint_level)
+	var out := ""
+	for i in hint_text.length():
+		var c := hint_text.unicode_at(i) - 0xAC00
+		if c < 0 or c >= 11172: out += hint_text[i]; continue
+		var k: int = _shown.get(i, 0)
+		var cho := c / 588; var jung := (c % 588) / 28; var jong := c % 28
+		if k == 0: out += "_"
+		elif k == 1: out += Hangul.CHO[cho]
+		elif k == 2 and jong: out += char(0xAC00 + (cho * 21 + jung) * 28)
+		else: out += hint_text[i]
+		out += " "
+	hint_l.text = out.strip_edges()

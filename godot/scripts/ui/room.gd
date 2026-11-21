@@ -81,6 +81,8 @@ func refresh() -> void:
 	var pl: Dictionary = Game.place()
 	var b: Dictionary = Game.beat()
 	var exam: bool = b.get("type", "") == "examine"
+	if exam and cam.zoom != Vector2.ONE:
+		cam.zoom = Vector2.ONE; cam.position = Vector2(ART_W, ART_H) / 2; marks.visible = true
 	var key: String = Game.exam().get("art", "") if exam else pl.get("art", "")
 	if not exam and Game.ST.get("free", false) and ResourceLoader.exists("res://art/%s_live.png" % key): key += "_live"
 	if key != _art_key:
@@ -218,9 +220,25 @@ func _draw_marks() -> void:
 			if Game.exam_found(d): marks.draw_arc(c, 18, 0, TAU, 32, Color(1, 0.85, 0.4, 0.9), 3)
 			elif _exam_miss >= 4: marks.draw_arc(c, d.r / 100.0 * size.x, 0, TAU, 32, Color(1, 1, 1, 0.35), 2)
 	elif Game.node == "":
+		var hidden: bool = Game.place().get("mode", "") == "explore"   # the shed: you find things yourself
+		var font := ThemeDB.fallback_font
 		for s in Game.spots_now():
-			if Game.F.has("found_%s_%s" % [Game.loc, s.l]):
-				marks.draw_circle(Vector2(s.x, s.y) / 100.0 * size, 5, Color(1, 0.98, 0.92, 0.35))
+			var c := Vector2(s.x, s.y) / 100.0 * size
+			var found := Game.F.has("found_%s_%s" % [Game.loc, s.l])
+			if hidden:
+				if found: marks.draw_circle(c, 5, Color(1, 0.98, 0.92, 0.35))
+				continue
+			# a way out: always marked and named. Something to look at: a soft ring; its name once you've looked
+			var exit: bool = s.kind == "=>"
+			marks.draw_circle(c, 15, Color(1, 0.98, 0.92, 0.16))
+			marks.draw_arc(c, 15, 0, TAU, 40, Color(1, 0.98, 0.92, 0.85), 2.5)
+			if exit: marks.draw_arc(c, 6, 0, TAU, 16, Color(1, 0.98, 0.92, 0.85), 3)
+			if exit or found:
+				var label: String = s.l
+				var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 19).x
+				var at := Vector2(clampf(c.x - w / 2, 4, size.x - w - 4), c.y + 22)
+				marks.draw_rect(Rect2(at - Vector2(10, 18), Vector2(w + 20, 28)), Color(0.08, 0.1, 0.14, 0.82))
+				marks.draw_string(font, at + Vector2(0, 2), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(0.95, 0.92, 0.86))
 	for r in _ripples:
 		marks.draw_arc(r.p, 10 + 26 * r.t, 0, TAU, 32, Color(1, 1, 1, 0.8 * (1 - r.t)), 2.5)
 

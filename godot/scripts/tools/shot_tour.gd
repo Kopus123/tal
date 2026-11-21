@@ -21,6 +21,8 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		if n >= MAX or cmd in ["expect", "fx", "saved", "encounters", "noboard", "nospot", "done", "shown"]: return
 		await _wait(0.45)
 		await shot("%s_%s" % [cmd, arg.left(18)])
+		if cmd == "phone":   # show the phone itself, open on that thread
+			main._open("phone"); await _wait(0.3); await shot("phone_list"); _close_sheets()
 	await _wait(0.5)
 	var ok: bool = await r.run(route)
 	await _wait(0.4); await shot("end" if ok else "FAILED_here")
@@ -43,4 +45,4 @@ func _wait(s: float) -> void: await main.get_tree().create_timer(s).timeout
 
 func _close_sheets() -> void:
 	for c in main.get_children():
-		if c is ColorRect and c.color.a > 0.5 and c.color.a < 0.7: c.queue_free()
+		if c is ColorRect and c.color.a > 0.5 and c.color.a < 0.75: c.queue_free()

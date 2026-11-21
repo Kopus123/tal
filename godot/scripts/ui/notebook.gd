@@ -22,6 +22,7 @@ static func open(main: Control, w: String) -> void:
 static func _page(main: Control, w: String) -> void:
 	Game.note("  opened word: " + w)
 	var r: Dictionary = Game.word(w)
+	main.voice.say("{%s}" % w, "word")
 	var inner := Kit.sheet(main, "수첩", 0.6)
 	var top := HBoxContainer.new(); top.add_theme_constant_override("separation", 18); inner.add_child(top)
 	var spec: String = Game.world.words.get(w, {}).get("p", "")
@@ -36,8 +37,11 @@ static func _page(main: Control, w: String) -> void:
 	var upd := func():
 		badge.text = ("GOT IT · you're sure" if r.sure else "YOUR GUESS · not sure yet") if r.note.strip_edges() != "" else ("NEW WORD" if r.ctx.size() <= 1 else "NO NOTE YET")
 	upd.call()
-	var gram: String = Game.world.grammar.get(w, "")
-	if gram != "": inner.add_child(Kit.label(gram, 19, Kit.PAPER_INK, true))
+	# a grammar piece (an ending): the notebook explains it, so there's nothing to guess
+	if Game.world.words.get(w, {}).get("g", false):
+		badge.text = "GRAMMAR PIECE"
+		inner.add_child(Kit.label(Game.world.grammar.get(w, ""), 21, Kit.PAPER_INK, true))
+		_seen_in(inner, w, r); return
 	inner.add_child(Kit.label("What you think it means", 16, Kit.MUTE))
 	var note := LineEdit.new(); note.text = r.note; note.placeholder_text = "Your own words"; note.add_theme_font_size_override("font_size", 24)
 	note.custom_minimum_size.y = 56
@@ -58,7 +62,23 @@ static func _page(main: Control, w: String) -> void:
 		sure.disabled = t.strip_edges() == ""; Game.save_words(); upd.call())
 	note.text_submitted.connect(func(_t): note.release_focus(); Game.note("  wrote for %s: %s" % [w, r.note]))
 	sure.toggled.connect(func(on): r.sure = on; Game.save_words(); upd.call(); Game.sound.emit("solve" if on else "tap"); Game.note("  %s sure about %s" % ["is" if on else "isn't", w]))
+	_seen_in(inner, w, r)
+
+
+static func _seen_in(inner: VBoxContainer, w: String, r: Dictionary) -> void:
 	inner.add_child(Kit.label("Where you've seen it", 16, Kit.MUTE))
 	if r.ctx.is_empty(): inner.add_child(Kit.label("Not seen anywhere yet.", 20, Kit.MUTE))
 	for line in r.ctx:
 		var c := Kit.rich(22); c.text = Kit.esc(line).replace(w, "[bgcolor=#%s]%s[/bgcolor]" % [Kit.HILITE.to_html(false), w]); inner.add_child(c)
+
+
+## a name (수진) or a sound (아이고): not a word to learn, but you can still look
+static func name_page(main: Control, n: String) -> void:
+	var d: Dictionary = Game.world.names.get(n, {})
+	var inner := Kit.sheet(main, "소리" if d.get("kind", "") == "sound" else "이름", 0.5)
+	inner.add_child(Kit.label(n, 52))
+	inner.add_child(Kit.label("A SOUND PEOPLE MAKE" if d.get("kind", "") == "sound" else "A NAME", 15, Kit.MUTE))
+	inner.add_child(Kit.label(d.get("d", ""), 22, Kit.PAPER_INK, true))
+	var hear := Kit.button("▶ Hear it", false, 18); hear.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	hear.pressed.connect(func(): main.voice.say(n, "word")); inner.add_child(hear)
+	main.voice.say(n, "word")

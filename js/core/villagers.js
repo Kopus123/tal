@@ -55,7 +55,24 @@ function talkTo(id){
 const evKey=e=>e.id+'@'+S.world.day;
 const eventsNow=()=>!ST||!ST.free||S.world.frozen?[]:(ST.events||[]).filter(e=>e.slot===slotName()&&cond(e.when)&&!S.world.evs[evKey(e)]);
 // arriving somewhere (or being there when the time comes): an event here plays, once
-function checkEvents(){if(S.node)return false;const e=eventsNow().find(e=>e.place===S.loc);if(!e)return false;S.world.evs[evKey(e)]='seen';go(e.scene);return true}
+function checkEvents(){if(S.node)return false;const e=eventsNow().find(e=>e.place===S.loc);
+  if(e){S.world.evs[evKey(e)]='seen';go(e.scene);return true}
+  const n=ENC_OFF?null:encountersToday().find(n=>n.slot===slotName()&&n.place===S.loc&&!S.world.evs['enc:'+n.id+'@'+S.world.day]);
+  if(!n)return false;S.world.evs['enc:'+n.id+'@'+S.world.day]='seen';go(n.scene);return true}
+/* ---------- encounters: little things that happen to you around the village ----------
+   === encounter ID / at SLOT PLACE (one or more choices) / scene SCENE / when COND.
+   Each day 2 or 3 of them are picked (never one you saw yesterday), each at one of its "at"s.
+   Walk in at that time and it plays. Miss it and nothing happens: there'll be others. */
+let ENC_OFF=false;   // the scripted tests turn them off (they'd interrupt a planned route); the random bot leaves them on
+function dayHash(s){let a=[...s].reduce((a,c)=>Math.imul(a^c.charCodeAt(0),16777619)>>>0,2166136261);a^=a>>>16;a=Math.imul(a,0x45d9f3b)>>>0;return(a^a>>>16)>>>0}
+function encountersToday(){if(!ST||!ST.free||S.world.frozen||!ST.encounters||!ST.encounters.length)return[];
+  const d=S.world.day,seenYesterday=id=>!!S.world.evs['enc:'+id+'@'+(d-1)];
+  const pool=ST.encounters.filter(n=>n.at.length&&cond(n.when)&&!seenYesterday(n.id)).sort((a,b)=>dayHash(d+'/'+a.id)-dayHash(d+'/'+b.id));
+  const picked=[],used=new Set();
+  for(const n of pool){if(picked.length>=2+dayHash('n'+d)%2)break;
+    const at=n.at[dayHash(d+'@'+n.id)%n.at.length],k=at.slot+' '+at.place;if(used.has(k))continue;used.add(k);
+    picked.push({id:n.id,scene:n.scene,slot:at.slot,place:at.place})}
+  return picked}
 // time is about to move on: anything due now that you didn't see becomes something you hear about
 function missEvents(){eventsNow().forEach(e=>{S.world.evs[evKey(e)]='missed';if(e.missed){const [who,sc]=e.missed;(S.world.gossip[who]=S.world.gossip[who]||[]).push(sc)}})}
 defEffect('chapter','chapter',a=>{S.F.goChapter=a.trim()});   // when this scene ends, carry on in another chapter file

@@ -125,7 +125,7 @@ blurb A mystery in Korean. Nobody will translate for you. Tap any word to see a 
 # (a chapter can be several files: village.story + jobs.story)
 prologue   | 1장      | 탈       | prologue.story
 ch1        | 1장      | 탈       | ch1.story      | continues
-village    | 마을     | Free days | village.story + jobs.story | free
+village    | 마을     | Free days | village.story + jobs.story + encounters.story | free
 
 === people
 # id | file in story/people/   (who lives in the village on free days: see js/core/villagers.js)
@@ -161,6 +161,7 @@ ajeossi    | 식당 아저씨   | #8a5a34  | InJoon -6%   -18Hz | hair=short hc=
 staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz | hair=long hc=#1f1a18 top=#2d3f66 wear=blazer extra=glasses
 ajumma     | 시장 아주머니 | #b5653d  | SunHi  +4%   -6Hz  | hair=bun hc=#3a2a20 top=#d9822b wear=apron extra=wrinkles skin=#e0b98f
 stranger   | ???           | #2a2a2a  | InJoon -10%  -14Hz
+hiker      | 등산객        | #5a7a4a  | InJoon -2%   -4Hz  | hair=short hc=#3a2a20 top=#c9452f wear=plain extra=stubble,glasses
 junho      | 준호          | #4f6ea8  | InJoon +6%   +12Hz
 jiho       | 지호          | #d9a43d  | InJoon +12%  +40Hz | hair=short hc=#1f1a18 top=#e2c044 wear=plain
 haraboji   | 할아버지      | #6b7a5a  | InJoon -12%  -26Hz | hair=short hc=#e4e0da top=#6b7a5a wear=plain extra=wrinkles,stubble skin=#d9b38e
@@ -415,6 +416,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 아직 = clock
 그거 = that
 직원 = card
+마리 = fish
 잘 = good
 줘요 = please
 한테 = (grammar)
@@ -654,6 +656,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 아직 | still, (not) yet
 그거 | that (thing)
 직원 | staff, employee
+마리 | counter for animals: 물고기 일곱 마리 = seven fish
 잘 | well (잘 먹었어요? = did you enjoy the meal?)
 줘요 | give (it to you)
 줘 | give (casual, rude)

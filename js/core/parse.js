@@ -13,7 +13,7 @@ const PARSE_WARN=[];   // lines the parser did not understand: the automatic pla
 // split "a | b | {x|y}" on the bars that aren't inside {braces}
 function splitBar(str){const out=[];let d=0,cur='';for(const c of str){if(c==='{')d++;else if(c==='}')d--;if(c==='|'&&!d){out.push(cur.trim());cur=''}else cur+=c}out.push(cur.trim());return out}
 function parseStory(src,st,file){
-  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{},calendar:[],people:{},peopleFiles:[],events:[],jobs:{}};
+  st=st||{cast:{},words:{},places:{},nodes:{},cases:[],phones:[],hints:[],patterns:[],meta:{},chapters:[],map:[],grammar:{},endings:[],evidence:{},statements:{},tells:{},examines:{},meanings:{},names:{},calendar:[],people:{},peopleFiles:[],events:[],jobs:{},encounters:[]};
   let sec=null,cur=null,scene=null,last=null,count=0;
   let early=[];   // effects written before a scene's first line: they run with that first line
   const node=n=>{count++;const id=count===1?scene:scene+'.'+count;if(early.length){n.fx=early;early=[]}
@@ -33,6 +33,7 @@ function parseStory(src,st,file){
       else if(sec==='examine')cur=st.examines[arg]={id:arg,details:[]};
       else if(sec==='person')cur=st.people[arg]={id:arg,at:{},greet:[],chat:[],story:[],ask:[],bye:null};
       else if(sec==='event'){cur={id:arg,when:'',slot:'',place:'',scene:'',missed:null};st.events.push(cur)}
+      else if(sec==='encounter'){cur={id:arg,at:[],scene:'',when:''};st.encounters.push(cur)}
       else if(sec==='job')cur=st.jobs[arg]={id:arg,ko:arg,en:arg,level:'easy',client:'',pay:0,thanks:1,when:'',note:'',start:'',ask:{}};
       return}
     let m;
@@ -66,6 +67,11 @@ function parseStory(src,st,file){
       case 'event':{
         if(m=line.match(/^when\s+(\S+)$/))cur.when=m[1];else if(m=line.match(/^at\s+(\w+)\s+(\w+)$/)){cur.slot=m[1];cur.place=m[2]}
         else if(m=line.match(/^scene\s+(\w+)$/))cur.scene=m[1];else if(m=line.match(/^missed\s+(\w+)\s+(\w+)$/))cur.missed=[m[1],m[2]];
+        else PARSE_WARN.push(`${file||'story'}:${ln+1}: ${line}`);break}
+      // encounter: at SLOT PLACE (one or more) / scene SCENE / when COND   (see js/core/villagers.js)
+      case 'encounter':{
+        if(m=line.match(/^at\s+(\w+)\s+(\w+)$/))cur.at.push({slot:m[1],place:m[2]});
+        else if(m=line.match(/^scene\s+(\w+)$/))cur.scene=m[1];else if(m=line.match(/^when\s+(\S+)$/))cur.when=m[1];
         else PARSE_WARN.push(`${file||'story'}:${ln+1}: ${line}`);break}
       // job: see js/core/jobs.js
       case 'job':{

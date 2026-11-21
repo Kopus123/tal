@@ -179,6 +179,7 @@ def parse(path):
             elif sec == "phone": cur = d["phones"][arg] = dict(ln=ln)
             elif sec == "examine": cur = d["examines"][arg] = dict(ln=ln, id=arg, art=None, keys=0)
             elif sec == "person": d["who_refs"].append((arg, ln))
+            elif sec == "encounter": pass
             elif sec == "job":
                 if arg in d["jobs"]: err(f, ln, f"job '{arg}' defined twice")
                 d["jobs"][arg] = dict(ln=ln, start=False)
@@ -266,6 +267,13 @@ def parse(path):
             elif m := re.match(r"^scene\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
             elif m := re.match(r"^missed\s+(\w+)\s+(\w+)$", line): d["who_refs"].append((m.group(1), ln)); d["gossip"].append((m.group(2), ln))
             else: err(f, ln, "event line should be: when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE")
+        elif sec == "encounter":
+            if m := re.match(r"^at\s+(\w+)\s+(\w+)$", line):
+                if m.group(1) not in SLOTS: err(f, ln, f"'{m.group(1)}' isn't a time of day ({', '.join(sorted(SLOTS))})")
+                d["placefx"].append((m.group(2), ln))
+            elif m := re.match(r"^scene\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
+            elif m := re.match(r"^when\s+(\S+)$", line): conds(m.group(1), ln)
+            else: err(f, ln, "encounter line should be: at SLOT PLACE / scene SCENE / when COND")
         elif sec == "job":
             job = d["jobs"][list(d["jobs"])[-1]]
             if m := re.match(r"^title\s+(.+?)\s*\|\s*(.+)$", line): pass

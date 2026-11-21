@@ -40,7 +40,8 @@
      sleep                 press Go to bed (at home, evening or night)
      switch ID             move to this chapter keeping the save, the way the story does at a chapter's end
      job ID                take this job from the notice board (you must be at the board's place)
-     noboard ID            this job must NOT be on the notice board right now  */
+     noboard ID            this job must NOT be on the notice board right now
+     encounters on|off     village encounters (off from the start of every route, so they don't interrupt it)  */
 (function(){
 const out=[];let failed=false;
 const log=s=>out.push(s);
@@ -85,7 +86,7 @@ async function solveIt(a,expectFail){
   while(document.querySelector('#ovs .ov')){closeTop();await settle()}
 }
 const STEPS={
-  async chapter(id){S=fresh();S.set.auto=0;S.set.sound=0;S.set.music=0;S.set.amb=0;BACK=[];SEEN.clear();
+  async chapter(id){ENC_OFF=true;S=fresh();S.set.auto=0;S.set.sound=0;S.set.music=0;S.set.amb=0;BACK=[];SEEN.clear();
     document.querySelectorAll('.title').forEach(t=>t.remove());startChapter(id,true);await settle()},
   async choose(t){await clickEl(await until(()=>vis('#sf [data-ch]').find(b=>txt(b).includes(t)),`a choice "${t}"`))},
   async spot(l){await idle();const b=vis('#sb .chipbtn[data-hs]').find(b=>txt(b)===l);
@@ -130,6 +131,7 @@ const STEPS={
     const t=document.querySelector(`[data-take="${id}"]`);const on=vis('[data-take]').map(x=>x.dataset.take);
     if(!t){closeTop();await settle();fail(`job "${id}" isn't on the board (on it: ${on.join(', ')||'nothing'}${S.world.job?'; already working on '+S.world.job:''})`)}await clickEl(t)},
   async noboard(id){if(jobsToday().some(j=>j.id===id))fail(`job "${id}" is on the board, but shouldn't be`)},
+  async encounters(a){ENC_OFF=a.trim()!=='on'},
   async closed(p){await idle();const before=S.loc;if(enter(p)!==false||S.loc!==before)fail(`${p} let you in, but it should be closed`)},
   async wait(){await idle();const b=document.querySelector('#bWait');if(!b)fail('there is no Wait button here (is the clock running, and is it before night?)');await clickEl(b)},
   async sleep(){await idle();const b=document.querySelector('#bBed');if(!b)fail('there is no Go to bed button here (home, evening or night, clock running)');await clickEl(b)},
@@ -182,7 +184,7 @@ async function jump(route,label){
   const veil=document.createElement('div');veil.className='ov center';veil.innerHTML=`<div class="panel paper" style="padding:20px;text-align:center;min-width:260px">Jumping ahead to<br><b>${esc(label)}</b><div class="jbar"><i id="jbar"></i></div></div>`;document.body.appendChild(veil);
   window.__jumpBar=veil.querySelector('#jbar');
   let r;try{r=await run(route,label)}catch(e){out.push(String(e))}
-  window.setTimeout=realST;veil.remove();unsilence();JUMPING=false;
+  window.setTimeout=realST;veil.remove();unsilence();JUMPING=false;ENC_OFF=false;
   while(document.querySelector('#ovs .ov'))closeTop();
   const met=S.w;Object.assign(S,keep);for(const k in met)if(!S.w[k])S.w[k]={ctx:met[k].ctx||[],note:'',n:met[k].n||1}; // words from skipped scenes, without notes
   save();lastLoc=null;render();
@@ -257,7 +259,7 @@ function checks(ctx){
   return bad}
 async function fuzzFrom(mark,snap,runs,steps,base,found,cover){
   for(let r=0;r<runs;r++){
-    const sd=base*1000+FUZZ_MARK*50+r;seed(sd);
+    const sd=base*1000+FUZZ_MARK*50+r;seed(sd);ENC_OFF=false;
     await restore(snap);
     const trail=[],ctx={clock:clockNow(),n:0};const errs=[];const onErr=e=>errs.push(e.message||String(e.reason));
     window.addEventListener('error',onErr);window.addEventListener('unhandledrejection',onErr);
@@ -288,9 +290,9 @@ async function fuzz(route,runs,steps,base,only){
   const found=new Map(),cover={scenes:new Set()};const t0=Date.now();let marks=0;
   const realST=window.setTimeout;window.setTimeout=(f,ms,...x)=>realST(f,Math.min(ms||0,4),...x);  // pauses are instant
   await run(route,null,async mark=>{FUZZ_MARK++;if(only&&mark!==only)return;marks++;
-    const snap=JSON.stringify(S),realRnd=Math.random;
+    const snap=JSON.stringify(S),realRnd=Math.random,encWas=ENC_OFF;
     await fuzzFrom(mark,snap,runs,steps,base,found,cover);
-    Math.random=realRnd;await restore(snap)});   // back on the route
+    Math.random=realRnd;ENC_OFF=encWas;await restore(snap)});   // back on the route
   window.setTimeout=realST;
   const all=new Set([...Object.values(CH).flatMap(c=>Object.keys(c.nodes||{})),...Object.keys(PNODES)]);
   const hit=[...cover.scenes].filter(s=>all.has(s)).length;

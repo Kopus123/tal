@@ -331,10 +331,30 @@ function closeMud(){
   g+=[250,262,276,340,352,366,380].map((x,i)=>`<path d="M${x} 300 Q${x+(i%2?8:-6)} 240 ${x+(i%2?14:-10)} ${190+i*6}" stroke="#7f9a4e" stroke-width="4" fill="none"/>`).join('');
   return `<svg class="art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${g}</svg>`;
 }
+// 마을회관: the village hall. Plank floor, a long table, and the notice board with jobs pinned up
+function artHall(){
+  let s=`<rect width="400" height="300" fill="#e8dcc0"/><rect y="0" width="400" height="12" fill="#6b4528"/>`;
+  s+=`<rect x="0" y="12" width="400" height="6" fill="#3f7f6e"/><rect x="0" y="17" width="400" height="2" fill="#b5412d"/>`;
+  // the sign over the door
+  s+=`<rect x="22" y="58" width="96" height="30" rx="3" fill="#5a3b24"/><text x="70" y="79" text-anchor="middle" font-family="Gowun Batang,serif" font-size="15" fill="#f2e6c8">마을회관</text>`;
+  // window with mountains
+  s+=`<rect x="300" y="36" width="84" height="70" fill="#c9dde3" stroke="#6b4528" stroke-width="5"/><path d="M300,90 Q325,66 342,82 T384,74 V106 H300Z" fill="#94ae9f"/><line x1="342" y1="36" x2="342" y2="106" stroke="#6b4528" stroke-width="3"/>`;
+  // the notice board (cork, pinned papers)
+  s+=`<rect x="128" y="40" width="156" height="112" rx="4" fill="#b98a57" stroke="#5a3b24" stroke-width="5"/>`;
+  const papers=[[142,52,40,46,-4,'#f6f0e0'],[190,50,44,38,3,'#fbe9b7'],[240,56,34,44,-2,'#f6f0e0'],[150,104,46,38,2,'#e5f1f4'],[204,96,40,46,-3,'#f6f0e0'],[250,106,26,34,4,'#fbe9b7']];
+  papers.forEach(([x,y,w,h,r,c])=>{s+=`<g transform="rotate(${r} ${x+w/2} ${y+h/2})"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" stroke="#9c8b66" stroke-width=".8"/>`+
+    `<path d="M${x+6} ${y+12} H${x+w-6} M${x+6} ${y+20} H${x+w-10} M${x+6} ${y+28} H${x+w-14}" stroke="#7a6a4c" stroke-width="2"/><circle cx="${x+w/2}" cy="${y+4}" r="3" fill="#b5412d"/></g>`});
+  // a long low table with cushions, a kettle and cups
+  s+=`<rect x="0" y="190" width="400" height="110" fill="url(#plank)"/>`;
+  s+=`<rect x="60" y="196" width="280" height="14" rx="3" fill="#7a5536"/><rect x="72" y="208" width="8" height="26" fill="#5e3f27"/><rect x="320" y="208" width="8" height="26" fill="#5e3f27"/>`;
+  s+=`<ellipse cx="170" cy="192" rx="13" ry="5" fill="#cfd6db"/><rect x="160" y="178" width="20" height="14" rx="5" fill="#cfd6db"/><circle cx="210" cy="190" r="5" fill="#f4f1ea"/><circle cx="226" cy="191" r="5" fill="#f4f1ea"/>`;
+  [[110,'#b5412d'],[200,'#3f7f6e'],[290,'#d9a43d']].forEach(([x,c])=>s+=`<ellipse cx="${x}" cy="252" rx="30" ry="9" fill="${c}"/>`);
+  return svg(s);
+}
 const ART={
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
   gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
-  jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate,
+  jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate, hall:artHall,
   mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true), mud:closeMud,
   photo_old:()=>closeMask(true).replace('<svg class="art"','<svg class="art" style="filter:sepia(.85) contrast(.9) brightness(1.08)"')
 };

@@ -1,5 +1,7 @@
 {
   "_about": "Which characters are voiced by ElevenLabs (tools/build_audio.py). Everyone else keeps the free edge-tts voice from the cast in story/world.story. speed: 0.7 slow ... 1.2 fast. Changing a voice or speed re-records that character's lines.",
+  "enabled": false,
+  "_enabled": "Turn on once the plan allows library voices through the API (the free plan does not).",
   "model": "eleven_multilingual_v2",
   "voices": {
     "sujin":    {"name": "Anna Kim",      "id": "uyVNoMrnUku1dZyVEXwD", "speed": 1.0},

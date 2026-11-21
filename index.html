@@ -435,6 +435,14 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 .tint.t-night{background:rgba(22,30,84,.66);mix-blend-mode:multiply}
 .tint.own{background:none}
 .tint.indoors{opacity:.4}
+.clock.wallet{left:auto;right:8px;font-family:var(--f-ui);font-variant-numeric:tabular-nums}
+.jobcard{border:1px solid #cbbf9f;border-radius:10px;padding:10px 12px;margin:8px 0;background:#fbf6e9}
+.jobcard.mine{border-color:var(--celadon);box-shadow:0 0 0 2px rgba(63,127,110,.25)}
+.jobhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.jobhead .ko{font-size:1.15rem}
+.joblv{font-size:.72rem;border-radius:99px;padding:2px 8px;background:#e5f4e4;color:#2f5f3c;white-space:nowrap}
+.joblv.medium{background:#f9eeda;color:#7a5418}
+.jobcard p{margin:6px 0 8px;font-size:.92rem}
 .clock{position:absolute;left:8px;top:8px;z-index:4;font-family:var(--f-ko);font-size:.85rem;background:rgba(18,22,32,.74);color:#f6f0e0;border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:3px 11px}
 .chipbtn.timechip::before{background:#4f6ea8;border-radius:50%;transform:none}
 .dayrow{display:flex;gap:6px}
@@ -520,7 +528,7 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
     <button class="ib" id="bCase" aria-label="Case board"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.6"/><circle cx="16" cy="9" r="1.6"/><circle cx="12" cy="15.5" r="1.6"/><path d="M8 9l4 6.5L16 9"/></svg><span class="dot" id="caseDot" hidden></span></button>
     <button class="ib" id="bMenu" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
-  <div class="scene" id="scene"><div class="artwrap" id="art"></div><div class="tint" id="tint"></div><div class="amb" id="amb"></div><button class="clock" id="clock" hidden></button><div class="fx" id="fx"></div></div>
+  <div class="scene" id="scene"><div class="artwrap" id="art"></div><div class="tint" id="tint"></div><div class="amb" id="amb"></div><button class="clock" id="clock" hidden></button><button class="clock wallet" id="wallet" hidden aria-label="Wallet"></button><div class="fx" id="fx"></div></div>
   <div class="sheet"><div class="sheet-body" id="sb"></div><div class="sheet-foot" id="sf"></div></div>
 </div>
 <div class="boot" id="boot"><span>탈</span></div>
@@ -537,6 +545,7 @@ mark.fix{background:rgba(63,139,119,.2);color:var(--celadon);font-weight:700;bor
 <script src="js/core/rules.js"></script>
 <script src="js/core/world.js"></script>
 <script src="js/core/villagers.js"></script>
+<script src="js/core/jobs.js"></script>
 <script src="js/core/words.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/music.js"></script>

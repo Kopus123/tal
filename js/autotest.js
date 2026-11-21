@@ -38,7 +38,9 @@
      closed PLACE          that place must turn you away right now
      wait                  press Wait a while (free time only)
      sleep                 press Go to bed (at home, evening or night)
-     switch ID             move to this chapter keeping the save, the way the story does at a chapter's end  */
+     switch ID             move to this chapter keeping the save, the way the story does at a chapter's end
+     job ID                take this job from the notice board (you must be at the board's place)
+     noboard ID            this job must NOT be on the notice board right now  */
 (function(){
 const out=[];let failed=false;
 const log=s=>out.push(s);
@@ -124,6 +126,10 @@ const STEPS={
   async talk(who){await idle();const b=document.querySelector(`#sb [data-who="${who}"]`);
     if(!b)fail(`${who} isn't here now (here: ${vis('#sb [data-who]').map(x=>x.dataset.who).join(', ')||'nobody'})`);await clickEl(b)},
   async anychoice(){await clickEl(await until(()=>vis('#sf [data-ch]')[0],'a choice'))},
+  async job(id){await idle();const b=vis('#sb .chipbtn[data-hs]').find(b=>txt(b)==='Notice board');if(!b)fail('no notice board here');await clickEl(b);
+    const t=document.querySelector(`[data-take="${id}"]`);const on=vis('[data-take]').map(x=>x.dataset.take);
+    if(!t){closeTop();await settle();fail(`job "${id}" isn't on the board (on it: ${on.join(', ')||'nothing'}${S.world.job?'; already working on '+S.world.job:''})`)}await clickEl(t)},
+  async noboard(id){if(jobsToday().some(j=>j.id===id))fail(`job "${id}" is on the board, but shouldn't be`)},
   async closed(p){await idle();const before=S.loc;if(enter(p)!==false||S.loc!==before)fail(`${p} let you in, but it should be closed`)},
   async wait(){await idle();const b=document.querySelector('#bWait');if(!b)fail('there is no Wait button here (is the clock running, and is it before night?)');await clickEl(b)},
   async sleep(){await idle();const b=document.querySelector('#bBed');if(!b)fail('there is no Go to bed button here (home, evening or night, clock running)');await clickEl(b)},

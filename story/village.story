@@ -55,8 +55,23 @@ spot "Left path" 14 76 => place sanqil
 spot "Right path" 86 76 => place sikdang if !time:night
 spot "Right path, past the dark restaurant" 86 76 => place jeong if time:night
 spot "Front gate" 50 92 => place madang
+spot "Village hall" 50 40 => place hall
 glow 오른쪽 86 76 10
 glow 왼쪽 14 76 10
+
+=== place hall
+light indoors
+music calm
+sound room
+name 마을회관
+sub The village hall
+art hall
+ambient dust
+closed time:night | The village hall is locked for the night.
+desc The village hall. Cushions, a kettle that's always warm, and the notice board by the door.
+spot "Notice board" 52 34 => board
+spot "Back to the alley" 12 88 => place golmok
+glow 마을 18 16 12
 
 === place sanqil
 music calm
@@ -80,6 +95,7 @@ ambient dust
 closed time:night | The restaurant is dark and the door is locked. Closed for the night.
 desc The restaurant. It smells of sesame oil.
 spot "Bus stop" 85 40 => place jeong
+spot "Order food" 50 84 -> v_food
 spot "Back to the alley" 12 88 => place golmok
 glow 김밥 11 23 7
 glow 떡볶이 26 23 7
@@ -142,6 +158,7 @@ travel no
 closed !time:morning&!time:afternoon | The market has packed up for the day.
 desc if on:market: Market day! The aisles are packed and everyone is shouting prices.
 desc The market. Fish on ice, mountains of cabbage, and the stall full of paint pots and wood.
+spot "호떡 cart" 24 70 -> v_snack
 spot "Take the bus back" 78 88 -> v_back
 glow 시장 50 40 30
 
@@ -161,10 +178,16 @@ glow 탈 24 42 16
 
 === scene v_bus
 ! place bus; led 청솔마을
-~ The bus comes rattling along the river road. Where to?
-* [Ride to the market] -> v_tomarket if !time:evening
-* [Ride to the museum] -> v_tomuseum if !time:evening
+~ The bus comes rattling along the river road. A ride is 1,500원.
+* [Ride to the market · 1,500원] -> v_tomarket if !time:evening&money>=1500 ! money -1500 each time
+* [Ride to the museum · 1,500원] -> v_tomuseum if !time:evening&money>=1500 ! money -1500 each time
+* [You can't afford the fare] -> v_broke if money<1500
 * [Stay here] -> v_stay
+
+=== scene v_broke
+~ You count your coins. Not enough. The driver shrugs and the doors hiss shut.
+~ The notice board in the village hall has small jobs that pay.
+! place jeong
 
 === scene v_stay
 ~ You wave the bus on.
@@ -183,8 +206,148 @@ bus: {다음} {정류장}{은|은/는} {박물관}{입니다}.
 ! place museum
 
 === scene v_back
-~ You catch the next bus back to the village.
+~ The bus back to the village pulls up. 1,500원.
+* [Pay and ride back · 1,500원] -> v_back_bus if money>=1500 ! money -1500 each time
+* [Walk back along the river road] -> v_walk
+
+=== scene v_back_bus
+~ You ride back to the village.
 ! place jeong
+
+=== scene v_walk
+~ You walk back along the river road. It's a long way, and the day moves on without you.
+! time +1 each time; place jeong
+
+# ------------------------------------------------------------ food: order in Korean, pay with the number pad
+=== scene v_food
+ajeossi: {어서 오세요}! {뭐} {드릴까요}?
+* {김밥} {주세요} -> v_food_k if money>=3000
+* {떡볶이} {주세요} -> v_food_t if money>=4000
+* {라면} {주세요} -> v_food_r if money>=4500
+* {비빔밥} {주세요} -> v_food_b if money>=8000
+* [Not today] -> v_food_no
+
+=== scene v_food_no
+ajeossi: {네}~ {다음}{에} {오세요}!
+
+=== scene v_food_k
+ajeossi: {김밥}? {네}! {삼}{천} {원}{이에요}.
+-> v_food_k_pay
+
+=== scene v_food_k_pay
+@number Pay him. | won
+answer: 3000 -> v_food_k_ok
+miss -> v_food_k_miss
+
+=== scene v_food_k_miss
+ajeossi[surprised]: {아니요}~ {삼}{천} {원}!
+(He holds up three fingers and laughs.)
+-> v_food_k_pay
+
+=== scene v_food_k_ok
+! money -3000 each time
+ajeossi[happy]: {감사합니다}!
+~ The 김밥 comes cut into neat little rounds. You eat every one.
+-> v_food_end
+
+=== scene v_food_t
+ajeossi: {떡볶이}? {사}{천} {원}{이에요}. {매워요}!
+-> v_food_t_pay
+
+=== scene v_food_t_pay
+@number Pay him. | won
+answer: 4000 -> v_food_t_ok
+miss -> v_food_t_miss
+
+=== scene v_food_t_miss
+ajeossi[surprised]: {아니요}~ {사}{천} {원}!
+(Four fingers.)
+-> v_food_t_pay
+
+=== scene v_food_t_ok
+! money -4000 each time
+ajeossi[happy]: {감사합니다}!
+~ Red, sticky, and much spicier than it looked. Your eyes water. Worth it.
+-> v_food_end
+
+=== scene v_food_r
+ajeossi: {라면}? {사}{천}{오}{백} {원}{이에요}.
+-> v_food_r_pay
+
+=== scene v_food_r_pay
+@number Pay him. | won
+answer: 4500 -> v_food_r_ok
+miss -> v_food_r_miss
+
+=== scene v_food_r_miss
+ajeossi[surprised]: {아니요}~ {사}{천}{오}{백} {원}!
+(He writes it on a napkin: 4,500.)
+-> v_food_r_pay
+
+=== scene v_food_r_ok
+! money -4500 each time
+ajeossi[happy]: {감사합니다}!
+~ The 라면 arrives still bubbling, with an egg cracked in at the last second.
+-> v_food_end
+
+=== scene v_food_b
+ajeossi: {비빔밥}? {팔}{천} {원}{이에요}.
+-> v_food_b_pay
+
+=== scene v_food_b_pay
+@number Pay him. | won
+answer: 8000 -> v_food_b_ok
+miss -> v_food_b_miss
+
+=== scene v_food_b_miss
+ajeossi[surprised]: {아니요}~ {팔}{천} {원}!
+(He taps the menu on the wall.)
+-> v_food_b_pay
+
+=== scene v_food_b_ok
+! money -8000 each time
+ajeossi[happy]: {감사합니다}!
+~ A whole rainbow in a stone bowl, still sizzling. You mix it the way he shows you.
+-> v_food_end
+
+=== scene v_food_end
+~ You sit back, full.
+* [Buy 김밥 for the whole table · 3,000원] -> v_treat if time:evening&money>=3000
+* [Thank him] -> v_food_bye
+
+=== scene v_treat
+! money -3000 each time; rel staff +1 each time; rel ajumma +1 each time
+~ You set a plate of 김밥 down where the others are sitting.
+ajumma[happy]: {같이} {먹어요}!
+staff[happy]: {고마워요}!
+(For a few minutes it's just chopsticks and talking over each other.)
+-> v_food_bye
+
+=== scene v_food_bye
+ajeossi[happy]: {잘} {먹었어요}? {또} {오세요}!
+
+# ------------------------------------------------------------ a snack at the market
+=== scene v_snack
+~ A little cart at the edge of the market. Something sweet is frying in a lot of oil.
+sign: {호떡} {천} {원}
+* {호떡} {하나} {주세요} -> v_snack_pay if money>=1000
+* [Maybe later] -> v_snack_no
+
+=== scene v_snack_no
+~ You walk on. The smell follows you for a while.
+
+=== scene v_snack_pay
+@number Pay for it. | won
+answer: 1000 -> v_snack_ok
+miss -> v_snack_miss
+
+=== scene v_snack_miss
+~ The cart man taps his sign and smiles: 천 원.
+-> v_snack_pay
+
+=== scene v_snack_ok
+! money -1000 each time
+~ It's too hot to eat. You eat it anyway. Brown sugar and cinnamon, all over your fingers.
 
 # ------------------------------------------------------------ village events
 # They happen whether you are there or not. Missed ones reach you as gossip.

@@ -11,10 +11,30 @@ const head=t=>`<div class="ph-head"><h2>${t}</h2><button class="x" aria-label="C
 const STATE_LABEL={new:'New word',seen:'No note yet',guess:'Your guess',sure:'You\'re sure',gram:'Grammar piece'};
 
 // tap the clock: what day it is, the four times of day, and what the calendar says about today and the next days
+// the notice board in the village hall: today's jobs, the one you're on, and how many you've done
+function jobBoard(){
+  const cur=jobOn(),list=jobsToday(),done=Object.values(ST.jobs||{}).filter(j=>jobState(j.id).done);
+  const lv={easy:'쉬워요 · easy',medium:'보통 · medium'};
+  const card=(j,mine)=>`<div class="jobcard${mine?' mine':''}"><div class="jobhead"><b class="ko">${esc(j.ko)}</b><span class="joblv ${j.level}">${lv[j.level]||esc(j.level)}</span></div>
+    <div class="en">${esc(j.en)} · for ${esc((ST.cast[j.client]||{}).n||j.client)} · <b style="white-space:nowrap">${wonStr(j.pay)}</b></div><p>${esc(j.note)}</p>
+    ${mine?`<button class="btn-ink" data-quit="${j.id}">Give up for today</button>`:cur?'':`<button class="btn primary" data-take="${j.id}">Take this job</button>`}</div>`;
+  const o=overlay(`<div class="panel paper">${head('의뢰 게시판')}<div class="ph-body">
+    <div class="en">The village notice board. People pin up small jobs; take one, work it out, and get paid.</div>
+    ${cur?`<div class="label">You're working on</div>${card(cur,true)}`:''}
+    <div class="label">${cur?'Also on the board':'On the board today'}</div>
+    ${list.length?list.map(j=>card(j,false)).join(''):'<div class="empty">Nothing new today. Come back tomorrow.</div>'}
+    ${cur&&list.length?'<div class="empty">One job at a time: finish yours first.</div>':''}
+    ${done.length?`<div class="label">Done</div><div class="en">${done.map(j=>esc(j.en)).join(' · ')}</div>`:''}
+  </div></div>`);
+  o.querySelector('.x').onclick=()=>close(o);
+  o.querySelectorAll('[data-take]').forEach(b=>b.onclick=()=>{close(o);takeJob(b.dataset.take)});
+  o.querySelectorAll('[data-quit]').forEach(b=>b.onclick=()=>{close(o);const k='_quit';ST.nodes[k]={id:k,who:'narr',en:'You let the job go for today.',fx:[{k:'job',a:'fail'}]};go(k)});
+}
 function dayPanel(){
   const d=S.world.day,row=n=>{const ev=eventsOn(n);return `<div class="calrow"><b>${n===d?ko('{오늘}'):n===d+1?ko('{내일}'):n+'일째'}</b><span>${ev.length?ev.map(e=>ko(e.label)+(e.note?` <small class="en">${esc(e.note)}</small>`:'')).join('<br>'):'<small class="en">nothing special</small>'}</span></div>`};
   const o=overlay(`<div class="panel paper">${head(d+'일째')}<div class="ph-body">
     <div class="en">${d}일째 = day ${d}. ${S.world.frozen?'The story sets the time for now.':'Time passes when you wait, travel or sleep.'}</div>
+    <div class="calrow"><b>Wallet</b><span>${wonStr(S.world.money)}${jobOn()?` · working on <i>${esc(jobOn().en)}</i>`:''}</span></div>
     <div class="dayrow">${SLOTS.map(s=>`<button class="w ${s===slotName()?'nowslot':''}" data-w="${SLOT_KO[s]}">${SLOT_KO[s]}</button>`).join('')}</div>
     <div class="label">Calendar</div>${[d,d+1,d+2,d+3].map(row).join('')}
     ${Object.keys(S.world.met).length?`<div class="label">People</div>${Object.keys(S.world.met).filter(w=>PEOPLE[w]).map(w=>`<div class="calrow"><b>${esc((ST.cast[w]||{}).n||w)}</b><span class="hearts">${'♥'.repeat(relLevel(w))}${'♡'.repeat(REL_STEPS.length-relLevel(w))}${S.world.met[w]===d?' <small class="en">said hello today</small>':''}</span></div>`).join('')}`:''}</div></div>`);

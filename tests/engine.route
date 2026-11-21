@@ -4,7 +4,8 @@
 
 chapter prologue
 # --- a new game starts on the evening of day 1 with nothing, and the story holds the clock
-expect day=1&time:evening&!time:morning&!clock&money=0&!g:test&!has:radio&!rel:sujin>=1
+expect day=1&time:evening&!time:morning&!clock&money=20000&!g:test&!has:radio&!rel:sujin>=1
+fx money =0
 
 # --- money, friendship, things you own, village flags
 fx money +500; rel sujin +2; item +radio; item +radio; set g:test
@@ -39,7 +40,7 @@ expect money=1305
 # --- the save on the phone today (format 4) upgrades and keeps everything you wrote and learned
 oldsave v4
 # (in the middle of chapter 1: the story holds the clock, on the story's day 3)
-expect day=3&!clock&money=0&sawFake&hasPhone
+expect day=3&!clock&money=20000&sawFake&hasPhone
 note 탈 mask
 note 강 river
 saved m.탈.u
@@ -49,7 +50,7 @@ saved done.prologue
 saved w.탈.checked
 # --- a very old save (before chapters merged) still upgrades step by step, notes intact
 oldsave v2
-expect !clock&money=0
+expect !clock&money=20000
 note 탈 mask
 saved m.탈
 

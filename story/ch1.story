@@ -810,6 +810,7 @@ ajumma[surprised]: {백} {원}? {아니요}, {아니요}! {천 원}!
 <- c1_mprice
 
 === scene c1_mpaid
+! money -1000
 ajumma[happy]: {고마워요}, {고마워요}!
 (She wraps your purchase in newspaper and hands it over. Then she leans on her counter. She has a minute now.)
 ! set paid

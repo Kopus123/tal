@@ -100,7 +100,7 @@ const COMMON=[['안녕하세요','{안녕하세요}!','They say hello back, and 
   ['네','{네}?','They wait for the rest.'],['아니요','{네}?','They look confused.'],['몰라요','...{네}?','They wait.'],['저기요','{네}?','They wait for your question.']];
 let TREPLY=null;
 function spot(i){const x=ST.places[S.loc].spots[i];if(!x)return;sfx('tap');revealHeard();
-  if(x.kind==='->')go(x.t);else if(x.t==='phone')openPhone();else{const m=x.t.match(/^place\s+(\S+)/);if(m)enter(m[1])}}
+  if(x.kind==='->')go(x.t);else if(x.t==='phone')openPhone();else if(x.t==='board')jobBoard();else{const m=x.t.match(/^place\s+(\S+)/);if(m)enter(m[1])}}
 // playtest: jump ahead to the next decision without the voices
 function skipAhead(){
   quiet=true;stopAudio();let n=0;
@@ -160,7 +160,7 @@ async function present(nd,id){
 /* ---------- chapters ---------- */
 function useChapter(id){
   const c=CH[id]||CH[WORLD.chapters[0].id];
-  ST={examines:Object.assign({},c.examines),statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:Object.assign({},PNODES,c.nodes),free:!!chInfo(id).free,events:c.events||[],cases:c.cases,phones:c.phones,hints:c.hints,
+  ST={examines:Object.assign({},c.examines),statements:Object.assign({},c.statements),evidence:Object.assign({},WORLD.evidence,c.evidence),cast:Object.assign({},WORLD.cast,c.cast),words:W,places:c.places,nodes:Object.assign({},PNODES,c.nodes),free:!!chInfo(id).free,events:c.events||[],jobs:c.jobs||{},cases:c.cases,phones:c.phones,hints:c.hints,
     patterns:WORLD.patterns.concat(c.patterns),meta:Object.assign({},WORLD.meta,c.meta),map:WORLD.map,chapters:WORLD.chapters};
 }
 const chIndex=id=>WORLD.chapters.findIndex(c=>c.id===id);

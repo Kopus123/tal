@@ -96,7 +96,7 @@ def fname(key):
 EL = json.loads((ROOT / "tools" / "elevenlabs.json").read_text(encoding="utf-8"))
 
 def el_voice(key):
-    return EL["voices"].get(key.split("|", 1)[0])
+    return EL["voices"].get(key.split("|", 1)[0]) if EL.get("enabled", True) else None
 
 def el_name(key):  # the voice, model and speed are part of the name, so changing them re-records
     v = el_voice(key)

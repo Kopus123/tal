@@ -31,7 +31,8 @@ defCond('g:','gflag',f=>S.world.g[f]);
 defCond('rel:','who',w=>S.world.rel[w]||0);
 defCond('has:','item',it=>S.world.inv[it]||0);
 
-defEffect('money','amount',a=>{const am=amount(a);if(am)S.world.money=bump(S.world.money,am)},{once:1});
+defEffect('money','amount',(a,x)=>{const am=amount(a);if(!am)return;const before=S.world.money;S.world.money=Math.max(0,bump(S.world.money,am));
+  const d=S.world.money-before;if(d&&!x.replay)toast(`${d>0?'+':'−'}${wonStr(Math.abs(d))} <small>· ${wonStr(S.world.money)} left</small>`,2600)},{once:1});
 defEffect('rel','who_amount',a=>{const [w,n]=a.trim().split(/\s+/),am=amount(n);if(!w||!am)return;if(am.op==='=')S.world.rel[w]=am.n;else addRel(w,am.op==='-'?-am.n:am.n)},{once:1});
 defEffect('item','item',a=>{const m=a.trim().match(/^([+-]?)(\S+)$/);if(!m)return;
   const n=Math.max(0,(S.world.inv[m[2]]||0)+(m[1]==='-'?-1:1));if(n)S.world.inv[m[2]]=n;else delete S.world.inv[m[2]]},{once:1});
@@ -44,8 +45,12 @@ let TIMECARD=false;                       // show the big time-of-day card on th
 const eventsOn=day=>(WORLD.calendar||[]).filter(e=>e.day?e.day===day:day>=e.from&&(day-e.from)%e.every===0);
 function passTime(){if(S.world.frozen||S.world.slot>=3)return false;missEvents();S.world.slot++;TIMECARD=true;closingTime();save();checkEvents();return true}
 // where a spot takes you: "=> place X" directly, or a scene ("-> v_back") that moves you with "! place X"
-function spotExit(x){const m=x.t.match(/^place\s+(\S+)/);if(m)return m[1];if(!/^\w+$/.test(x.t))return null;
-  for(let i=1,id=x.t;ST.nodes[id];id=x.t+'.'+(++i)){const f=(ST.nodes[id].fx||[]).find(f=>f.k==='place');if(f)return f.a.trim()}return null}
+function spotExit(x){const m=x.t.match(/^place\s+(\S+)/);if(m)return m[1];return /^\w+$/.test(x.t)?sceneExit(x.t,0):null}
+// the place a scene ends up in: its own "! place X", or (one choice deep) where its first choice that leads somewhere goes
+function sceneExit(sc,depth){
+  for(let i=1,id=sc;ST.nodes[id];id=sc+'.'+(++i)){const nd=ST.nodes[id];const f=(nd.fx||[]).find(f=>f.k==='place');if(f)return f.a.trim();
+    if(depth<1&&nd.ch)for(const c of nd.ch){const p=/^\w+$/.test(c.go)&&sceneExit(c.go,depth+1);if(p)return p}}
+  return null}
 // if the place you're in has just closed, you're shown out to the first place its exits lead to (walking, or the bus)
 function closingTime(){if(!ST||!isClosed(S.loc))return;const l=ST.places[S.loc];
   const out=l.spots.map(spotExit).find(p=>p&&ST.places[p]&&!isClosed(p));if(!out)return;

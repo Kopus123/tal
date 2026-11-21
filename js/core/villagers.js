@@ -39,15 +39,16 @@ function talkTo(id){
   const day=S.world.day,lv=relLevel(id),seen=S.world.seen,ok=x=>x.lv<=lv&&cond(x.c);
   if(S.world.met[id]!==day){S.world.met[id]=day;addRel(id,1);const g=p.greet[(day+id.length)%Math.max(1,p.greet.length)];save();go(g);return}
   const told=S.world.gossip[id]||[];if(told.length){const sc=told.shift();save();go(sc);return}   // someone missed something: they tell you first
-  const st=p.story.find(x=>ok(x)&&!seen[x.scene]);if(st){go(st.scene);return}
+  const job=jobOn(),js=job&&job.ask[id];
+  const st=p.story.find(x=>ok(x)&&!seen[x.scene]);if(st&&!js){go(st.scene);return}
   const pool=p.chat.filter(x=>ok(x)&&seen[x.scene]!==day)
     .sort((a,b)=>weakWords(b.scene)-weakWords(a.scene)||(seen[a.scene]||0)-(seen[b.scene]||0));   // shaky words first, then the one heard longest ago
   const asks=p.ask.filter(x=>cond(x.c)&&S.w[x.word]&&seen[x.scene]!==day);
-  if(!asks.length){go(pool.length?pool[0].scene:p.bye);return}
+  if(!asks.length&&!js){go(pool.length?pool[0].scene:p.bye);return}
   // the talk menu: small talk, or bring something up
   const key='_talk_'+id;
   ST.nodes[key]={id:key,who:'narr',en:`What do you want to talk to ${(ST.cast[id]||{}).n||id} about?`,
-    ch:[...(pool.length?[{en:'Just chat',go:pool[0].scene}]:[]),...asks.map(x=>({ko:topicOf(x.word),go:x.scene,lang:'ko'})),{en:'Leave it for now',go:p.bye}]};
+    ch:[...(js?[{en:'About the job: '+job.en,go:js}]:[]),...(st?[{en:'Just chat',go:st.scene}]:pool.length?[{en:'Just chat',go:pool[0].scene}]:[]),...asks.map(x=>({ko:topicOf(x.word),go:x.scene,lang:'ko'})),{en:'Leave it for now',go:p.bye}]};
   go(key);
 }
 /* ---------- events ---------- */

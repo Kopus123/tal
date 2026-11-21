@@ -23,6 +23,9 @@
 #                            "free" = the village between chapters: clock running, people about)
 #    === people             id | file in story/people/      (each file: === person ID, then ordinary scenes)
 #    === event ID           when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE     (free days: js/core/villagers.js)
+#    === job ID             title 한국어 | English / level easy|medium / client WHO / pay N / thanks N / note TEXT
+#                           / start SCENE / ask WHO SCENE / [when COND]   (notice-board jobs: js/core/jobs.js;
+#                           in scenes: ! job done / ! job fail; conditions job:ID, jobdone:ID; ids start with ID_)
 #    === map                pin PLACE X% Y% [above|left|right|below]
 #    === cast               key | name | color | voice rate pitch | look
 #    === words              word = picture [+past] [+future] [+not]      (pictures: js/icons.js)
@@ -49,7 +52,7 @@
 #                           first SCENE (plays the first time you arrive) / always SCENE (every time)
 #                           desc [if COND:] text                 (the first one that fits is shown)
 #                           closed COND | message                (while COND holds you can't go in: you get the message)
-#                           spot "Label" X Y -> SCENE [if COND]  (also  => place NAME   and   => phone)
+#                           spot "Label" X Y -> SCENE [if COND]  (also  => place NAME,  => phone,  => board)
 #                           glow WORD X Y [R] [H]                (the ring when someone says WORD)
 #    === phone ID           name / avatar LETTER COLOR / on-open effects
 #                           day[@COND] text / them[@COND] TIME text / me[@COND] TIME text / sys[@COND] text
@@ -119,9 +122,10 @@ blurb A mystery in Korean. Nobody will translate for you. Tap any word to see a 
 
 === chapters
 # id       | title    | subtitle | file           | continues (blank = starts a new chapter)
+# (a chapter can be several files: village.story + jobs.story)
 prologue   | 1장      | 탈       | prologue.story
 ch1        | 1장      | 탈       | ch1.story      | continues
-village    | 마을     | Free days | village.story | free
+village    | 마을     | Free days | village.story + jobs.story | free
 
 === people
 # id | file in story/people/   (who lives in the village on free days: see js/core/villagers.js)
@@ -145,6 +149,7 @@ pin museum 86 30
 pin gang 79 55
 pin jeol 9 14 below
 pin sijang 84 79
+pin hall 22 46
 
 === cast
 # key      | name          | color    | voice  rate  pitch | look (see js/people.js)
@@ -384,6 +389,35 @@ sign       |               |          | SunHi  -10%  +0Hz
 는데요 = (grammar)
 거든요 = (grammar)
 낚시 = fish
+가방 = bag
+열쇠 = key
+고양이 = cat
+아이 = student
+가져갔어요 = bring +past
+갔어요 = go +past
+미안해 = sorry
+맞아요 = yes
+좋아해요 = good
+드릴까요 = please
+호떡 = hotteok
+돈 = won
+팔았어요 = won +past
+그런데 = next
+줬어요 = please +past
+봤어 = eye +past
+먹었어 = eat +past
+아니야 = no
+예뻐 = pretty
+개 = twoitems
+또 = next
+도둑 = hide
+메모 = letter
+아직 = clock
+그거 = that
+직원 = card
+잘 = good
+줘요 = please
+한테 = (grammar)
 
 === grammar
 # piece | what it does (shown when you tap it)
@@ -398,6 +432,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 의 | Possessive, like 's: 할머니의 공방 = grandma's workshop.
 으로 | "toward" or "by way of": 오른쪽으로 가요 = go to the right. After a vowel it's just 로.
 하고 | "with" or "and" (casual): 친구하고 = with a friend. 누구하고? = with who?
+한테 | "to" a person: 친구한테 = to a friend. 아이한테 = to a kid. (For places, use 에.)
 을/를 | Object marker. Sticks to the thing being done to: 물감을 샀어요 = bought paint. 을 after a consonant, 를 after a vowel.
 요 | The polite ending, stuck onto almost anything: 할머니요? = (do you mean) grandma? After a word ending in a consonant it's often 이요: 선생님이요?
 는데요 | "...but" / "well...". A soft ending that trails off and leaves something unsaid: 아는데요... = I do know, but... After a noun it's 인데요: 진짜인데요 = it's real, but...
@@ -593,6 +628,34 @@ sign       |               |          | SunHi  -10%  +0Hz
 매일 | every day
 제 | my (polite)
 낚시 | fishing
+가방 | bag
+열쇠 | key
+고양이 | cat
+아이 | child, kid
+가져갔어요 | took (it away)
+갔어요 | went
+미안해 | sorry (casual)
+맞아요 | that's right
+좋아해요 | likes
+드릴까요 | shall I get you...? (what a server says)
+호떡 | hotteok, a sweet fried pancake
+돈 | money
+팔았어요 | sold
+그런데 | but, however
+줬어요 | gave
+봤어 | saw (casual)
+먹었어 | ate (casual)
+아니야 | no (casual)
+예뻐 | pretty (casual)
+개 | counter for things: 세 개 = three of them
+또 | again
+도둑 | thief
+메모 | note, memo
+아직 | still, (not) yet
+그거 | that (thing)
+직원 | staff, employee
+잘 | well (잘 먹었어요? = did you enjoy the meal?)
+줘요 | give (it to you)
 줘 | give (casual, rude)
 잠깐만요 | wait a moment
 안녕히 가세요 | goodbye (to someone leaving)

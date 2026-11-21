@@ -10,13 +10,14 @@
 //                finished chapters, the map
 const KEY='tal-save-v2';
 // Save format version. When the format changes: bump SAVE_V and add a step to MIGRATE that upgrades the old shape.
-const SAVE_V=7;
+const SAVE_V=8;
 // slot = time of day: 0 morning, 1 afternoon, 2 evening, 3 night (names in SLOTS, js/core/world.js)
 // did = effects that add up (money, friendship, items) and have already happened, so a beat can't pay out twice
 // frozen = the story is holding the clock (it sets the time itself); when it lets go, time passes as you wait and sleep
 // met = the day you last said hello to each person; seen = the day you last heard each conversation
 // evs = village events seen or missed (id@day); gossip = scenes someone will tell you, about events you missed
-const freshWorld=()=>({day:1,slot:0,frozen:0,money:0,rel:{},met:{},seen:{},evs:{},gossip:{},inv:{},room:{},g:{},did:{}});
+const START_MONEY=20000;
+const freshWorld=()=>({day:1,slot:0,frozen:0,money:START_MONEY,rel:{},met:{},seen:{},evs:{},gossip:{},inv:{},room:{},g:{},did:{},jobs:{},job:null});
 const fresh=()=>({v:SAVE_V,world:freshWorld(),m:{},tl:{},mx:{},pat:{},ch:null,prog:{},done:{},known:{},loc:null,node:null,F:{},w:{},cs:{},nb:{},log:[],set:{auto:1,slow:0,glow:1,sound:1,size:1,dev:0,music:2,amb:2,fade:1},visited:{}});
 const CH_FIELDS=['loc','node','F','cs','visited'];
 // erasing progress keeps what you wrote about each word (for playtesting)
@@ -44,6 +45,8 @@ const MIGRATE={
     if(s.ch==='ch1'&&(s.done||{}).ch1&&!s.world.frozen){s.prog=s.prog||{};s.prog.ch1={loc:s.loc,node:null,F:s.F||{},cs:s.cs||{},visited:s.visited||{}};
       s.ch='village';s.F={};s.cs={};s.visited={};s.node=null;s.loc=null}
     return s},
+  7:s=>{ // money became real (a wallet you can see, prices you pay): everyone starts with pocket money
+    s.world=Object.assign(freshWorld(),s.world);if(!s.world.money)s.world.money=START_MONEY;return s},
 };
 function migrate(s){let v=s.v||(s.ch?2:1);while(v<SAVE_V&&MIGRATE[v]){s=MIGRATE[v](s);v++}s.v=Math.max(v,s.v||0);return s}
 // a stored save of any age -> a complete, current one (anything newer code expects is filled in with its default)

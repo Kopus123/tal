@@ -250,7 +250,9 @@ saved world.evs.haggle@5
 talk ajumma
 idle
 spot Take the bus back
+choose Pay and ride back
 idle
+expect money=16000
 map madang
 wait
 wait

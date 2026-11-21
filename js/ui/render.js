@@ -31,6 +31,7 @@ function render(){
   setScene(l.music||'none',l.sound||'none');
   $('#tint').className='tint t-'+slotName()+(exam?' own':l.light?' '+l.light:'');
   const ck=$('#clock');ck.hidden=!S.F.started;ck.textContent=`${S.world.day}일째 · ${SLOT_KO[slotName()]}`;ck.onclick=dayPanel;
+  const wl=$('#wallet');wl.hidden=!S.F.started;wl.textContent=wonStr(S.world.money);wl.onclick=dayPanel;
   let h='';
   if(nd&&nd.type==='camera')h+=`<div class="vf" id="vf" style="left:${cam.x}%;top:${cam.y}%"><span>Drag me</span></div>`;
   if(exam){const got=d=>S.F['ex_'+exam.id+'_'+d.id];

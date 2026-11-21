@@ -92,9 +92,11 @@ def _fx_time(d, a, ln, f):
     elif m.group(2) and m.group(2) not in SLOTS: err(f, ln, f"'{m.group(2)}' isn't a time of day ({', '.join(sorted(SLOTS))})")
 
 def _fx_chapter(d, a, ln, f): d["chapter_refs"].append((a.strip(), ln))
+def _fx_job(d, a, ln, f):
+    if a.strip() not in ("done", "fail"): err(f, ln, f"'job {a}' should be 'job done' or 'job fail'")
 
 EFFECT_KINDS = {"chapter": _fx_chapter, "time": _fx_time, "flags": _fx_flags, "unflags": None, "text": None, "place": _fx_place, "evidence": _fx_evidence,
-                "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item}
+                "statement": _fx_statement, "mixup": _fx_mixup, "amount": _fx_amount, "who_amount": _fx_who_amount, "item": _fx_item, "job": _fx_job}
 ADDS_UP = {"amount", "who_amount", "item", "time"}      # these may end in "each time"
 
 def _c_place(d, rest, ln, f): d["placefx"].append((rest, ln))
@@ -105,8 +107,9 @@ def _c_who(d, rest, ln, f): d["who_refs"].append((rest, ln))
 def _c_item(d, rest, ln, f): d["items_read"].append((rest, ln))
 
 def _c_calendar(d, rest, ln, f): d["cal_read"].append((rest, ln))
+def _c_job(d, rest, ln, f): d["jobrefs"].append((rest, ln))
 
-COND_KINDS = {"calendar": _c_calendar, "place": _c_place, "bool": None, "number": None, "slot": _c_slot, "gflag": _c_gflag, "who": _c_who, "item": _c_item}
+COND_KINDS = {"calendar": _c_calendar, "place": _c_place, "bool": None, "number": None, "slot": _c_slot, "gflag": _c_gflag, "who": _c_who, "item": _c_item, "job": _c_job}
 
 for _name, _kind in EFFECTS.items():
     if _kind not in EFFECT_KINDS: sys.exit(f"check_story.py: effect '{_name}' has the new kind '{_kind}'. Add it to EFFECT_KINDS.")
@@ -124,7 +127,7 @@ def parse(path):
     d = dict(meta={}, cast={}, words={}, places={}, scenes={}, deduce=[], evidence={}, phones={},
              hints=[], chapters=[], pins=[], jumps=[], flags_set=[], flags_read=[], gives=[], shows=[],
              speakers=[], tokens=[], placefx=[], statements={}, pairs=[], examines={}, exrefs=[],
-             people_files=[], person_at=[], gossip=[], chapter_refs=[], cal=[], cal_read=[], gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[])
+             people_files=[], person_at=[], gossip=[], chapter_refs=[], cal=[], cal_read=[], gflags_set=[], gflags_read=[], who_refs=[], items_given=[], items_read=[], details=[], raw=[], jobs={}, jobrefs=[])
     sec = cur = scene = None
     count = 0; join = False   # inside "@build ... | join": tiles are pieces of a word, not words
     def conds(c, ln):                       # mirror of cond() in js/core/rules.js
@@ -176,6 +179,9 @@ def parse(path):
             elif sec == "phone": cur = d["phones"][arg] = dict(ln=ln)
             elif sec == "examine": cur = d["examines"][arg] = dict(ln=ln, id=arg, art=None, keys=0)
             elif sec == "person": d["who_refs"].append((arg, ln))
+            elif sec == "job":
+                if arg in d["jobs"]: err(f, ln, f"job '{arg}' defined twice")
+                d["jobs"][arg] = dict(ln=ln, start=False)
             continue
         if sec not in SECTIONS: continue
         if sec == "meta":
@@ -260,6 +266,18 @@ def parse(path):
             elif m := re.match(r"^scene\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None))
             elif m := re.match(r"^missed\s+(\w+)\s+(\w+)$", line): d["who_refs"].append((m.group(1), ln)); d["gossip"].append((m.group(2), ln))
             else: err(f, ln, "event line should be: when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE")
+        elif sec == "job":
+            job = d["jobs"][list(d["jobs"])[-1]]
+            if m := re.match(r"^title\s+(.+?)\s*\|\s*(.+)$", line): pass
+            elif m := re.match(r"^level\s+(\S+)$", line):
+                if m.group(1) not in ("easy", "medium"): err(f, ln, "level should be easy or medium")
+            elif m := re.match(r"^client\s+(\w+)$", line): d["who_refs"].append((m.group(1), ln))
+            elif re.match(r"^(pay|thanks)\s+\d+$", line): pass
+            elif m := re.match(r"^when\s+(\S+)$", line): conds(m.group(1), ln)
+            elif re.match(r"^note\s+.+$", line): pass
+            elif m := re.match(r"^start\s+(\w+)$", line): d["jumps"].append((m.group(1), ln, None)); job["start"] = True
+            elif m := re.match(r"^ask\s+(\w+)\s+(\w+)$", line): d["who_refs"].append((m.group(1), ln)); d["jumps"].append((m.group(2), ln, None))
+            else: err(f, ln, "job line should be: title 한국어 | English / level easy|medium / client WHO / pay N / thanks N / when COND / note TEXT / start SCENE / ask WHO SCENE")
         elif sec == "calendar":
             p = [x.strip() for x in line.split("|")]
             m = re.match(r"^(\w+)\s+(every\s+\d+(\s+from\s+\d+)?|day\s+\d+)$", p[0])
@@ -308,9 +326,18 @@ def main():
     world = parse(STORY / "world.story")
     chapters = {}
     for c in world["chapters"]:
-        fp = STORY / c["file"]
-        if not fp.exists(): err("world.story", c["ln"], f"chapter file {c['file']} is missing"); continue
-        chapters[c["id"]] = (fp.name, parse(fp))
+        parts = [STORY / x.strip() for x in c["file"].split("+") if x.strip()]
+        missing = [x.name for x in parts if not x.exists()]
+        if missing: err("world.story", c["ln"], f"chapter file {', '.join(missing)} is missing"); continue
+        d = parse(parts[0])
+        for fp in parts[1:]:
+            for k, v in parse(fp).items():
+                if isinstance(v, list): d[k] += v
+                elif isinstance(v, dict):
+                    for x in v:
+                        if x in d[k] and k in ("scenes", "places", "evidence", "jobs"): err(fp.name, 1, f"'{x}' is already in {parts[0].name}")
+                    d[k].update(v)
+        chapters[c["id"]] = (" + ".join(x.name for x in parts), d)
     people = []
     for pid, pf, ln in world["people_files"]:
         fp = STORY / "people" / pf
@@ -367,9 +394,16 @@ def main():
                 else:
                     m = re.match(r"^place\s+(\S+)", s["t"])
                     if m and m.group(1) not in places: err(fname, s["ln"], f"spot leads to unknown place '{m.group(1)}'")
-                    elif not m and s["t"] != "phone": err(fname, s["ln"], f"spot target '{s['t']}' not understood")
+                    elif not m and s["t"] not in ("phone", "board"): err(fname, s["ln"], f"spot target '{s['t']}' not understood")
         for p, ln in d["placefx"]:
             if p not in places: err(fname, ln, f"unknown place '{p}'")
+        # jobs
+        for x, ln in d["jobrefs"]:
+            if x not in d["jobs"]: err(fname, ln, f"no '=== job {x}' in this chapter")
+        for jid, j in d["jobs"].items():
+            if not j["start"]: err(fname, j["ln"], f"job {jid} has no start scene")
+        if d["jobs"] and not any(s["t"] == "board" for p in places.values() for s in p["spots"]):
+            err(fname, 1, "there are jobs, but no notice board spot (=> board) to take them from")
         # jumps
         reached = set()
         for t, ln, frm in d["jumps"]:

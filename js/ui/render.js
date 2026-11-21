@@ -23,10 +23,11 @@ function render(){
   $('#locKo').textContent=l.name||'';$('#locSub').textContent=l.sub||'';
   if(S.loc)S.known[S.loc]=1;
   $('#bPhone').hidden=!hasPhone();
+  $('#bMap').hidden=!(canTravel()&&ST.map.filter(p=>S.known[p.p]&&ST.places[p.p]).length>1);
   const exam=nd&&nd.type==='examine'?ST.examines[nd.exam]:null;   // a close-up takes over the picture window
   const artName=exam?exam.art:l.art;
-  const ak=artName+(artName==='bus'?'|'+(S.F.led||''):'');
-  if(ak!==artKey){const w=$('#art');w.innerHTML=(ART[artName]||ART.madang)();w.classList.remove('in');void w.offsetWidth;w.classList.add('in');artKey=ak}
+  const live=!!ST.free&&!exam,ak=artName+(artName==='bus'?'|'+(S.F.led||''):'')+(live?'|live':'');
+  if(ak!==artKey){const w=$('#art');PERSON_OFF=live;try{w.innerHTML=(ART[artName]||ART.madang)()}finally{PERSON_OFF=false}w.classList.remove('in');void w.offsetWidth;w.classList.add('in');artKey=ak}
   const amb=exam?'none':l.ambient||'none';if(amb!==ambKey){$('#amb').innerHTML=ambientHTML(amb);ambKey=amb}
   setScene(l.music||'none',l.sound||'none');
   $('#tint').className='tint t-'+slotName()+(exam?' own':l.light?' '+l.light:'');
@@ -37,9 +38,9 @@ function render(){
   if(exam){const got=d=>S.F['ex_'+exam.id+'_'+d.id];
     h+=`<div class="exlayer" id="exam">${exam.compare&&ART[exam.compare]?`<div class="excompare">${ART[exam.compare]()}<span>1979 photo</span></div>`:''}${exam.details.map(d=>got(d)?`<span class="exmark" style="left:${d.x}%;top:${d.y}%"></span>`:EXMISS>=4?`<span class="exhint" style="left:${d.x}%;top:${d.y}%"></span>`:'').join('')}</div>`}
   if(nd&&nd.type==='card')h+=`<div class="card-title"><b>${esc(nd.title)}</b>${nd.sub?`<span>${esc(nd.sub)}</span>`:''}</div>`;
-  if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
-  if(!nd)peopleHere().forEach(p=>{const a=p.at[slotName()],n=(ST.cast[p.id]||{}).n||p.id;
-    h+=`<button class="hs who" data-who="${p.id}" style="left:${a.x}%;top:${a.y}%" aria-label="Talk to ${esc(n)}"><i></i><span>${esc(n)}</span></button>`});
+  if(!nd)l.spots.forEach((x,i)=>{if(!cond(x.c))return;h+=`<button class="hs ${x.x<25?'edge-l':x.x>75?'edge-r':''}" data-hs="${i}" style="left:${x.x}%;top:${x.y}%" aria-label="${esc(x.l)}"><i></i><span>${esc(x.l)}</span></button>`});
+  if(!nd)peopleHere().forEach(p=>{const a=whereNow(p),n=(ST.cast[p.id]||{}).n||p.id;
+    h+=`<button class="hs who fig" data-who="${p.id}" style="left:${a.x}%;top:${a.y}%;--fs:${parseLook((ST.cast[p.id]||{}).look).size||1}" aria-label="Talk to ${esc(n)}">${figureSVG(p.id)}<span>${esc(n)}</span></button>`});
   if(nd&&nd.ko&&!nd.audio&&glowFor!==S.node){glowFor=S.node;h+=glowHTML(idsIn(nd.ko))}
   if(TIMECARD){TIMECARD=false;if(!(nd&&nd.type==='card')){lastLoc=S.loc;h+=`<div class="placecard"><b>${SLOT_KO[slotName()]}</b><span>day ${S.world.day} · ${slotName()}</span></div>`}}
   if(S.loc!==lastLoc&&!(nd&&nd.type==='card'))h+=`<div class="placecard"><b>${esc(l.name||'')}</b><span>${esc(l.sub||'')}</span></div>`;
@@ -55,12 +56,11 @@ function render(){
   if(!nd){
     const d=l.desc.find(x=>cond(x.c));
     const chips=l.spots.map((x,i)=>cond(x.c)?`<button class="chipbtn" data-hs="${i}">${esc(x.l)}</button>`:'').join('');
-    const mapBtn=canTravel()&&ST.map.filter(p=>S.known[p.p]&&ST.places[p.p]).length>1?`<button class="chipbtn mapchip" id="bMap">Village map</button>`:'';
     // free time: wait for a later time of day, and at home in the evening, go to bed
     const run=!S.world.frozen,home=S.loc===ST.meta.home;
     const timeBtn=!run?'':(home&&S.world.slot>=2?`<button class="chipbtn timechip" id="bBed">Go to bed</button>`:'')+(S.world.slot<3?`<button class="chipbtn timechip" id="bWait">Wait a while</button>`:'');
     const who=peopleHere().map(p=>`<button class="chipbtn whochip" data-who="${p.id}">Talk to ${esc((ST.cast[p.id]||{}).n||p.id)}</button>`).join('');
-    body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${who}${chips}${mapBtn}${timeBtn}</div>`;
+    body=`<div class="narr">${esc(d?d.t:'')}</div><div class="chips">${who}${chips}${timeBtn}</div>`;
   }else if(nd.type==='build'){
     const tl=nd.tiles;
     body=`<div class="en">${esc(nd.en)}</div><div class="built ${nd.join?'joined':''}">${bseq.length?bseq.map(i=>`<span>${ko(tl[i],false,false)}</span>`).join(''):`<span class="ph">${nd.join?'Tap the pieces to build the word':'Tap words to build a sentence'}</span>`}</div>
@@ -126,7 +126,6 @@ function render(){
   if($('#bSayT')){const tin=$('#tin');$('#bSayT').onclick=()=>sayTyped(nd,tin.value);$('#tf').onsubmit=e=>{e.preventDefault();sayTyped(nd,tin.value)};
     $('#bHintT').onclick=()=>{tHint=Math.min(tHint+1,3);const v=tin.value;render();const t2=$('#tin');t2.value=v;t2.focus()}}
   if($('#bSkip'))$('#bSkip').onclick=skipAhead;
-  if($('#bMap'))$('#bMap').onclick=openMap;
   if($('#bWait'))$('#bWait').onclick=()=>{sfx('page');passTime();if(!S.node)render()};
   if($('#bBed'))$('#bBed').onclick=()=>{sfx('page');nextMorning();render()};
   sb.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>present(nd,b.dataset.show));

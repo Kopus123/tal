@@ -1,9 +1,12 @@
 # 시장 아주머니: says everything twice, 아이고 for everything, knows everyone's business. (format: js/core/villagers.js)
 
 === person ajumma
-at morning sijang 66 56
-at afternoon sijang 66 56
-at evening sikdang 70 60
+at morning sijang 66 52
+at afternoon sijang 66 52
+at afternoon sijang 66 52
+at afternoon sanqil 70 74
+at evening sikdang 64 72
+at evening madang 62 82
 greet am_hi
 chat 0 am_price
 chat 0 am_paint
@@ -11,6 +14,8 @@ chat 0 am_tired
 ask 할아버지 am_ask_gramps
 ask 물감 am_ask_paint
 bye am_bye
+bye am_bye2
+bye am_bye3
 
 === scene am_hi
 ajumma[happy]: 아이고, {학생}! {어서 오세요}, {어서 오세요}!
@@ -75,3 +80,11 @@ ajumma: {물감}{은|은/는} {여기} {있어요}. {나무}{도} {있어요}!
 === scene am_bye
 ajumma: {바빠요}, {바빠요}! {내일} {와요}!
 (A queue has formed behind you.)
+
+=== scene am_bye2
+ajumma[happy]: {학생}! {오늘} {날씨}{가|이/가} {좋아요}!
+(She pats your arm twice and moves on.)
+
+=== scene am_bye3
+ajumma: {네}~ {내일} {와요}!
+(She's already talking to someone else.)

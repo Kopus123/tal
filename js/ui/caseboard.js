@@ -20,9 +20,10 @@ function shortlist(q,filter){
   let h=7;for(const ch of q.id)h=(h*31+ch.charCodeAt(0))>>>0;
   const rnd=()=>{h=(h*1103515245+12345)>>>0;return h/4294967296};
   const mix=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
-  const pool=new Set();ST.cases.filter(c=>cond(c.c)&&!S.cs[c.id]).forEach(c=>c.blanks.forEach(a=>{if(W[a])pool.add(a)})); // only cards on the board now: no spoilers
+  const pool=new Set(),MAX=10;q.blanks.forEach(a=>{if(W[a])pool.add(a)});
+  mix(ST.cases.filter(c=>c!==q&&cond(c.c)&&!S.cs[c.id]).flatMap(c=>c.blanks).filter(a=>W[a]&&!pool.has(a))).slice(0,Math.max(0,MAX-2-pool.size)).forEach(a=>pool.add(a)); // other cards on the board now: no spoilers
   if(q.blanks.some(b=>W[b]&&W[b].g))Object.keys(WORLD.tells).concat(['이에요','아니에요']).filter(id=>W[id]).forEach(id=>pool.add(id));
-  mix(Object.keys(S.w).filter(id=>ok(id)&&W[id].p&&!pool.has(id))).slice(0,Math.max(0,16-pool.size)).forEach(x=>pool.add(x));
+  mix(Object.keys(S.w).filter(id=>ok(id)&&W[id].p&&!pool.has(id))).slice(0,Math.max(0,MAX-pool.size)).forEach(x=>pool.add(x));
   return mix([...pool]);
 }
 // sentence with slots; filled = array of words (or null)

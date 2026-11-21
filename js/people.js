@@ -63,4 +63,8 @@ function portrait(lookStr,expr='neutral'){
 }
 
 // the bus announcer and other voices without a face
+// the same person, standing in the scene (the small figure from js/art.js, in their own colors)
+function figureSVG(id){const L=parseLook((ST.cast[id]||{}).look),PO=PERSON_OFF;PERSON_OFF=false;
+  const g=person(0,0,{top:L.top,bot:L.bot||'#3b3f4a',skin:L.skin,hair:L.hc,bun:L.hair==='bun'||L.hair==='grandma',long:L.hair==='long',hanbok:L.wear==='hanbok',apron:L.wear==='apron'});
+  PERSON_OFF=PO;return `<svg viewBox="-17 -68 34 72" aria-hidden="true">${g}</svg>`}
 function speakerGlyph(){return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M26,40 H40 L58,24 V76 L40,60 H26Z" fill="#3b4048" stroke="${PK}" stroke-width="3" stroke-linejoin="round"/><path d="M68,36 q8,14 0,28 M76,28 q14,22 0,44" fill="none" stroke="#d9a43d" stroke-width="4" stroke-linecap="round"/></svg>`}

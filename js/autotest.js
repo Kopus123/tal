@@ -124,7 +124,9 @@ const STEPS={
   async expect(c){if(!cond(c))fail(`expected ${c}`)},
   async done(id){if(!S.done[id])fail(`chapter ${id} isn't finished`)},
   async nospot(l){await idle();if(vis('#sb .chipbtn[data-hs]').some(b=>txt(b)===l))fail(`"${l}" is offered here but shouldn't be`)},
-  async talk(who){await idle();const b=document.querySelector(`#sb [data-who="${who}"]`);
+  // people move around (a different spot each day), so "talk" first walks to wherever they are now, if they're anywhere
+  async talk(who){await idle();let b=document.querySelector(`#sb [data-who="${who}"]`);
+    const w=!b&&PEOPLE[who]&&whereNow(PEOPLE[who]);if(w&&w.place!==S.loc&&canTravel()&&S.known[w.place]){await STEPS.map(w.place);await idle();b=document.querySelector(`#sb [data-who="${who}"]`)}
     if(!b)fail(`${who} isn't here now (here: ${vis('#sb [data-who]').map(x=>x.dataset.who).join(', ')||'nobody'})`);await clickEl(b)},
   async anychoice(){await clickEl(await until(()=>vis('#sf [data-ch]')[0],'a choice'))},
   async job(id){await idle();const b=vis('#sb .chipbtn[data-hs]').find(b=>txt(b)==='Notice board');if(!b)fail('no notice board here');await clickEl(b);

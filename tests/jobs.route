@@ -15,7 +15,7 @@ idle
 expect job:key
 noboard key
 
-# --- the missing key: 수진 is home in the morning; the river is where she really was
+# --- the missing key: 수진 (wherever she is this morning); the river is where she really was
 spot Back to the alley
 spot Front gate
 talk sujin
@@ -24,7 +24,7 @@ talk sujin
 choose About the job
 choose I don't know yet
 idle
-spot Front gate
+map golmok
 spot Right path
 spot Bus stop
 spot Path behind the bus stop
@@ -167,12 +167,14 @@ expect jobdone:cash&money=40500
 
 # --- dinner: order in Korean, pay with the number pad (wrong first), then treat the table
 #@ Jobs · dinner at the restaurant
+map sikdang
 spot Order food
 choose 라면 주세요
 number 4000
 number 4500
 expect money=36000
-choose Buy 김밥 for the whole table
+# (buying for the table is only offered when 아주머니 or the museum woman is here; tonight one of them is)
+choose Buy 김밥 for
 idle
 expect money=33000
 

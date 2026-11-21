@@ -1,9 +1,13 @@
 # 수진: runs the guesthouse. Polite, quick, notices everything. (format: js/core/villagers.js)
 
 === person sujin
-at morning madang 30 66
-at afternoon gongbang 30 72
-at evening madang 30 66
+at morning madang 30 80
+at morning madang 30 80
+at morning golmok 36 74
+at afternoon gongbang 26 84
+at afternoon gongbang 26 84
+at afternoon madang 62 82
+at evening madang 30 80
 greet sj_hi
 greet sj_hi2
 chat 0 sj_weather
@@ -15,6 +19,8 @@ ask 할머니 sj_ask_gm
 ask 탈 sj_ask_mask
 story 1 sj_workshop
 bye sj_bye
+bye sj_bye2
+bye sj_bye3
 
 === scene sj_hi
 sujin[happy]: {안녕하세요}!
@@ -121,3 +127,11 @@ sujin[happy]: {장날}{에}... {아저씨}{하고} {아주머니}{가|이/가}..
 (She mimes someone clutching a cabbage and someone clutching their chest. You missed quite a show.)
 sujin: "{비싸요}! {비싸요}!" "{싸요}! {싸요}!"
 (She does both voices.)
+
+=== scene sj_bye2
+sujin[happy]: {안녕}! {내일} {같이} {산}{에} {가요}?
+(She says it every time now. One day you'll say yes.)
+
+=== scene sj_bye3
+sujin: {네}, {네}! {바빠요}!
+(She waves over her shoulder, already halfway to the next job.)

@@ -5,12 +5,26 @@
 // endings are forgiven (mask / masks), filler words don't count, and so "h" or "thing" is not a match for anything.
 let WRONG=null;
 const FILLER=new Set('a an the to it its is are am be i im me my of please you your for or and that this there they them'.split(' '));
-function guessWords(s){return String(s).toLowerCase().replace(/\([^)]*\)/g,' ').replace(/'/g,'').replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(w=>w&&!FILLER.has(w))}
-function nearWord(x,w){if(x===w)return true;if(Math.min(x.length,w.length)<3)return false;
+// number words become digits, so "10000", "10,000" and "ten thousand" are all the same answer
+const NUM1={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,
+  sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+function numWords(ws){const out=[];let tot=0,cur=0,on=false;const flush=()=>{if(on){out.push(String(tot+cur));tot=cur=0;on=false}};
+  for(const w of ws){if(w in NUM1||/^\d+$/.test(w)){cur+=w in NUM1?NUM1[w]:+w;on=true}
+    else if(w==='hundred'){cur=(cur||1)*100;on=true}
+    else if(w==='thousand'||w==='million'){tot+=(cur||1)*(w==='thousand'?1e3:1e6);cur=0;on=true}
+    else if(w==='and'&&on)continue;else{flush();out.push(w)}}
+  flush();return out}
+function guessWords(s){return numWords(String(s).toLowerCase().replace(/\([^)]*\)/g,' ').replace(/'/g,'').replace(/(\d),(?=\d)/g,'$1').replace(/[^a-z0-9]+/g,' ').trim().split(' ')).filter(w=>w&&!FILLER.has(w))}
+function nearWord(x,w){if(x===w)return true;if(/\d/.test(x+w)||Math.min(x.length,w.length)<3)return false;
   let cp=0;while(cp<x.length&&cp<w.length&&x[cp]===w[cp])cp++;   // letters they share from the start: grandma / grandmother
   return (x.length>=8&&w.length>=8&&lev(x,w)<=1)||cp>=Math.max(4,Math.ceil(.75*Math.min(x.length,w.length)))||(w.length===3&&x.startsWith(w)&&x.length<=5)}
-function guessRight(guess,meaning){const g=guessWords(guess);if(!g.length)return false;
-  return String(meaning).replace(/\([^)]*\)/g,' ').split(',').map(guessWords).filter(a=>a.length).some(a=>a.every(w=>g.some(x=>nearWord(x,w))))}
+// "o clock" = "oclock" = "o'clock": two words written together count as one, both ways
+function guessRight(guess,meaning){let g=guessWords(guess);if(!g.length)return false;g=[...g,...g.slice(1).map((x,i)=>g[i]+x)];
+  return String(meaning).replace(/\([^)]*\)/g,' ').replace(/(\d),(?=\d{3})/g,'$1').split(',').map(guessWords).filter(a=>a.length).some(a=>a.every(w=>g.some(x=>nearWord(x,w)))||g.some(x=>nearWord(x,a.join(''))))}
+const cap=s=>String(s).replace(/^\s*\S/,c=>c.toUpperCase());
+// two wrong checks in a row lock checking until you've run into the word again, so guesses can't be fired off one after another
+const seenN=id=>(S.m[id]||{}).s||0;
+const checkLocked=(id,r)=>r.lk!=null&&seenN(id)<=r.lk;
 function wordSheet(id){
   const d=W[id];if(!d)return;const r=wrec(id);S.nb[id]=1;save();
   const o=overlay(`<div class="panel paper" role="dialog" aria-label="${esc(id)}">${head('수첩')}<div class="ph-body" id="wsb"></div></div>`);
@@ -24,18 +38,20 @@ function wordSheet(id){
       ${def?`<div class="defbox">${esc(def)}</div>`:''}
       <button class="btn" id="wsay" style="justify-content:center">▶ Hear it</button>
       ${d.g?'':`<div class="label">What you think it means</div><textarea id="wnote" placeholder="Your own words">${esc(r.note||'')}</textarea>
-      <label class="surebox"><input type="checkbox" id="wsure" ${r.sure?'checked':''} ${r.note&&r.note.trim()?'':'disabled'}><span>I'm sure about this</span></label>
-      ${r.checked?`<div class="meaning">${r.right?'You got it. ':''}Meaning: <b>${esc(meaningOf(id))}</b></div>`:meaningOf(id)?`<button class="btn-ink" id="wcheck" ${r.note&&r.note.trim()?'':'disabled'}>Check my guess</button>
-        <div class="hintline">${!(r.note&&r.note.trim())?'Write a guess first, then you can check it.':WRONG===id?'Not quite. Look at the picture and where you\'ve seen it, then try another guess.':'Tells you if your guess is right. It only shows the meaning once you get it.'}</div>
+      ${meaningOf(id)?'':`<label class="surebox"><input type="checkbox" id="wsure" ${r.sure?'checked':''} ${r.note&&r.note.trim()?'':'disabled'}><span>I'm sure about this</span></label>`}
+      ${r.checked?`<div class="meaning">${r.right?'✓ You got it. ':''}Meaning: <b>${esc(cap(meaningOf(id)))}</b></div>`:meaningOf(id)?(()=>{const lk=checkLocked(id,r),has=r.note&&r.note.trim();
+        return `<button class="btn-ink" id="wcheck" ${has&&!lk?'':'disabled'}>Check my guess</button>
+        <div class="hintline">${!has?'Write a guess first, then you can check it.':lk?'Not quite. You get another try after you run into this word again somewhere. Watch how it\'s used.':WRONG===id?'Not quite. One more try for now. Look at the picture and where you\'ve seen it.':'Tells you if your guess is right. It only shows the meaning once you get it.'}</div>`})()+`
         ${(r.tries||0)>=3?`<button class="linkish" id="wreveal">I give up, show me</button>`:''}`:''}`}
       <div class="label">Where you've seen it</div>${ctx}
       ${d.g?'':`<button class="linkish" id="wsym">What do the badges on the picture mean?</button>`}`;
     o.querySelector('#wsay').onclick=()=>speak(id,'word');
     const n=o.querySelector('#wnote');if(n)n.oninput=e=>{r.note=e.target.value;if(!r.note.trim())r.sure=0;save();
-      const c=o.querySelector('#wsure');c.disabled=!r.note.trim();const wc2=o.querySelector('#wcheck');if(wc2)wc2.disabled=!r.note.trim();if(!r.note.trim())c.checked=false;o.querySelector('.badge').className='badge st-'+status(id);o.querySelector('.badge').textContent=STATE_LABEL[status(id)]};
+      const c=o.querySelector('#wsure');if(c){c.disabled=!r.note.trim();if(!r.note.trim())c.checked=false}const wc2=o.querySelector('#wcheck');if(wc2)wc2.disabled=!r.note.trim()||checkLocked(id,r);o.querySelector('.badge').className='badge st-'+status(id);o.querySelector('.badge').textContent=STATE_LABEL[status(id)]};
     const c=o.querySelector('#wsure');if(c)c.onchange=e=>{r.sure=e.target.checked?1:0;save();sfx(r.sure?'learn':'tap');o.querySelector('.badge').className='badge st-'+status(id);o.querySelector('.badge').textContent=STATE_LABEL[status(id)]};
     const wc=o.querySelector('#wcheck');if(wc)wc.onclick=()=>{
-      if(guessRight(r.note,meaningOf(id))){r.checked=1;r.right=1;WRONG=null;sfx('learn')}else{r.tries=(r.tries||0)+1;WRONG=id;sfx('wrong');buzz(40)}
+      if(guessRight(r.note,meaningOf(id))){r.checked=1;r.right=1;r.sure=1;delete r.lk;WRONG=null;sfx('learn')}
+      else{r.tries=(r.tries||0)+1;if(WRONG===id)r.lk=seenN(id);WRONG=id;sfx('wrong');buzz(40)}
       save();draw()};
     const wr=o.querySelector('#wreveal');if(wr)wr.onclick=()=>{r.checked=1;WRONG=null;save();draw()};
     const sy=o.querySelector('#wsym');if(sy)sy.onclick=()=>{nbTab='sym';notebook()};
@@ -52,8 +68,8 @@ const SYMBOLS=()=>`
   <div class="label">Word colors</div>
   <div class="symrow"><span class="w new demo">새</span><div><b>New</b>: the first time you've run into this word.</div></div>
   <div class="symrow"><span class="w seen demo">새</span><div><b>No note yet</b>: you've seen it before but haven't written what it means.</div></div>
-  <div class="symrow"><span class="w guess demo">새</span><div><b>Your guess</b>: you wrote a meaning but aren't sure.</div></div>
-  <div class="symrow"><span class="w sure demo">새</span><div><b>Sure</b>: you ticked "I'm sure".</div></div>
+  <div class="symrow"><span class="w guess demo">새</span><div><b>Not checked</b>: you wrote a meaning but haven't got it right yet.</div></div>
+  <div class="symrow"><span class="w sure demo">새</span><div><b>Got it</b>: you checked your guess and it was right.</div></div>
   <div class="symrow"><span class="w gram demo">는</span><div><b>Grammar piece</b>: a little part that sticks to words. Tap it for an explanation.</div></div>
   <div class="label">In the scene</div>
   <div class="symrow"><span class="glowdemo"></span><div>A golden ring means someone just named that thing.</div></div>
@@ -72,9 +88,9 @@ function notebook(){
     const eng=id=>((S.w[id].note||'').trim()||(S.w[id].checked?meaningOf(id):'')).toLowerCase();
     if(nbQ){const q=nbQ.toLowerCase();list=list.filter(id=>id.includes(nbQ)||eng(id).includes(q))}
     list=nbSort==='ko'?[...list].sort((a,b)=>a.localeCompare(b,'ko')):nbSort==='en'?[...list].sort((a,b)=>(!eng(a))-(!eng(b))||eng(a).localeCompare(eng(b))||a.localeCompare(b,'ko')):[...list].reverse();
-    const tabs=[['all','All'],['todo','No note'],['guess','Guesses'],['sure','Sure'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],...(Object.keys(S.mx||{}).length?[['mix','Misheard']]:[]),['sym','Symbols']];
+    const tabs=[['all','All'],['todo','No note'],['guess','Not checked'],['sure','Got it'],['gram','Grammar'],['pat','Patterns'],['num','Numbers'],...(Object.keys(S.mx||{}).length?[['mix','Misheard']]:[]),['sym','Symbols']];
     let inner=`<div class="tabs">${tabs.map(([k,t])=>`<button class="tab ${nbTab===k?'on':''}" data-tab="${k}">${t}</button>`).join('')}</div>`;
-    if(['all','todo','guess','sure'].includes(nbTab))inner+=`<div class="label">${by('sure').length} sure · ${by('guess').length} guesses · ${vocab.length} seen</div>
+    if(['all','todo','guess','sure'].includes(nbTab))inner+=`<div class="label">${by('sure').length} got · ${by('guess').length} not checked · ${vocab.length} seen</div>
       <div class="nbtools"><input id="nbq" placeholder="Search Korean or your notes" value="${esc(nbQ)}" autocomplete="off"><span class="seg">${[['ko','ㄱㄴㄷ'],['en','A–Z'],['new','Newest']].map(([k,t])=>`<button data-sort="${k}" class="${nbSort===k?'on':''}">${t}</button>`).join('')}</span></div>`;
     if(nbTab==='gram'){
       inner+=`<div class="label">Little pieces that stick to words</div>`+(gram.length?`<div class="glist">${gram.map(id=>`<button class="grow" data-w="${esc(id)}"><b>${esc(id)}</b><span>${esc(WORLD.grammar[id]||'')}</span></button>`).join('')}</div>`:`<div class="empty">The ones you run into will collect here.</div>`);

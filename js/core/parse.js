@@ -31,7 +31,7 @@ function parseStory(src,st,file){
       else if(sec==='phone'){cur={id:arg,m:[],fx:[]};st.phones.push(cur)}
       else if(sec==='pattern'){cur={id:arg,pairs:[],need:3};st.patterns.push(cur)}
       else if(sec==='examine')cur=st.examines[arg]={id:arg,details:[]};
-      else if(sec==='person')cur=st.people[arg]={id:arg,at:{},greet:[],chat:[],story:[],ask:[],bye:null};
+      else if(sec==='person')cur=st.people[arg]={id:arg,at:{},greet:[],chat:[],story:[],ask:[],bye:[]};
       else if(sec==='event'){cur={id:arg,when:'',slot:'',place:'',scene:'',missed:null};st.events.push(cur)}
       else if(sec==='encounter'){cur={id:arg,at:[],scene:'',when:''};st.encounters.push(cur)}
       else if(sec==='job')cur=st.jobs[arg]={id:arg,ko:arg,en:arg,level:'easy',client:'',pay:0,thanks:1,when:'',note:'',start:'',ask:{}};
@@ -57,11 +57,11 @@ function parseStory(src,st,file){
       // people: ID | file in story/people/        person: see js/core/villagers.js
       case 'people':{const [id,f]=line.split('|').map(x=>x.trim());if(id&&f)st.peopleFiles.push({id,file:f});break}
       case 'person':{
-        if(m=line.match(/^at\s+(\w+)\s+(\w+)\s+([\d.]+)\s+([\d.]+)$/))cur.at[m[1]]={place:m[2],x:+m[3],y:+m[4]};
+        if(m=line.match(/^at\s+(\w+)\s+(\w+)\s+([\d.]+)\s+([\d.]+)$/))(cur.at[m[1]]=cur.at[m[1]]||[]).push({place:m[2],x:+m[3],y:+m[4]});
         else if(m=line.match(/^greet\s+(\w+)$/))cur.greet.push(m[1]);
         else if(m=line.match(/^(chat|story)\s+(\d+)\s+(\w+)(?:\s+if\s+(\S+))?$/))cur[m[1]].push({lv:+m[2],scene:m[3],c:m[4]});
         else if(m=line.match(/^ask\s+(\S+)\s+(\w+)(?:\s+if\s+(\S+))?$/))cur.ask.push({word:m[1],scene:m[2],c:m[3]});
-        else if(m=line.match(/^bye\s+(\w+)$/))cur.bye=m[1];
+        else if(m=line.match(/^bye\s+(\w+)$/))cur.bye.push(m[1]);
         else PARSE_WARN.push(`${file||'story'}:${ln+1}: ${line}`);break}
       // event: when COND / at SLOT PLACE / scene SCENE / missed WHO SCENE   (see js/core/villagers.js)
       case 'event':{

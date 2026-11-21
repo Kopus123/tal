@@ -1,9 +1,9 @@
 # 식당 아저씨: laughs a lot, and everything comes back to food. (format: js/core/villagers.js)
 
 === person ajeossi
-at morning sikdang 50 52
-at afternoon sikdang 50 52
-at evening sikdang 50 52
+at morning sikdang 50 64
+at afternoon sikdang 50 64
+at evening sikdang 50 64
 greet aj_hi
 chat 0 aj_special
 chat 0 aj_gramps
@@ -11,6 +11,8 @@ chat 0 aj_order
 ask 할아버지 aj_ask_gramps
 ask 김밥 aj_ask_kimbap
 bye aj_bye
+bye aj_bye2
+bye aj_bye3
 
 === scene aj_hi
 ajeossi[happy]: {어서 오세요}! {먹었어요}?
@@ -83,3 +85,11 @@ ajeossi: {할아버지}? 하하. {매일} {김밥} {두 개}!
 === scene aj_ask_kimbap
 ajeossi[happy]: {김밥}{은|은/는}... {비밀}{이에요}!
 (He taps his nose. The recipe is not for sale.)
+
+=== scene aj_bye2
+ajeossi[happy]: 아이고, {학생}! {배고파요}? 하하!
+(He doesn't wait for an answer. He never does.)
+
+=== scene aj_bye3
+ajeossi: {오늘}{도} {바빠요}... {내일} {오세요}!
+(He wipes his hands on his apron and gets back to work.)

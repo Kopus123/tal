@@ -163,7 +163,7 @@ ajumma     | 시장 아주머니 | #b5653d  | SunHi  +4%   -6Hz  | hair=bun hc=#
 stranger   | ???           | #2a2a2a  | InJoon -10%  -14Hz
 hiker      | 등산객        | #5a7a4a  | InJoon -2%   -4Hz  | hair=short hc=#3a2a20 top=#c9452f wear=plain extra=stubble,glasses
 junho      | 준호          | #4f6ea8  | InJoon +6%   +12Hz
-jiho       | 지호          | #d9a43d  | InJoon +12%  +40Hz | hair=short hc=#1f1a18 top=#e2c044 wear=plain
+jiho       | 지호          | #d9a43d  | InJoon +12%  +40Hz | hair=short hc=#1f1a18 top=#e2c044 wear=plain size=.72
 haraboji   | 할아버지      | #6b7a5a  | InJoon -12%  -26Hz | hair=short hc=#e4e0da top=#6b7a5a wear=plain extra=wrinkles,stubble skin=#d9b38e
 bus        | 안내 방송     | #2a2a2a  | Hyunsu -5%   +0Hz
 you        |               |          | Hyunsu -8%   +0Hz
@@ -208,7 +208,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 아침 = morning
 낮 = noon
 저녁 = evening
-장날 = market
+장날 = marketday
 9시 = clock
 저기요 = excuse
 안녕하세요 = wave

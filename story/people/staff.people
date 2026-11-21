@@ -1,9 +1,11 @@
 # 박물관 직원: proud of her museum, goes stiff and formal (-습니다) when she's nervous. (format: js/core/villagers.js)
 
 === person staff
-at morning museum 66 62
-at afternoon museum 66 62
-at evening sikdang 30 60
+at morning museum 60 78
+at afternoon museum 60 78
+at evening sikdang 30 70
+at evening sikdang 30 70
+at evening gang 40 70
 greet st_hi
 chat 0 st_quiet
 chat 0 st_masks
@@ -11,6 +13,8 @@ chat 0 st_dinner
 ask 탈 st_ask_mask
 ask 할머니 st_ask_gm
 bye st_bye
+bye st_bye2
+bye st_bye3
 
 === scene st_hi
 staff[happy]: {안녕하세요}! {어서 오세요}.
@@ -75,3 +79,11 @@ staff[sad]: 김순자 {선생님}... {좋은} {선생님}{입니다}.
 === scene st_bye
 staff: {네}. {안녕히 가세요}.
 (She goes back to her leaflets.)
+
+=== scene st_bye2
+staff[happy]: {내일} {만나요}.
+(A small, polite bow.)
+
+=== scene st_bye3
+staff: {오늘} {날씨}{가|이/가} {좋아요}.
+(She says it the way you'd say it to a visitor: polite, and finished.)

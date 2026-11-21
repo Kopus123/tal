@@ -2,14 +2,19 @@
 # (format: js/core/villagers.js)
 
 === person jiho
-at afternoon golmok 50 62
-at evening jeong 90 56
+at afternoon golmok 58 80
+at afternoon gang 40 70
+at afternoon madang 44 82
+at evening jeong 90 86
+at evening golmok 58 80
 greet jh_hi
 chat 0 jh_what
 chat 0 jh_homework
 chat 0 jh_game
 ask 탈 jh_ask_mask
 bye jh_bye
+bye jh_bye2
+bye jh_bye3
 
 === scene jh_hi
 jiho[happy]: {안녕}!
@@ -75,3 +80,11 @@ jiho[surprised]: {할아버지}{가|이/가} {큰} {물고기} {잡았어}! {진
 (He spreads his arms as wide as they go. Then a bit wider.)
 jiho: {그리고}... {다시} {줬어}! {강}{에}!
 (He can't believe it either: caught it, and let it go.)
+
+=== scene jh_bye2
+jiho[happy]: {내일}! {내일} {같이}!
+(He runs off, then runs back to make sure you heard, then runs off again.)
+
+=== scene jh_bye3
+jiho: {배고파요}...
+(He wanders off in the direction of the restaurant.)

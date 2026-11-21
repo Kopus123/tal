@@ -312,7 +312,9 @@ ajeossi[happy]: {감사합니다}!
 
 === scene v_food_end
 ~ You sit back, full.
-* [Buy 김밥 for the whole table · 3,000원] -> v_treat if time:evening&money>=3000
+* [Buy 김밥 for the whole table · 3,000원] -> v_treat if here:ajumma&here:staff&money>=3000
+* [Buy 김밥 for 아주머니's table · 3,000원] -> v_treat_am if here:ajumma&!here:staff&money>=3000
+* [Buy 김밥 for 박물관 직원's table · 3,000원] -> v_treat_st if here:staff&!here:ajumma&money>=3000
 * [Thank him] -> v_food_bye
 
 === scene v_treat
@@ -321,6 +323,20 @@ ajeossi[happy]: {감사합니다}!
 ajumma[happy]: {같이} {먹어요}!
 staff[happy]: {고마워요}!
 (For a few minutes it's just chopsticks and talking over each other.)
+-> v_food_bye
+
+=== scene v_treat_am
+! money -3000 each time; rel ajumma +1 each time
+~ You set a plate of 김밥 down in front of 아주머니.
+ajumma[happy]: 아이고! {같이} {먹어요}!
+(She pulls out the chair next to her before you can say no.)
+-> v_food_bye
+
+=== scene v_treat_st
+! money -3000 each time; rel staff +1 each time
+~ You set a plate of 김밥 down in front of the museum woman.
+staff[happy]: {고마워요}!
+(She looks surprised, then pleased, then pushes half of it back toward you.)
 -> v_food_bye
 
 === scene v_food_bye

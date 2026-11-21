@@ -31,7 +31,8 @@ function hanok(x,y,w,h,eve){
   return s+roof(x,y-7,w);
 }
 // A standing figure. (x,y) = feet. Options: top, bot, skin, hair (colors), hanbok, apron, bun, long, s (scale)
-function person(x,y,o={}){
+let PERSON_OFF=false;   // on free days the villagers are drawn live (js/ui/render.js), so the painted ones stay out
+function person(x,y,o={}){if(PERSON_OFF)return'';
   const s=o.s||1,top=o.top||'#7fa89a',bot=o.bot||'#3b4a5a',skin=o.skin||'#e3c09a',hair=o.hair||'#1f1a18';
   const ln='stroke="#2a231d" stroke-width="1" stroke-linejoin="round"';
   let g=`<g transform="translate(${x},${y}) scale(${s})">`;
@@ -139,7 +140,7 @@ function artMadang(eve){
   s+=person(120,232,{top:'#c7d3cf',bot:'#5b6a7a',bun:1});
   if(eve){
     for(let i=0;i<6;i++)s+=lantern(90+i*44,126,i%2?'#c9452f':'#d9a43d',true);
-    s+=person(300,232,{top:'#8a6a9a',bot:'#4a3a52',hanbok:1,bun:1,hair:'#d8d4ce'})+mask(314,206,.45,{c:'#e7d2a7'});
+    if(!PERSON_OFF)s+=person(300,232,{top:'#8a6a9a',bot:'#4a3a52',hanbok:1,bun:1,hair:'#d8d4ce'})+mask(314,206,.45,{c:'#e7d2a7'});
   }
   return svg(s);
 }

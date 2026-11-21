@@ -1,9 +1,13 @@
 # 할아버지: gruff, few words, always fishing, always an excuse. (format: js/core/villagers.js)
 
 === person haraboji
-at morning gang 64 60
-at afternoon gang 64 60
-at evening gang 64 60
+at morning gang 64 68
+at morning gang 64 68
+at morning sanqil 70 74
+at afternoon gang 64 68
+at afternoon jeong 88 84
+at evening gang 64 68
+at evening golmok 36 74
 greet hb_hi
 chat 0 hb_fish
 chat 0 hb_know
@@ -11,6 +15,8 @@ chat 0 hb_busy
 ask 할머니 hb_ask_gm
 ask 물고기 hb_ask_fish
 bye hb_bye
+bye hb_bye2
+bye hb_bye3
 
 === scene hb_hi
 haraboji: ...{네}.
@@ -79,3 +85,11 @@ haraboji[sad]: {좋은} {친구}{예요|이에요}. {옛날}{부터}.
 === scene hb_ask_fish
 haraboji[happy]: {물고기}? {큰} {물고기}{가|이/가} {있어요}. {여기}.
 (He points at a dark patch of water under the bridge. One day.)
+
+=== scene hb_bye2
+haraboji: ...{네}.
+(He nods once. That seems to be the whole conversation.)
+
+=== scene hb_bye3
+haraboji[happy]: {내일}... {물고기}.
+(He mimes reeling in something enormous. Tomorrow, apparently.)

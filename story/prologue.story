@@ -593,7 +593,7 @@ bus: {이번} {정류장}{은|은/는} {박물관}{입니다}.
 === scene bs4
 bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
 ! led 지하철역
-* [🔔 Press the stop button] -> bend
+* [🔔 Press the stop button] -> bsubway
 * [Stay on] -> bend
 
 === scene bo_market
@@ -612,6 +612,11 @@ bus: {이번} {정류장}{은|은/는} {지하철역}{입니다}.
 
 === scene bend
 ~ The bus stops for good and the driver switches off the engine. Everyone gets off. You missed your stop, so you ride back and try again.
+<- b0
+
+=== scene bsubway
+~ You hop off at the subway station. Trains to the city, crowds, ticket machines. Nothing here has anything to do with 할머니.
+~ You get straight back on the bus to the village and try again.
 <- b0
 
 # ------------------------------------------------------------ museum

@@ -708,7 +708,7 @@ bus: {다음} {정류장}{은|은/는} {박물관}{입니다}.
 === scene c1_bs4
 bus: {다음} {정류장}{은|은/는} {지하철역}{입니다}.
 ! led 지하철역
-* [🔔 Press the stop button] -> c1_bend
+* [🔔 Press the stop button] -> c1_bsubway
 * [Stay on] -> c1_bend
 
 === scene c1_bo_market
@@ -731,6 +731,11 @@ bus: {다음} {정류장}{은|은/는} {지하철역}{입니다}.
 
 === scene c1_bend
 ~ The bus stops for good. Last stop. You ride back and try again.
+<- c1_b0
+
+=== scene c1_bsubway
+~ You hop off at the subway station. Trains to the city, crowds, ticket machines. Nobody here has anything to do with the village or the mask.
+~ You get straight back on the bus to the village and start over.
 <- c1_b0
 
 === scene c1_mback

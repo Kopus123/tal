@@ -4,11 +4,14 @@
 /* ---------- overlays ---------- */
 function overlay(html,cls=''){sfx('open');const o=document.createElement('div');o.className='ov '+cls;o.innerHTML=html;o.addEventListener('click',e=>{if(e.target===o)close(o)});$('#ovs').appendChild(o);return o}
 let NB_REDRAW=null;
-function close(o){stopAudio();o.remove();if(!document.querySelector('#ovs .phone'))hush(false);render();if(NB_REDRAW&&document.querySelector('#nbb'))NB_REDRAW()}
+function close(o){stopAudio();o.remove();if(!document.querySelector('#ovs .phone'))hush(false);render();if(NB_REDRAW&&document.querySelector('#nbb'))NB_REDRAW();recolor()}
+// words still on screen (the phone, the history) take the color of what you now know about them
+function recolor(){document.querySelectorAll('button.w[data-w]').forEach(b=>{const id=b.dataset.w;if(!id||!W[id])return;
+  b.classList.remove('new','seen','guess','sure','gram');b.classList.add(status(id))})}
 function closeTop(){const o=$('#ovs').lastElementChild;if(o)close(o)}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTop()});
 const head=t=>`<div class="ph-head"><h2>${t}</h2><button class="x" aria-label="Close">×</button></div>`;
-const STATE_LABEL={new:'New word',seen:'No note yet',guess:'Your guess',sure:'You\'re sure',gram:'Grammar piece'};
+const STATE_LABEL={new:'New word',seen:'No note yet',guess:'Not checked yet',sure:'Got it',gram:'Grammar piece'};
 
 // tap the clock: what day it is, the four times of day, and what the calendar says about today and the next days
 // the notice board in the village hall: today's jobs, the one you're on, and how many you've done
@@ -31,12 +34,14 @@ function jobBoard(){
   o.querySelectorAll('[data-quit]').forEach(b=>b.onclick=()=>{close(o);const k='_quit';ST.nodes[k]={id:k,who:'narr',en:'You let the job go for today.',fx:[{k:'job',a:'fail'}]};go(k)});
 }
 function dayPanel(){
-  const d=S.world.day,row=n=>{const ev=eventsOn(n);return `<div class="calrow"><b>${n===d?ko('{오늘}'):n===d+1?ko('{내일}'):n+'일째'}</b><span>${ev.length?ev.map(e=>ko(e.label)+(e.note?` <small class="en">${esc(e.note)}</small>`:'')).join('<br>'):'<small class="en">nothing special</small>'}</span></div>`};
-  const o=overlay(`<div class="panel paper">${head(d+'일째')}<div class="ph-body">
-    <div class="en">${d}일째 = day ${d}. ${S.world.frozen?'The story sets the time for now.':'Time passes when you wait, travel or sleep.'}</div>
-    <div class="calrow"><b>Wallet</b><span>${wonStr(S.world.money)}${jobOn()?` · working on <i>${esc(jobOn().en)}</i>`:''}</span></div>
-    <div class="dayrow">${SLOTS.map(s=>`<button class="w ${s===slotName()?'nowslot':''}" data-w="${SLOT_KO[s]}">${SLOT_KO[s]}</button>`).join('')}</div>
-    <div class="label">Calendar</div>${[d,d+1,d+2,d+3].map(row).join('')}
+  const d=S.world.day,row=n=>{const ev=eventsOn(n);return `<div class="calrow"><b>${n===d?'Today':n===d+1?'Tomorrow':'Day '+n}</b><span>${ev.length?ev.map(e=>ko(e.label)+(e.note?` <small class="en">${esc(e.note)}</small>`:'')).join('<br>'):'<small class="en">nothing special</small>'}</span></div>`};
+  const now=S.world.slot,EN={morning:'Morning',afternoon:'Afternoon',evening:'Evening',night:'Night'};
+  const o=overlay(`<div class="panel paper">${head('Day '+d)}<div class="ph-body">
+    <div class="label">Today</div>
+    <div class="slots">${SLOTS.map((s,i)=>`<div class="slotc ${i===now?'now':i<now?'past':''}"><b>${SLOT_KO[s]}</b><small>${EN[s]||s}${i===now?' · now':''}</small></div>`).join('')}</div>
+    <div class="howto">${S.world.frozen?'The story is in charge of the time right now.':`<b>Wait a while</b> moves to the next part of the day. Walking back from town takes time too. At night, go to bed at the guesthouse to start day ${d+1}.`}</div>
+    <div class="calrow"><b>Wallet</b><span>${wonStr(S.world.money)}${jobOn()?` · job: <i>${esc(jobOn().en)}</i>`:''}</span></div>
+    <div class="label">Coming up</div>${[d,d+1,d+2,d+3].map(row).join('')}
     ${Object.keys(S.world.met).length?`<div class="label">People</div>${Object.keys(S.world.met).filter(w=>PEOPLE[w]).map(w=>`<div class="calrow"><b>${esc((ST.cast[w]||{}).n||w)}</b><span class="hearts">${'♥'.repeat(relLevel(w))}${'♡'.repeat(REL_STEPS.length-relLevel(w))}${S.world.met[w]===d?' <small class="en">said hello today</small>':''}</span></div>`).join('')}`:''}</div></div>`);
   o.querySelector('.x').onclick=()=>close(o);
 }

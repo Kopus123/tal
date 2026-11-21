@@ -10,7 +10,7 @@ function resume(){
   if(S.node&&!ST.nodes[S.node])S.node=null;
   revealFor=S.node;lastLoc=S.loc;
 }
-const BUILD='54';   // same number as <meta name="tal-build"> in index.html: bump both together
+const BUILD='55';   // same number as <meta name="tal-build"> in index.html: bump both together
 async function boot(){
   // an old copy of the page with new code (the browser kept the page): fetch the page fresh, once
   const pb=(document.querySelector('meta[name="tal-build"]')||{}).content;

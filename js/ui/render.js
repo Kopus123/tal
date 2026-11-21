@@ -20,7 +20,7 @@ const hasPhone=()=>!!S.F.hasPhone&&ST.phones.length>0;
 function render(){
   const l=ST.places[S.loc]||Object.values(ST.places)[0];const nd=S.node?ST.nodes[S.node]:null;
   document.documentElement.dataset.size=S.set.size;
-  panMode(l.mode==='explore');lockTurn(l.mode==='explore');
+  panMode(l.mode==='explore');lockTurn(l.mode==='explore');$('#bTurn').hidden=l.mode!=='explore';
   if(!nd||!ZOOM||ZOOM.loc!==S.loc)ZOOM=null;const pin=$('#panin');if(pin){pin.classList.toggle('zoom',!!ZOOM);if(ZOOM){pin.style.setProperty('--zx',ZOOM.x+'%');pin.style.setProperty('--zy',ZOOM.y+'%')}}
   $('#locKo').textContent=l.name||'';$('#locSub').textContent=l.sub||'';
   if(S.loc)S.known[S.loc]=1;
@@ -184,6 +184,11 @@ let PANNED=false,ZOOM=null;
 // Full screen is the one place a page may decide for itself: the test area goes full screen, then may turn.
 function fullTurn(on){try{if(on&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>{TURN=null;lockTurn(true)}).catch(()=>{});
   else if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(_){}}
+// the rotate button (explore places): flip between sideways and upright without auto-rotate
+async function turnToggle(){sfx('tap');const side=matchMedia('(orientation:landscape)').matches;
+  try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});
+    await screen.orientation.lock(side?'portrait':'landscape');TURN=null}
+  catch(_){toast('This phone or browser doesn’t let the game turn itself. Try auto-rotate.',4000)}}
 let TURN=null;function lockTurn(free){if(TURN===free)return;TURN=free;try{screen.orientation.lock(free?'any':'portrait').catch(()=>{})}catch(_){}}
 function panMode(on){const app=$('#app');if(!!on===app.classList.contains('explore'))return;app.classList.toggle('explore',!!on);
   const sc=$('#scene');let pan=$('#pan');

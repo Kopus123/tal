@@ -1,6 +1,6 @@
 // Offline support. Game code and story: network first (so updates arrive), cache as offline fallback.
 // Audio clips, icons, fonts: cache first (they never change once recorded).
-const VERSION = 'tal-v46';
+const VERSION = 'tal-v47';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './audio/clips.js', './js/art.js', './js/icons.js', './js/people.js', './js/core/parse.js', './js/core/state.js', './js/core/rules.js', './js/core/world.js', './js/core/villagers.js', './js/core/jobs.js', './js/core/words.js', './js/audio.js', './js/music.js', './js/core/flow.js', './js/ui/render.js', './js/ui/overlays.js', './js/ui/notebook.js', './js/ui/caseboard.js', './js/ui/phone.js', './js/boot.js',
   './story/world.story', './story/prologue.story', './story/ch1.story', './story/village.story', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -20,7 +20,8 @@ self.addEventListener('fetch', e => {
   const fresh = url.origin === location.origin && (e.request.mode === 'navigate' || /\.(js|story|html|webmanifest|route)$/.test(url.pathname) || url.pathname.endsWith('/'));
   if (fresh) {
     // no-cache: always ask the server whether the file changed, so code and story never mix versions
-    const req = e.request.mode === 'navigate' ? e.request : new Request(e.request.url, { cache: 'no-cache' });
+    // (the page itself too: GitHub Pages lets browsers keep it 10 minutes, and an old page with new code breaks the layout)
+    const req = e.request.mode === 'navigate' ? new Request(url.href, { cache: 'no-cache', credentials: 'same-origin' }) : new Request(e.request.url, { cache: 'no-cache' });
     e.respondWith(fetch(req).then(r => put(e.request, r)).catch(() => caches.match(e.request, { ignoreSearch: true })));
     return;
   }

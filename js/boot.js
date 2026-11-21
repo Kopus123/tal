@@ -2,6 +2,9 @@
 // with a save in S: point the engine at its chapter, and make sure the place and beat it names still exist
 function resume(){
   if(!S.ch||!CH[S.ch])S.ch=WORLD.chapters[0].id;
+  // a test area never resumes: reopening the game puts you back in the story (Jump ahead starts the test area fresh)
+  if(chInfo(S.ch).dev){const b=S.world.g.devBack;delete S.world.g.devBack;S.ch=b&&CH[b]&&!chInfo(b).dev?b:WORLD.chapters[0].id;
+    const p=S.prog[S.ch];if(p&&p.F&&p.F.started)CH_FIELDS.forEach(k=>S[k]=p[k]);else{S.loc=null;S.node=null}}
   useChapter(S.ch);
   if(!S.loc||!ST.places[S.loc])S.loc=ST.meta['start-place'];
   if(S.node&&!ST.nodes[S.node])S.node=null;

@@ -20,7 +20,8 @@ const hasPhone=()=>!!S.F.hasPhone&&ST.phones.length>0;
 function render(){
   const l=ST.places[S.loc]||Object.values(ST.places)[0];const nd=S.node?ST.nodes[S.node]:null;
   document.documentElement.dataset.size=S.set.size;
-  panMode(l.mode==='explore');
+  panMode(l.mode==='explore');lockTurn(l.mode==='explore');
+  if(!nd||!ZOOM||ZOOM.loc!==S.loc)ZOOM=null;const pin=$('#panin');if(pin){pin.classList.toggle('zoom',!!ZOOM);if(ZOOM){pin.style.setProperty('--zx',ZOOM.x+'%');pin.style.setProperty('--zy',ZOOM.y+'%')}}
   $('#locKo').textContent=l.name||'';$('#locSub').textContent=l.sub||'';
   if(S.loc)S.known[S.loc]=1;
   $('#bPhone').hidden=!hasPhone();
@@ -54,7 +55,7 @@ function render(){
   h+=`<div class="flash" id="flash"></div>`;
   darkLayer(l);
   $('#fx').innerHTML=h;
-  $('#fx').querySelectorAll('.hs[data-hs]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(xp)S.F['f_'+S.loc+'_'+l.spots[+b.dataset.hs].l]=1;spot(+b.dataset.hs)});
+  $('#fx').querySelectorAll('.hs[data-hs]').forEach(b=>b.onclick=e=>{e.stopPropagation();const x=l.spots[+b.dataset.hs];if(xp){S.F['f_'+S.loc+'_'+x.l]=1;if(x.kind==='->')ZOOM={x:x.x,y:x.y,loc:S.loc}}spot(+b.dataset.hs)});
   $('#fx').onclick=xp?e=>{if(e.target===$('#fx'))emptyTap(e,l)}:null;
   // the back arrow sits on the window, not on the picture (which scrolls)
   let bb=$('#bBackPl');if(xp&&l.back){if(!bb){bb=document.createElement('button');bb.className='backbtn';bb.id='bBackPl';bb.setAttribute('aria-label','Back');bb.textContent='‹';$('#scene').appendChild(bb)}
@@ -177,7 +178,9 @@ function emptyTap(e,l){const fx=$('#fx'),r=fx.getBoundingClientRect(),px=(e.clie
   if(l.dark&&!S.F.lit&&+l.dark>.6){EMPTY++;if(EMPTY%3===1)toast('Too dark to make anything out.',2200)}}
 let EMPTY=0;
 // the room as a wide picture inside a tall window: the art, the darkness and the tap layer move together when you swipe
-let PANNED=false;
+let PANNED=false,ZOOM=null;
+// the installed app turns with the phone only in explore places (the experiment); everywhere else it stays upright
+let TURN=null;function lockTurn(free){if(TURN===free)return;TURN=free;try{screen.orientation.lock(free?'any':'portrait').catch(()=>{})}catch(_){}}
 function panMode(on){const app=$('#app');if(!!on===app.classList.contains('explore'))return;app.classList.toggle('explore',!!on);
   const sc=$('#scene');let pan=$('#pan');
   if(on){if(!pan){pan=document.createElement('div');pan.id='pan';pan.className='pan';pan.innerHTML='<div class="panin" id="panin"></div>';sc.insertBefore(pan,sc.firstChild)}

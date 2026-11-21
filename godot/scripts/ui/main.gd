@@ -3,7 +3,7 @@ extends Control
 ## Overlays: the combination lock, a word's picture, the menu, the Korean keyboard test.
 ##   godot --path . -- --shots OUT_DIR     plays the escape room and saves a screenshot of every step (tools/shot_tour.gd)
 
-const BUILD := 3
+const BUILD := 4
 const INK := Color("151a24")
 const PAPER := Color("efe6cf")
 const PAPER_INK := Color("2a231d")

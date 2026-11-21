@@ -7,6 +7,7 @@ const ART_W := 1600.0
 const ART_H := 1200.0
 const SPOT_R := 0.075            ## how close (fraction of the picture's width) a tap must be to a hidden spot
 const LEAN_ZOOM := 1.6
+const STEP_BACK := 0.28        ## leaning in: a tap further than this (fraction of the width) from the middle steps back
 ## moonlight through the shed window, per drawing: where (fraction of the picture), how strong, how far
 const MOON := {"shed": [Vector2(0.81, 0.25), 0.55, 1.1], "shed_window": [Vector2(0.3, 0.3), 0.5, 2.2]}
 
@@ -22,6 +23,9 @@ var back_btn: Button
 var _art_key := ""
 var _ripples := []
 var _empty := 0
+const DRAG_PX := 24.0
+var _press_at := Vector2.ZERO
+var _dragged := false
 
 
 func _ready() -> void:
@@ -31,7 +35,7 @@ func _ready() -> void:
 	add_child(vp)
 	art = Sprite2D.new(); art.centered = false; vp.add_child(art)
 	night = CanvasModulate.new(); vp.add_child(night)
-	torch = _light(Color(1.0, 0.9, 0.72), 1.5, 1.35); vp.add_child(torch)
+	torch = _light(Color(1.0, 0.9, 0.72), 1.5, 1.35); torch.position = Vector2(ART_W, ART_H) / 2; vp.add_child(torch)   # starts in the middle
 	moon = _light(Color(0.7, 0.8, 1.0), 0.5, 1.0); vp.add_child(moon)
 	cam = Camera2D.new(); cam.position = Vector2(ART_W, ART_H) / 2; vp.add_child(cam); cam.make_current()
 	view = TextureRect.new(); view.texture = vp.get_texture(); view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -88,10 +92,14 @@ func refresh() -> void:
 ## ---------- input: tap a spot, drag the light, or tap nothing
 func _gui_input(e: InputEvent) -> void:
 	# touches arrive as mouse events too (Godot's default), so mouse events cover phone and laptop alike
-	if e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT): _aim(e.position)
+	# a press that moves more than a little is a drag (pointing the light): letting go after it taps nothing
+	if e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		_aim(e.position)
+		if e.position.distance_to(_press_at) > DRAG_PX: _dragged = true
 	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
-		if e.pressed: _aim(e.position)
-		else: _tap(e.position)
+		if e.pressed:
+			_press_at = e.position; _dragged = false; _aim(e.position)
+		elif not _dragged: _tap(e.position)
 
 
 func _to_art(p: Vector2) -> Vector2:   ## screen position in this box -> position in the drawing (when not leaning in)
@@ -103,7 +111,10 @@ func _aim(p: Vector2) -> void:
 
 
 func _tap(p: Vector2) -> void:
-	if Game.node != "": return            # mid-scene: the paper on the right decides what happens
+	if Game.node != "":
+		# looking closely at something: a tap well away from it (it sits in the middle) steps back from it
+		if Game._leaning and (p - size / 2).length() > size.x * STEP_BACK: Game.step_back()
+		return
 	var pct := p / size * 100.0
 	var best: Dictionary = {}; var bd := 1e9
 	for s in Game.spots_now():

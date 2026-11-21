@@ -141,6 +141,19 @@ func _digits(s: String) -> String:
 	return out
 
 
+## tapping away from a thing you're looking at: the rest of what happens there still happens (things you find,
+## flags), you just don't have to read it line by line; a question you haven't answered is left for later
+func step_back() -> void:
+	note("  stepped back")
+	for i in 40:
+		var b := beat()
+		if b.is_empty(): break
+		if b.has("ch") or b.get("type", "") == "number":
+			leave(); return
+		next()
+	_end_lean(); changed.emit()
+
+
 ## walk away from a beat that's waiting on you (the lock's "Leave it")
 func leave() -> void:
 	note("  walked away from it")

@@ -23,14 +23,14 @@ func _ready() -> void:
 	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 10); row.alignment = BoxContainer.ALIGNMENT_CENTER; col.add_child(row)
 	for i in digits.size():
 		var w := VBoxContainer.new(); w.add_theme_constant_override("separation", 2); row.add_child(w)
-		w.add_child(_arrow("▲", i, -1))
+		w.add_child(_arrow("▲", i, 1))
 		var face := PanelContainer.new(); var fs := StyleBoxFlat.new(); fs.bg_color = Color("e8e6df"); fs.set_corner_radius_all(8)
 		fs.border_color = Color("555"); fs.set_border_width_all(2); fs.content_margin_left = 18; fs.content_margin_right = 18
 		face.add_theme_stylebox_override("panel", fs); face.mouse_filter = Control.MOUSE_FILTER_STOP
 		face.gui_input.connect(_wheel_input.bind(i)); w.add_child(face)
 		var l := Label.new(); l.text = "0"; l.add_theme_font_size_override("font_size", 64); l.add_theme_color_override("font_color", Color("2a2a2a"))
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; face.add_child(l); labels.append(l)
-		w.add_child(_arrow("▼", i, 1))
+		w.add_child(_arrow("▼", i, -1))
 	var btns := HBoxContainer.new(); btns.add_theme_constant_override("separation", 10); col.add_child(btns)
 	var leave := _btn("Leave it", false); leave.pressed.connect(func(): Game.sound.emit("tap"); queue_free(); Game.leave()); btns.add_child(leave)
 	var go := _btn("Try it", true); go.pressed.connect(_try); btns.add_child(go)
@@ -53,7 +53,7 @@ func _btn(t: String, dark: bool) -> Button:
 func _turn(i: int, d: int) -> void:
 	digits[i] = (digits[i] + d + 10) % 10; labels[i].text = str(digits[i])
 	Game.sound.emit("click")
-	var tw := create_tween(); labels[i].position.y = -10 * d; tw.tween_property(labels[i], "position:y", 0.0, 0.12)
+	var tw := create_tween(); labels[i].position.y = 10 * d; tw.tween_property(labels[i], "position:y", 0.0, 0.12)
 
 
 ## swipe a wheel: every 40 pixels is one number
@@ -64,7 +64,7 @@ func _wheel_input(e: InputEvent, i: int) -> void:
 	elif e is InputEventMouseMotion and _drag_from.has(i):
 		var dy: float = e.position.y - _drag_from[i]
 		if absf(dy) >= 40:
-			_turn(i, -1 if dy < 0 else 1); _drag_from[i] = e.position.y
+			_turn(i, 1 if dy < 0 else -1); _drag_from[i] = e.position.y   # swipe up = the next number up
 
 
 func _try() -> void:

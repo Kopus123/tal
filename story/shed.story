@@ -37,7 +37,7 @@ You're out. (End of the test area: Menu > Jump ahead > Leave the test area.)
 === evidence
 flashlight | Flashlight | light | Your flashlight. You never go anywhere without it. |
 sh_note | {먼저} {기름} | letter | The note pinned over the workbench. Shaky handwriting. | {먼저} {기름}. {다음} {망치}.
-sh_driver | Screwdriver | make | A screwdriver from the workbench drawer. |
+sh_driver | Screwdriver | screwdriver | A screwdriver from the workbench drawer. |
 sh_key | {열쇠} | key | A small key from under a floorboard. |
 sh_oil | {기름} | oil | A can of oil from the toolbox. |
 sh_hammer | {망치} | hammer | A heavy hammer from the toolbox. |

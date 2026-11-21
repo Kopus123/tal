@@ -2,3 +2,7 @@
 __pycache__/
 voice-samples/
 IDEAS.md
+
+# Godot
+godot/.godot/
+build/

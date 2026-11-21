@@ -1,0 +1,25 @@
+﻿; Engine configuration file.
+
+config_version=5
+
+[application]
+
+config/name="íƒˆ"
+run/main_scene="res://scenes/hello.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
+
+renderer/rendering_method="mobile"
+environment/defaults/default_clear_color=Color(0.082, 0.102, 0.141, 1)
+

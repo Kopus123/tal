@@ -67,6 +67,9 @@ def main():
     b = blank(.08); tone(b, 0, .045, 1400, .12); noise(b, 0, .025, .1, 2600); save("tap", b)
     b = blank(1.2); [tone(b, i * .08, .8, f, .15, "sine") for i, f in enumerate([523, 659, 784, 1047])]; save("solve", b)
     b = blank(.3); tone(b, 0, .25, 140, .3); save("wrong", b)
+    b = blank(1.0); tone(b, 0, .55, 784, .2, "sine"); tone(b, .09, .7, 1175, .16, "sine"); save("learn", b)
+    b = blank(.2); noise(b, 0, .16, .12, 1600); save("page", b)
+    b = blank(.15); noise(b, 0, .1, .1, 900); save("open", b)
     b = blank(1.6); tone(b, 0, 1.5, 110, .06, "sine", 105); noise(b, 0, 1.6, .05, 400); save("wind", b)
     print("ok:", ", ".join(sorted(p.stem for p in OUT.glob("*.wav"))))
 

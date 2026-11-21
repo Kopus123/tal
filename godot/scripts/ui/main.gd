@@ -1,279 +1,449 @@
 extends Control
-## The screen: the picture on the left (room.gd), the paper on the right: what's happening, your choices, your pockets.
-## Overlays: the combination lock, a word's picture, the menu, the Korean keyboard test.
-##   godot --path . -- --shots OUT_DIR     plays the escape room and saves a screenshot of every step (tools/shot_tour.gd)
+## The screen. Sideways: the picture on the left (room.gd), the paper on the right.
+## The paper shows whatever the story is doing: someone talking (their face, the Korean line, what they do, your choices),
+## a puzzle (sentence tiles, typing, showing evidence, two things that clash, a close-up, the camera, a number), or,
+## when nothing is happening, the place's description, your pockets and the clock.
+## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
+##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := 7
-const INK := Color("151a24")
-const PAPER := Color("efe6cf")
-const PAPER_INK := Color("2a231d")
-const MUTE := Color("8a7d66")
-const STORY := "shed.story"
+const BUILD := 8
 
 var room: Control
 var paper: PanelContainer
 var title_ko: Label
 var title_en: Label
-var body: RichTextLabel
+var clock_btn: Button
+var bar_btns: Dictionary = {}
+var body: VBoxContainer
 var acts: VBoxContainer
 var pockets_box: HFlowContainer
 var pocket_hint: Label
+var foot: HBoxContainer
 var toast_box: VBoxContainer
 var card: Control
-var players := []
-var icons: Dictionary = {}
-var sheet: Texture2D
 var tour: RefCounted
+var kb: Control                      ## the Korean keyboard while a typed answer is open
+var _build_seq: Array = []           ## sentence tiles picked so far
+var _picks: Array = []               ## contradictions: the two you picked
+var _numpad := ""
+var _reply: Array = []               ## small talk while typing: [ko, en]
+var _shown_node := ""
+var voice := Voice.new()
 
 
 func _ready() -> void:
-	RenderingServer.set_default_clear_color(INK)
-	var idx = JSON.parse_string(FileAccess.get_file_as_string("res://icons/index.json"))
-	if idx: icons = idx
-	sheet = load("res://icons/sheet.png")
+	RenderingServer.set_default_clear_color(Kit.INK)
+	add_child(voice)
 	_build()
 	Game.changed.connect(_refresh)
 	Game.sound.connect(_play)
 	Game.toast.connect(_toast)
+	Game.rewound.connect(_rewound)
+	Game.timecard.connect(_timecard)
+	Game.finished.connect(_finished)
+	Game.reply.connect(func(k, e): _reply = [k, e]; voice.say(k, Game.beat().get("to", "sign")); _refresh())
 	var args := OS.get_cmdline_user_args()
-	Game.start(STORY)
 	if "--shots" in args:
 		var i := args.find("--shots")
 		tour = load("res://scripts/tools/shot_tour.gd").new()   # kept here: a tour nobody holds on to is freed mid-way
-		tour.run(self, args[i + 1] if i + 1 < args.size() else "user://shots")
+		tour.run(self, args[i + 1] if i + 1 < args.size() else "user://shots", args[i + 2] if i + 2 < args.size() else "shed", args[i + 3] if i + 3 < args.size() else "")
+		return
+	_title()
 
 
 ## ---------- layout
 func _build() -> void:
-	var bg := ColorRect.new(); bg.color = INK; bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(bg)
+	var bg := ColorRect.new(); bg.color = Kit.INK; bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(bg)
 	var row := HBoxContainer.new(); row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); row.add_theme_constant_override("separation", 14)
 	row.offset_left = 14; row.offset_top = 12; row.offset_right = -14; row.offset_bottom = -12
 	add_child(row)
 	var arc := AspectRatioContainer.new(); arc.ratio = 4.0 / 3.0; arc.size_flags_horizontal = Control.SIZE_EXPAND_FILL; arc.size_flags_stretch_ratio = 2.2
 	row.add_child(arc)
 	room = load("res://scripts/ui/room.gd").new(); arc.add_child(room)
+	room.wants.connect(func(w): _open("jobs" if w == "board" else w))
 	card = _card(); room.add_child(card)
+	clock_btn = Kit.button("", true, 18); clock_btn.position = Vector2(12, 12); clock_btn.pressed.connect(_day_panel); room.add_child(clock_btn)
 
-	paper = PanelContainer.new(); paper.size_flags_horizontal = Control.SIZE_EXPAND_FILL; paper.custom_minimum_size.x = 380
-	var ps := StyleBoxFlat.new(); ps.bg_color = PAPER; ps.set_corner_radius_all(18); ps.content_margin_left = 22; ps.content_margin_right = 22; ps.content_margin_top = 16; ps.content_margin_bottom = 16
+	paper = PanelContainer.new(); paper.size_flags_horizontal = Control.SIZE_EXPAND_FILL; paper.custom_minimum_size.x = 400
+	var ps := Kit.box(18, Kit.PAPER, Color.TRANSPARENT, 0, 18); ps.content_margin_left = 22; ps.content_margin_right = 22
 	paper.add_theme_stylebox_override("panel", ps); row.add_child(paper)
-	var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 12); paper.add_child(col)
+	var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 10); paper.add_child(col)
 
-	var head := HBoxContainer.new(); col.add_child(head)
+	var head := HBoxContainer.new(); head.add_theme_constant_override("separation", 6); col.add_child(head)
 	var names := VBoxContainer.new(); names.size_flags_horizontal = Control.SIZE_EXPAND_FILL; names.add_theme_constant_override("separation", -4); head.add_child(names)
-	title_ko = _label("", 30, PAPER_INK); names.add_child(title_ko)
-	title_en = _label("", 15, MUTE); names.add_child(title_en)
-	var menu := _button("☰", true); menu.custom_minimum_size = Vector2(56, 56); menu.pressed.connect(_menu); head.add_child(menu)
+	title_ko = Kit.label("", 28); names.add_child(title_ko)
+	title_en = Kit.label("", 14, Kit.MUTE); title_en.clip_text = true; names.add_child(title_en)
+	for k in [["note", "수첩"], ["board", "사건"], ["phone", "📱"], ["map", "지도"], ["menu", "☰"]]:
+		var b := Kit.button(k[1], true, 17); b.custom_minimum_size = Vector2(52, 52); head.add_child(b); bar_btns[k[0]] = b
+	bar_btns.note.pressed.connect(func(): _open("notebook"))
+	bar_btns.board.pressed.connect(func(): _open("board"))
+	bar_btns.phone.pressed.connect(func(): _open("phone"))
+	bar_btns.map.pressed.connect(func(): _open("map"))
+	bar_btns.menu.pressed.connect(_menu)
 
 	var scroll := ScrollContainer.new(); scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
-	var inner := VBoxContainer.new(); inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; inner.add_theme_constant_override("separation", 14); scroll.add_child(inner)
-	body = RichTextLabel.new(); body.bbcode_enabled = true; body.fit_content = true; body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_theme_color_override("default_color", PAPER_INK); body.add_theme_font_size_override("normal_font_size", 24)
-	body.add_theme_font_size_override("bold_font_size", 30); body.meta_underlined = false
-	body.meta_clicked.connect(func(w): _word(str(w)))
-	inner.add_child(body)
+	var inner := VBoxContainer.new(); inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; inner.add_theme_constant_override("separation", 12); scroll.add_child(inner)
+	body = VBoxContainer.new(); body.add_theme_constant_override("separation", 8); inner.add_child(body)
 	acts = VBoxContainer.new(); acts.add_theme_constant_override("separation", 8); inner.add_child(acts)
 	var pk := VBoxContainer.new(); pk.add_theme_constant_override("separation", 6); col.add_child(pk)
 	pockets_box = HFlowContainer.new(); pockets_box.add_theme_constant_override("h_separation", 8); pk.add_child(pockets_box)
-	pocket_hint = _label("", 16, MUTE); pocket_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; pk.add_child(pocket_hint)
-	var bl := _label("build %d" % BUILD, 12, Color(1, 1, 1, 0.25)); bl.set_anchors_preset(Control.PRESET_BOTTOM_LEFT); bl.position = Vector2(18, -22); add_child(bl)
-	bl.anchor_top = 1; bl.anchor_bottom = 1; bl.offset_top = -20; bl.offset_left = 18
+	pocket_hint = Kit.label("", 15, Kit.MUTE, true); pk.add_child(pocket_hint)
+	foot = HBoxContainer.new(); foot.add_theme_constant_override("separation", 8); col.add_child(foot)
+	var bl := Kit.label("build %d" % BUILD, 12, Color(1, 1, 1, 0.25)); bl.anchor_top = 1; bl.anchor_bottom = 1; bl.offset_top = -18; bl.offset_left = 16; add_child(bl)
 	toast_box = VBoxContainer.new(); toast_box.set_anchors_preset(Control.PRESET_CENTER_TOP); toast_box.position.y = 20; toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_box.grow_horizontal = Control.GROW_DIRECTION_BOTH; add_child(toast_box)
 
 
-func _label(t: String, sz: int, c: Color) -> Label:
-	var l := Label.new(); l.text = t; l.add_theme_font_size_override("font_size", sz); l.add_theme_color_override("font_color", c)
-	return l
-
-
-func _button(t: String, dark := false) -> Button:
-	var b := Button.new(); b.text = t; b.add_theme_font_size_override("font_size", 22)
-	var n := StyleBoxFlat.new(); n.set_corner_radius_all(12); n.content_margin_left = 16; n.content_margin_right = 16; n.content_margin_top = 12; n.content_margin_bottom = 12
-	n.bg_color = PAPER_INK if dark else Color("fbf6e9"); n.border_color = PAPER_INK; n.set_border_width_all(0 if dark else 2)
-	var p := n.duplicate(); p.bg_color = n.bg_color.darkened(0.15)
-	for st in ["normal", "hover", "focus"]: b.add_theme_stylebox_override(st, n)
-	b.add_theme_stylebox_override("pressed", p)
-	var fc := PAPER if dark else PAPER_INK
-	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(st, fc)
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT if not dark else HORIZONTAL_ALIGNMENT_CENTER
-	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return b
-
-
 ## ---------- what's on the paper
 func _refresh() -> void:
+	if Game.ST.is_empty(): return
 	var pl: Dictionary = Game.place()
-	title_ko.text = pl.get("name", ""); title_en.text = pl.get("sub", "").to_upper()
-	for c in acts.get_children(): c.queue_free()
 	var b: Dictionary = Game.beat()
-	card.visible = b.get("type", "") == "card"
-	if b.is_empty():
-		body.text = _esc(Game.desc())
-	elif b.get("type", "") == "card":
+	title_ko.text = pl.get("name", ""); title_en.text = pl.get("sub", "").to_upper()
+	bar_btns.phone.visible = Game.has_phone()
+	bar_btns.board.visible = not Game.ST.cases.is_empty() or not Game.owned().is_empty()
+	bar_btns.map.visible = b.is_empty() and pl.get("travel", "") != "no" and Game.S.known.size() > 1
+	clock_btn.visible = Game.S.F.has("started") and pl.get("mode", "") != "explore"
+	clock_btn.text = "%d일째 · %s   %s" % [Game.W.day, Game.SLOT_KO[Game.slot_name()], Game.won(Game.W.money)]
+	Kit.clear(body); Kit.clear(acts); Kit.clear(foot)
+	var t: String = b.get("type", "")
+	card.visible = t == "card"
+	if kb and (t != "type" or Game.node != _shown_node): kb.queue_free(); kb = null
+	if Game.node != _shown_node:
+		_build_seq = []; _picks = []; _numpad = ""; _reply = []
+		if b.has("ko") and not b.get("audio", false) and b.who != "narr": voice.say(b.ko, b.who)
+		elif b.get("audio", false): voice.say(b.ko, b.who)
+	_shown_node = Game.node
+	if b.is_empty(): _looking()
+	elif t == "card":
 		card.get_node("T").text = b.title; card.get_node("S").text = b.get("sub", "")
-		body.text = "[color=#8a7d66]Sound on. Tap any underlined word to see its picture.[/color]"
-		_cont("Begin")
-	elif b.get("type", "") == "number":
-		body.text = _esc(b.en)
-		var lock = load("res://scripts/ui/lock.gd").new(); lock.setup(len(Game._digits(b.ans[0][0])) if not b.ans.is_empty() else 4)
-		lock.tried.connect(func(v): Game.answer(v))
-		room.add_child(lock)
-	else:
-		body.text = _beat_text(b)
-		var shown := 0
-		for o in b.get("ch", []):
-			if not Game.cond(o.c): continue
-			shown += 1
-			var btn := _button(Game.plain(o.get("en", o.get("ko", ""))))
-			btn.pressed.connect(Game.choose.bind(o)); acts.add_child(btn)
-		if shown == 0: _cont("Continue")
-	_pockets()
+		_text("[color=#8a7d66]Sound on. Tap any underlined word to open its page in your notebook.[/color]"); _cont("Begin")
+	elif t == "number": _number(b)
+	elif t == "build": _build_beat(b)
+	elif t == "type": _type_beat(b)
+	elif t == "present": _present_beat(b)
+	elif t == "contradict": _contradict_beat(b)
+	elif t == "examine": _examine_beat()
+	elif t == "camera": _text(Kit.esc(b.en)); _act("Take the photo", func(): room.shoot(b), true)
+	elif t == "photo":
+		var pic := TextureRect.new(); pic.texture = load("res://art/photo.png"); pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; pic.custom_minimum_size = Vector2(0, 260); body.add_child(pic)
+		_text(Kit.esc(b.en)); _cont("Continue")
+	else: _say_beat(b)
+	_pockets(b.is_empty())
+	room.refresh()
+
+
+func _text(bb: String, sz := 24, c: Color = Kit.PAPER_INK) -> RichTextLabel:
+	var r := Kit.rich(sz, c); r.text = bb; r.meta_clicked.connect(func(w): _word(str(w))); body.add_child(r); return r
+
+
+func _act(t: String, f: Callable, dark := false) -> Button:
+	var b := Kit.wide(t, dark); b.pressed.connect(f); acts.add_child(b); return b
 
 
 func _cont(t: String) -> void:
-	var c := _button(t, true); c.pressed.connect(func(): Game.sound.emit("tap"); Game.next()); acts.add_child(c)
+	_act(t, func(): Game.sound.emit("tap"); Game.next(), true)
 
 
-func _esc(s: String) -> String: return s.replace("[", "[lb]")
+## nothing happening: where you are, and (free days) who's here, the clock
+func _looking() -> void:
+	_text(Kit.esc(Game.desc()))
+	if Game.ST.free and not Game.W.frozen:
+		for p in Game.people_here():
+			_act("Talk to " + Game.ST.cast.get(p.id, {}).get("n", p.id), func(): Game.talk_to(p.id))
+		var home: bool = Game.S.loc == Game.ST.meta.get("home", "")
+		if home and Game.W.slot >= 2: _foot("Go to bed", func(): Game.sound.emit("page"); Game.next_morning(); _refresh())
+		if Game.W.slot < 3: _foot("Wait a while", func(): Game.sound.emit("page"); Game.pass_time())
 
 
-## Korean words become tappable (they open the word's picture)
-func _ko(s: String) -> String:
-	var re := RegEx.create_from_string("\\{([^}|]+)(?:\\|([^}]+))?\\}")
-	var out := ""; var at := 0
-	for m in re.search_all(s):
-		out += _esc(s.substr(at, m.get_start() - at))
-		var entry := m.get_string(2) if m.get_string(2) != "" else m.get_string(1)
-		out += "[url=%s][color=#7a3b1e][u]%s[/u][/color][/url]" % [entry, _esc(m.get_string(1))]
-		at = m.get_end()
-	return out + _esc(s.substr(at))
+func _foot(t: String, f: Callable) -> void:
+	var b := Kit.button(t, false, 18); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(f); foot.add_child(b)
 
 
-func _beat_text(b: Dictionary) -> String:
+## someone talks (or the narration, or a sign)
+func _say_beat(b: Dictionary) -> void:
 	var who: String = b.get("who", "narr")
-	if who == "narr": return _esc(b.get("en", ""))
-	if who == "sign":
-		return "[center][bgcolor=#e2d6b8][font_size=38] %s [/font_size][/bgcolor][/center]\n[color=#8a7d66][font_size=19]%s[/font_size][/color]" % [_ko(b.ko), _esc(b.get("en", ""))]
-	var name: String = Game.world.cast.get(who, {}).get("n", who)
-	return "[color=#8a7d66][font_size=18]%s[/font_size][/color]\n[font_size=32]%s[/font_size]\n[color=#8a7d66][font_size=19]%s[/font_size][/color]" % [_esc(name), _ko(b.ko), _esc(b.get("en", ""))]
+	if who == "narr": _text(Kit.esc(b.get("en", "")))
+	elif who == "sign":
+		var r := _text("[center][bgcolor=#e2d6b8][font_size=36] %s [/font_size][/bgcolor][/center]" % Kit.ko(b.ko))
+		r.add_theme_font_size_override("normal_font_size", 36)
+		_hear(b)
+		if b.has("en"): _text(Kit.esc(b.en), 19, Kit.MUTE)
+	else:
+		var line := HBoxContainer.new(); line.add_theme_constant_override("separation", 14); body.add_child(line)
+		var side := VBoxContainer.new(); side.add_theme_constant_override("separation", 2); line.add_child(side)
+		var f := TextureRect.new(); f.texture = Kit.face(who, b.get("ex", "neutral")); f.custom_minimum_size = Vector2(110, 110)
+		f.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; f.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; side.add_child(f)
+		var c: Dictionary = Game.ST.cast.get(who, {})
+		var nm := Kit.label(c.get("n", ""), 16, Color(c.get("c", "#888"))); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; side.add_child(nm)
+		var right := VBoxContainer.new(); right.size_flags_horizontal = Control.SIZE_EXPAND_FILL; line.add_child(right)
+		if b.get("audio", false):
+			right.add_child(Kit.label("You only hear this. It gets written down once you act on it.", 17, Kit.MUTE, true))
+		else:
+			var r := Kit.rich(30); r.text = Kit.ko(b.ko); r.meta_clicked.connect(func(w): _word(str(w))); right.add_child(r)
+		var again := Kit.button("▶ Again", false, 16); again.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		again.pressed.connect(func(): voice.say(b.ko, who)); right.add_child(again)
+		if b.has("en"): _text(Kit.esc(b.en), 19, Kit.MUTE)
+	var shown := 0
+	for o in b.get("ch", []):
+		if not Game.cond(o.c): continue
+		shown += 1
+		var t: String = ("“%s”" % Game.plain(o.ko)) if o.has("ko") else o.get("en", "")
+		_act(t, func():
+			if o.has("ko"): voice.say(o.ko, "you")
+			Game.choose(o))
+	if shown == 0: _cont("Continue" if (b.has("next") or b.has("rewind")) else "Look around")
 
 
-## ---------- pockets
-func _pockets() -> void:
-	for c in pockets_box.get_children(): c.queue_free()
+func _hear(b: Dictionary) -> void:
+	var h := Kit.button("▶ Read aloud", false, 16); h.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN; h.pressed.connect(func(): voice.say(b.ko, b.who)); body.add_child(h)
+
+
+## ---------- puzzles
+func _number(b: Dictionary) -> void:
+	_text(Kit.esc(b.en))
+	if b.kind == "count":
+		var lock = load("res://scripts/ui/lock.gd").new()
+		lock.setup(len(Game._digits(b.ans[0][0])) if not b.ans.is_empty() else 4)
+		lock.tried.connect(func(v): Game.answer(v))
+		room.add_child(lock); return
+	var shown: String = _numpad if _numpad != "" else {"time": "_ : _ _", "won": "0 원", "phone": "010-____-____"}.get(b.kind, "_")
+	if _numpad != "":
+		if b.kind == "time" and _numpad.length() > 2: shown = _numpad.substr(0, _numpad.length() - 2) + ":" + _numpad.right(2)
+		elif b.kind == "won": shown = Game.won(int(_numpad))
+	var d := Kit.label(shown, 44); d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; body.add_child(d)
+	var grid := GridContainer.new(); grid.columns = 3; grid.add_theme_constant_override("h_separation", 8); grid.add_theme_constant_override("v_separation", 8); acts.add_child(grid)
+	for k in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓"]:
+		var btn := Kit.button(k if k != "✓" else ("Pay" if b.kind == "won" else "Say it"), k == "✓", 26)
+		btn.custom_minimum_size = Vector2(0, 58); btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.disabled = k == "✓" and _numpad == ""
+		btn.pressed.connect(func():
+			Game.sound.emit("tap")
+			if k == "✓": Game.answer(_numpad); return
+			if k == "⌫": _numpad = _numpad.left(-1)
+			elif _numpad.length() < 11: _numpad += k
+			_refresh())
+		grid.add_child(btn)
+	_leave_btn()
+
+
+func _leave_btn() -> void:
+	var l := Kit.button("Never mind", false, 18); l.alignment = HORIZONTAL_ALIGNMENT_CENTER; l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.pressed.connect(func(): Game.leave()); foot.add_child(l)
+
+
+func _build_beat(b: Dictionary) -> void:
+	_text(Kit.esc(b.en))
+	var line := " ".join(_build_seq.map(func(i): return Game.plain(b.tiles[i]))) if not b.join else "".join(_build_seq.map(func(i): return Game.plain(b.tiles[i])))
+	var shown := Kit.label(line if line != "" else ("Tap the pieces to build the word" if b.join else "Tap words to build a sentence"), 30 if line != "" else 18, Kit.PAPER_INK if line != "" else Kit.MUTE, true)
+	body.add_child(shown)
+	var flow := HFlowContainer.new(); flow.add_theme_constant_override("h_separation", 8); flow.add_theme_constant_override("v_separation", 8); acts.add_child(flow)
+	for i in b.tiles.size():
+		var t := Kit.button(Game.plain(b.tiles[i]), false, 26); t.disabled = i in _build_seq
+		t.pressed.connect(func():
+			Game.sound.emit("tap"); _build_seq.append(i)
+			if not b.join: voice.say(b.tiles[i], "you")
+			_refresh())
+		flow.add_child(t)
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); acts.add_child(row)
+	var clr := Kit.button("Clear"); clr.alignment = HORIZONTAL_ALIGNMENT_CENTER; clr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	clr.pressed.connect(func(): _build_seq = []; _refresh()); row.add_child(clr)
+	var say := Kit.button("Say it", true); say.size_flags_horizontal = Control.SIZE_EXPAND_FILL; say.disabled = _build_seq.is_empty()
+	say.pressed.connect(func():
+		var seq: Array = _build_seq.map(func(i): return b.tiles[i])
+		voice.say(" ".join(seq) if not b.join else "".join(seq), "you"); Game.answer_build(seq))
+	row.add_child(say)
+	_leave_btn()
+
+
+## typed answers: the game's own Korean keyboard opens over the bottom of the screen
+func _type_beat(b: Dictionary) -> void:
+	_text(Kit.esc(b.en))
+	if not _reply.is_empty():
+		_text("[b]%s[/b]" % Kit.ko(_reply[0]), 26); _text(Kit.esc(_reply[1]), 18, Kit.MUTE)
+	if not Game.typed_close.is_empty():
+		_text("[color=#8a7d66]Close enough! Watch the difference.[/color]\nYou wrote: [b]%s[/b]\nCorrect: [b]%s[/b]" % [Kit.esc(Game.typed_close.yours), Kit.esc(Game.typed_close.correct)], 22)
+		_act("Continue", func(): Game.close_go_on(), true); return
+	if kb == null:
+		kb = load("res://scripts/ui/korean_keyboard.gd").new(); add_child(kb)
+		kb.hint_text = Game.plain(b.ans[0][0]) if not b.ans.is_empty() else ""
+		kb.submitted.connect(func(t): voice.say(t, "you"); Game.answer_type(t))
+		kb.closed.connect(func(): kb = null; Game.leave())
+
+
+func _cards(items: Array, pick: Callable, picked: Array = []) -> void:
+	for e in items:
+		var is_st: bool = e.has("node")
+		var b := Kit.wide("", e.id in picked, 18); b.custom_minimum_size = Vector2(0, 64)
+		if is_st:
+			var nd: Dictionary = Game.ST.nodes[e.node]
+			b.icon = Kit.face(nd.who, nd.get("ex", "neutral")); b.text = "%s: %s" % [Game.ST.cast.get(nd.who, {}).get("n", ""), Game.plain(nd.ko)]
+		else:
+			b.icon = Kit.icon("#" + e.icon); b.text = "%s · %s" % [Game.plain(e.label), e.desc]
+		b.expand_icon = false; b.add_theme_constant_override("icon_max_width", 48)
+		b.pressed.connect(func(): pick.call(e.id)); acts.add_child(b)
+
+
+func _present_beat(b: Dictionary) -> void:
+	_text(Kit.esc(b.en))
+	var ev := Game.owned()
+	if ev.is_empty(): _text("You have nothing to show.", 20, Kit.MUTE)
+	_cards(ev, func(id): Game.sound.emit("tap"); Game.present(id))
+	_leave_btn()
+
+
+func _contradict_beat(b: Dictionary) -> void:
+	_text(Kit.esc(b.en))
+	var pick := func(id):
+		Game.sound.emit("tap")
+		if id in _picks: _picks.erase(id)
+		else:
+			_picks.append(id)
+			if _picks.size() > 2: _picks.pop_front()
+		_refresh()
+	if not Game.owned_statements().is_empty(): acts.add_child(Kit.label("STATEMENTS", 14, Kit.MUTE))
+	_cards(Game.owned_statements(), pick, _picks)
+	if not Game.owned().is_empty(): acts.add_child(Kit.label("EVIDENCE", 14, Kit.MUTE))
+	_cards(Game.owned(), pick, _picks)
+	var c := Kit.button("These two can't both be true" if _picks.size() == 2 else "Pick two (%d/2)" % _picks.size(), true)
+	c.disabled = _picks.size() != 2; c.pressed.connect(func(): Game.clash(_picks[0], _picks[1])); foot.add_child(c)
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_leave_btn()
+
+
+func _examine_beat() -> void:
+	var x: Dictionary = Game.exam()
+	_text(Kit.esc(x.get("prompt", "Look closely. Tap anything that catches your eye.")) + " [b]Tap the picture.[/b]")
+	var found: Array = x.details.filter(func(d): return Game.exam_found(d))
+	_text("Noticed %d of %d" % [found.size(), x.details.size()], 17, Kit.MUTE)
+	for i in range(found.size() - 1, -1, -1): _text("· " + Kit.ko(found[i].t), 21)
+	var left: int = Game.exam_keys_left()
+	var d := _act("Keep looking" if left else "Done looking", func(): Game.next(), true); d.disabled = left > 0
+
+
+## ---------- pockets (exploring)
+func _pockets(free: bool) -> void:
+	Kit.clear(pockets_box)
 	var items: Array = Game.pockets()
-	var free_to_look: bool = Game.node == "" and Game.place().get("mode", "") == "explore"
-	pockets_box.get_parent().visible = free_to_look and not items.is_empty()
+	pockets_box.get_parent().visible = free and not items.is_empty()
 	for e in items:
 		var on: bool = bool(Game.F.get("lit", 0)) if e.id == "flashlight" else Game.F.get("hold", "") == e.id
-		# each thing shows its name underneath (in Korean for things labelled in Korean: 기름 on the oil can)
-		var b := Button.new(); b.custom_minimum_size = Vector2(112, 112); b.icon = _icon("#" + e.icon); b.expand_icon = true
+		var b := Button.new(); b.custom_minimum_size = Vector2(108, 108); b.icon = Kit.icon("#" + e.icon); b.expand_icon = true
 		b.text = Game.plain(e.label); b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP; b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.add_theme_font_size_override("font_size", 15 if b.text.length() > 6 else 18); b.clip_text = true
-		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(c, PAPER_INK)
-		var st := StyleBoxFlat.new(); st.set_corner_radius_all(12); st.bg_color = Color("efe3c4") if on else Color("fbf6e9")
-		st.border_color = PAPER_INK if on else Color("cbbf9f"); st.set_border_width_all(4 if on else 2); st.set_content_margin_all(12)
+		for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(c, Kit.PAPER_INK)
+		var st := Kit.box(12, Color("efe3c4") if on else Kit.PAPER_LIGHT, Kit.PAPER_INK if on else Kit.LINE, 4 if on else 2, 10)
 		for s in ["normal", "hover", "pressed", "focus"]: b.add_theme_stylebox_override(s, st)
 		b.pressed.connect(Game.pocket.bind(e.id)); pockets_box.add_child(b)
 	var h: String = Game.F.get("hold", "")
-	pocket_hint.text = ("Holding: %s. Tap where to use it." % Game.plain(Game.ch.evidence[h].label)) if h != "" and Game.ch.evidence.has(h) \
+	pocket_hint.text = ("Holding: %s. Tap where to use it." % Game.plain(Game.ST.evidence[h].label)) if h != "" and Game.ST.evidence.has(h) \
 		else ("Flashlight on. Drag on the picture to point it." if Game.F.get("lit", 0) else "Tap something in your pockets to take it out.")
 
 
-## a picture from the sheet: a word ("기름") or a picture by its own name ("#oil")
-func _icon(key: String) -> Texture2D:
-	var i = icons.get("words", {}).get(key)
-	if i == null or sheet == null: return null
-	var a := AtlasTexture.new(); a.atlas = sheet
-	var sz := float(icons.size); a.region = Rect2((int(i) % int(icons.cols)) * sz, int(int(i) / int(icons.cols)) * sz, sz, sz)
-	return a
+## ---------- pop-ups
+func _open(what: String) -> void:
+	_play("tap")
+	match what:
+		"notebook": load("res://scripts/ui/notebook.gd").open(self, "")
+		"board": load("res://scripts/ui/board.gd").open(self)
+		"phone": load("res://scripts/ui/phone.gd").open(self)
+		"map": load("res://scripts/ui/places.gd").map(self)
+		"jobs": load("res://scripts/ui/places.gd").board(self)
 
 
-## ---------- a word's page (수첩): like the web game's, without "check my guess". Your guess, whether you're sure,
-## and the lines you've seen it in. Only numbers get a picture: nothing around you could tell you what 사 means;
-## every other word you work out from where it's used (the things in your pockets have their Korean names on them).
 func _word(w: String) -> void:
 	_play("tap"); Game.note("  opened word: " + w)
-	var r: Dictionary = Game.word(w)
-	var o := _overlay()
-	var panel: PanelContainer = o.get_child(0); panel.custom_minimum_size.x = 620
-	var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 10); panel.add_child(box)
-	var top := HBoxContainer.new(); top.add_theme_constant_override("separation", 18); box.add_child(top)
-	var spec: String = Game.world.words.get(w, {}).get("p", "")
-	if spec.begins_with("sino") or spec.begins_with("nat"):
-		var pic := TextureRect.new(); pic.texture = _icon(w); pic.custom_minimum_size = Vector2(120, 120); pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; top.add_child(pic)
-	var right := VBoxContainer.new(); right.size_flags_horizontal = Control.SIZE_EXPAND_FILL; top.add_child(right)
-	right.add_child(_label(w, 52, PAPER_INK))
-	var badge := _label("", 16, MUTE); right.add_child(badge)
-	var upd := func():
-		badge.text = ("GOT IT · you're sure" if r.sure else "YOUR GUESS · not sure yet") if r.note.strip_edges() != "" else ("NEW WORD" if r.ctx.size() <= 1 else "NO NOTE YET")
-	upd.call()
-	box.add_child(_label("What you think it means", 16, MUTE))
-	var note := LineEdit.new(); note.text = r.note; note.placeholder_text = "Your own words"; note.add_theme_font_size_override("font_size", 24)
-	note.custom_minimum_size.y = 56; note.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_DEFAULT; box.add_child(note)
-	var ns := StyleBoxFlat.new(); ns.bg_color = Color("fbf6e9"); ns.border_color = Color("cbbf9f"); ns.set_border_width_all(2); ns.set_corner_radius_all(10)
-	ns.content_margin_left = 14; ns.content_margin_right = 14
-	var nf := ns.duplicate(); nf.border_color = PAPER_INK
-	note.add_theme_stylebox_override("normal", ns); note.add_theme_stylebox_override("focus", nf)
-	note.add_theme_color_override("font_color", PAPER_INK); note.add_theme_color_override("font_placeholder_color", MUTE); note.add_theme_color_override("caret_color", PAPER_INK)
-	var sure := CheckBox.new(); sure.text = "I'm sure about this"; sure.button_pressed = r.sure; sure.disabled = r.note.strip_edges() == ""
-	sure.add_theme_font_size_override("font_size", 20)
-	for c in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color", "font_disabled_color"]:
-		sure.add_theme_color_override(c, PAPER_INK if c != "font_disabled_color" else MUTE)
-	box.add_child(sure)
-	note.text_changed.connect(func(t):
-		r.note = t
-		if t.strip_edges() == "": r.sure = false; sure.button_pressed = false
-		sure.disabled = t.strip_edges() == ""; Game.save_words(); upd.call())
-	note.text_submitted.connect(func(_t): note.release_focus(); Game.note("  wrote for %s: %s" % [w, r.note]))
-	sure.toggled.connect(func(on): r.sure = on; Game.save_words(); upd.call(); _play("solve" if on else "tap"); Game.note("  %s sure about %s" % ["is" if on else "isn't", w]))
-	box.add_child(_label("Where you've seen it", 16, MUTE))
-	if r.ctx.is_empty(): box.add_child(_label("Not seen anywhere yet.", 20, MUTE))
-	for line in r.ctx:
-		var c := RichTextLabel.new(); c.bbcode_enabled = true; c.fit_content = true; c.add_theme_font_size_override("normal_font_size", 22)
-		c.add_theme_color_override("default_color", PAPER_INK); c.text = _esc(line).replace(w, "[bgcolor=#e9c97a]%s[/bgcolor]" % w); box.add_child(c)
-	var ok := _button("Close", true); box.add_child(ok)
-	ok.pressed.connect(func():
-		if r.note != "": Game.note("  note for %s: %s" % [w, r.note])
-		o.get_parent().queue_free())
+	load("res://scripts/ui/notebook.gd").open(self, w)
 
 
-func _overlay() -> Control:
-	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.55); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(o)
-	var c := CenterContainer.new(); c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); o.add_child(c)
-	var p := PanelContainer.new(); var st := StyleBoxFlat.new(); st.bg_color = PAPER; st.set_corner_radius_all(18); st.set_content_margin_all(26)
-	p.add_theme_stylebox_override("panel", st); p.custom_minimum_size.x = 420; c.add_child(p)
-	return c
-
-
-## ---------- the menu: a nudge, start over, the keyboard test
 func _menu() -> void:
 	_play("tap")
-	var o := _overlay()
-	var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 10); o.get_child(0).add_child(box)
-	var hint := _label("", 20, PAPER_INK); hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x = 380
-	var b1 := _button("💡  Think (a nudge)"); b1.pressed.connect(func(): hint.text = Game.hint(); Game.note("  HINT: " + hint.text)); box.add_child(b1); box.add_child(hint)
-	var b2 := _button("⌨  Korean keyboard test"); b2.pressed.connect(func(): o.get_parent().queue_free(); _keyboard()); box.add_child(b2)
-	var b3 := _button("↺  Start the shed over"); b3.pressed.connect(func(): Game.note("  started over")); b3.pressed.connect(func(): o.get_parent().queue_free(); room._art_key = ""; Game.start(STORY)); box.add_child(b3)
-	var b4 := _button("Close", true); b4.pressed.connect(func(): o.get_parent().queue_free()); box.add_child(b4)
+	var inner := Kit.sheet(self, "메뉴", 0.5)
+	var hint := Kit.label("", 20, Kit.PAPER_INK, true)
+	var b1 := Kit.button("💡  Think (a nudge)"); b1.pressed.connect(func(): hint.text = Game.hint(); Game.note("  HINT: " + hint.text)); inner.add_child(b1); inner.add_child(hint)
+	var b2 := Kit.button("📖  Chapters"); b2.pressed.connect(func(): Kit.close(inner); load("res://scripts/ui/places.gd").chapters(self)); inner.add_child(b2)
+	var b3 := Kit.button("⌨  Korean keyboard test"); b3.pressed.connect(func(): Kit.close(inner); _keyboard_test()); inner.add_child(b3)
+	var b4 := Kit.button("🔊  Voices: " + ("on" if voice.on else "off")); b4.pressed.connect(func(): voice.on = not voice.on; b4.text = "🔊  Voices: " + ("on" if voice.on else "off")); inner.add_child(b4)
 
 
-func _keyboard() -> void:
+func _keyboard_test() -> void:
 	var k = load("res://scripts/ui/keyboard_test.gd").new(); k.main = self; add_child(k)
 
 
-## ---------- the title card ("@card 시험 | 창고")
+func _day_panel() -> void:
+	_play("tap")
+	var inner := Kit.sheet(self, "Day %d" % Game.W.day, 0.55)
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); inner.add_child(row)
+	for i in 4:
+		var s: String = Game.SLOTS[i]
+		var b := Kit.button("%s\n%s%s" % [Game.SLOT_KO[s], s.capitalize(), " · now" if i == Game.W.slot else ""], i == Game.W.slot, 20)
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.disabled = i < Game.W.slot; row.add_child(b)
+	inner.add_child(Kit.label("The story is in charge of the time right now." if Game.W.frozen else
+		"Wait a while moves to the next part of the day. At night, go to bed in the courtyard to start day %d." % (Game.W.day + 1), 19, Kit.PAPER_INK, true))
+	inner.add_child(Kit.label("Wallet: " + Game.won(Game.W.money), 22))
+	var met: Array = Game.W.met.keys().filter(func(w): return Game.PEOPLE.has(w))
+	if not met.is_empty():
+		inner.add_child(Kit.label("PEOPLE", 14, Kit.MUTE))
+		for w in met:
+			inner.add_child(Kit.label("%s  %s%s" % [Game.ST.cast.get(w, {}).get("n", w), "♥".repeat(Game.rel_level(w)), "♡".repeat(Game.REL_STEPS.size() - Game.rel_level(w))], 22))
+	inner.add_child(Kit.label("COMING UP", 14, Kit.MUTE))
+	for n in range(Game.W.day, Game.W.day + 4):
+		var ev: Array = Game.events_on(n)
+		inner.add_child(Kit.label("%s: %s" % ["Today" if n == Game.W.day else ("Tomorrow" if n == Game.W.day + 1 else "Day %d" % n),
+			", ".join(ev.map(func(e): return Game.plain(e.label))) if not ev.is_empty() else "nothing special"], 19))
+
+
+## ---------- the start screen
+func _title() -> void:
+	var o := ColorRect.new(); o.color = Kit.INK; o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(o)
+	var c := CenterContainer.new(); c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); o.add_child(c)
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 14); v.custom_minimum_size.x = 440; c.add_child(v)
+	var t := Kit.label("탈", 120, Kit.PAPER); t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; v.add_child(t)
+	var s := Kit.label("청 솔 마 을", 26, Kit.MUTE); s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; v.add_child(s)
+	var go_on := func(f: Callable): o.queue_free(); f.call()
+	if Game.has_save():
+		var b := Kit.button("Continue", false); b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.pressed.connect(func(): go_on.call(func(): if not Game.load_save(): Game.start_chapter("prologue", true))); v.add_child(b)
+	var n := Kit.button("New game" if Game.has_save() else "Start", not Game.has_save()); n.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	n.pressed.connect(func(): go_on.call(func(): Game.S = Game._fresh(); Game.start_chapter("prologue", true))); v.add_child(n)
+	var ch := Kit.button("Chapters"); ch.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ch.pressed.connect(func(): go_on.call(func(): Game.load_save(); load("res://scripts/ui/places.gd").chapters(self))); v.add_child(ch)
+
+
+## ---------- the title card ("@card 1장 | 탈"), the time-of-day card, the end of a chapter
 func _card() -> Control:
 	var c := ColorRect.new(); c.color = Color(0, 0, 0, 0.82); c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); c.visible = false; c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var t := _label("", 84, PAPER); t.name = "T"; c.add_child(t)
-	var s := _label("", 30, Color(PAPER, 0.7)); s.name = "S"; c.add_child(s)
+	var t := Kit.label("", 84, Kit.PAPER); t.name = "T"; c.add_child(t)
+	var s := Kit.label("", 30, Color(Kit.PAPER, 0.7)); s.name = "S"; c.add_child(s)
 	for l in [t, s]:
 		l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	t.offset_top = -40; t.offset_bottom = -40; s.offset_top = 60; s.offset_bottom = 60
 	return c
+
+
+func _timecard() -> void:
+	var l := Kit.label("%s\nday %d · %s" % [Game.SLOT_KO[Game.slot_name()], Game.W.day, Game.slot_name()], 56, Kit.PAPER)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room.add_child(l); l.modulate.a = 0
+	var tw := create_tween(); tw.tween_property(l, "modulate:a", 1.0, 0.3); tw.tween_interval(1.2); tw.tween_property(l, "modulate:a", 0.0, 0.5); tw.tween_callback(l.queue_free)
+
+
+func _rewound() -> void:
+	_play("wrong")
+	var f := ColorRect.new(); f.color = Color(0.85, 0.75, 0.55, 0.35); f.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); f.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room.add_child(f); var tw := create_tween(); tw.tween_property(f, "modulate:a", 0.0, 0.7); tw.tween_callback(f.queue_free)
+
+
+func _finished(id: String) -> void:
+	var inner := Kit.sheet(self, Game.ST.meta.get("end-title", "끝"), 0.6)
+	inner.add_child(Kit.label(Game.ST.meta.get("end-text", ""), 22, Kit.PAPER_INK, true))
+	var nx: Dictionary = Game.next_chapter()
+	if not nx.is_empty() and not nx.free and Game.CH.has(nx.id):
+		var b := Kit.button("Start " + nx.t, true); b.pressed.connect(func(): Kit.close(inner); Game.start_chapter(nx.id, true)); inner.add_child(b)
+	var k := Kit.button("Keep exploring"); k.alignment = HORIZONTAL_ALIGNMENT_CENTER; k.pressed.connect(func(): Kit.close(inner)); inner.add_child(k)
 
 
 ## ---------- sound and little messages
@@ -285,7 +455,7 @@ func _play(n: String) -> void:
 
 
 func _toast(t: String) -> void:
-	var p := PanelContainer.new(); var st := StyleBoxFlat.new(); st.bg_color = Color(0.08, 0.09, 0.12, 0.92); st.set_corner_radius_all(14); st.set_content_margin_all(12)
-	p.add_theme_stylebox_override("panel", st); p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := _label(Game.plain(t), 20, PAPER); p.add_child(l); toast_box.add_child(p)
-	var tw := create_tween(); tw.tween_interval(2.6); tw.tween_property(p, "modulate:a", 0.0, 0.4); tw.tween_callback(p.queue_free)
+	var p := PanelContainer.new(); p.add_theme_stylebox_override("panel", Kit.box(14, Color(0.08, 0.09, 0.12, 0.92), Color.TRANSPARENT, 0, 12))
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(Kit.label(Game.plain(t), 20, Kit.PAPER)); toast_box.add_child(p)
+	var tw := create_tween(); tw.tween_interval(2.8); tw.tween_property(p, "modulate:a", 0.0, 0.4); tw.tween_callback(p.queue_free)

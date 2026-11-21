@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := 9
+const BUILD := 10
 
 var room: Control
 var paper: PanelContainer
@@ -29,6 +29,8 @@ var _numpad := ""
 var _reply: Array = []               ## small talk while typing: [ko, en]
 var _shown_node := ""
 var voice := Voice.new()
+var cork: Control                    ## the case board lab
+var card_sel := ""
 var busy := false                    ## your own line is playing: wait for it
 
 
@@ -63,6 +65,8 @@ func _build() -> void:
 	room = load("res://scripts/ui/room.gd").new(); arc.add_child(room)
 	room.wants.connect(func(w): _open("jobs" if w == "board" else w))
 	card = _card(); room.add_child(card)
+	cork = load("res://scripts/ui/cork.gd").new(); cork.visible = false; arc.add_child(cork)
+	cork.selected.connect(func(id): card_sel = id; _refresh())
 	clock_btn = Kit.button("", true, 18); clock_btn.position = Vector2(12, 12); clock_btn.pressed.connect(_day_panel); room.add_child(clock_btn)
 
 	paper = PanelContainer.new(); paper.size_flags_horizontal = Control.SIZE_EXPAND_FILL; paper.custom_minimum_size.x = 400
@@ -116,7 +120,11 @@ func _refresh() -> void:
 		if b.has("ko") and not b.get("audio", false) and b.who != "narr": voice.say(b.ko, b.who)
 		elif b.get("audio", false): voice.say(b.ko, b.who)
 	_shown_node = Game.node
-	if b.is_empty(): _looking()
+	var lab: bool = pl.get("mode", "") == "board"
+	cork.visible = lab; room.visible = not lab
+	if lab: cork.refresh()
+	if b.is_empty() and lab: _lab()
+	elif b.is_empty(): _looking()
 	elif t == "card":
 		card.get_node("T").text = b.title; card.get_node("S").text = b.get("sub", "")
 		_text("[color=#8a7d66]Sound on. Tap any underlined word to open its page in your notebook.[/color]"); _cont("Begin")
@@ -161,6 +169,34 @@ func _looking() -> void:
 
 func _foot(t: String, f: Callable) -> void:
 	var b := Kit.button(t, false, 18); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(f); foot.add_child(b)
+
+
+## the case board lab: the card you're looking at, where you can go, what you have to pin with
+func _lab() -> void:
+	var bd: Dictionary = Game.board()
+	if card_sel != "" and Game.ST.cards.has(card_sel):
+		var cd: Dictionary = Game.ST.cards[card_sel]
+		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 12); body.add_child(row)
+		var pic := TextureRect.new(); pic.texture = load("res://scripts/ui/cork.gd")._picture(cd); pic.custom_minimum_size = Vector2(96, 96)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(pic)
+		var v := VBoxContainer.new(); v.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(v)
+		var ko: String = cd.get("ko", "") if cd.kind != "thing" else cd.label + ("
+" + cd.ko if cd.ko != "" else "")
+		if cd.kind == "person": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who)
+		var r := Kit.rich(26); r.text = Kit.ko(ko); r.meta_clicked.connect(func(w): _word(str(w))); v.add_child(r)
+		if cd.kind == "say":
+			var hb := Kit.button("▶ Hear it", false, 16); hb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN; hb.pressed.connect(func(): voice.say(cd.ko, cd.who)); v.add_child(hb)
+		var tied: Array = []
+		for l in bd.links:
+			if card_sel in l: tied.append(Game.card_label(Game.ST.cards[l[1] if l[0] == card_sel else l[0]]))
+		if not tied.is_empty(): _text("Tied to: " + Kit.esc(", ".join(tied)), 17, Kit.MUTE)
+	else:
+		_text(Kit.esc(Game.desc()), 20)
+	acts.add_child(Kit.label("GO TO", 14, Kit.MUTE))
+	for s in Game.spots_now():
+		if s.kind == "=>": _act(s.l, func(): Game.tap_spot(s))
+	_text("Strings: %d   ·   Thumbtacks: %d   ·   %s
+More at the shop." % [bd.strings, bd.tacks, Game.won(Game.W.money)], 17, Kit.MUTE)
 
 
 ## someone talks (or the narration, or a sign)

@@ -136,6 +136,7 @@ ch1        | 1장      | 탈       | ch1.story      | continues
 village    | 마을     | Free days | village.story + jobs.story + encounters.story | free
 # test areas ("dev"): not in the chapter list; Menu > Jump ahead > Test areas, with Playtest tools on
 shed       | 창고     | Escape room | shed.story | dev
+boardlab   | 연구실   | Case board lab | boardlab.story | dev
 
 === people
 # id | file in story/people/   (who lives in the village on free days: see js/core/villagers.js)
@@ -438,6 +439,9 @@ sign       |               |          | SunHi  -10%  +0Hz
 기름 = oil
 망치 = hammer
 
+실 = thread
+압정 = tack
+
 === grammar
 # piece | what it does (shown when you tap it)
 이에요 | "is / am / are". Goes at the very end: 학생이에요 = (I) am a student. After a word ending in a vowel it shrinks to 예요: 어디예요? = where is it?
@@ -720,6 +724,9 @@ sign       |               |          | SunHi  -10%  +0Hz
 먼저 | first
 기름 | oil
 망치 | hammer
+
+실 | thread, string
+압정 | thumbtack
 
 === names
 # name | kind | what tapping it says (kind: name or sound). Keep these spoiler-free.

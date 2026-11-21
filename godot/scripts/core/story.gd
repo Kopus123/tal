@@ -11,7 +11,7 @@ extends RefCounted
 static func empty() -> Dictionary:
 	return {"meta": {}, "cast": {}, "words": {}, "meanings": {}, "names": {}, "grammar": {}, "tells": {}, "places": {}, "nodes": {},
 		"evidence": {}, "statements": {}, "examines": {}, "phones": [], "cases": [], "hints": [], "chapters": [], "map": [],
-		"calendar": [], "people": {}, "people_files": [], "events": [], "encounters": [], "jobs": {}, "warnings": []}
+		"calendar": [], "people": {}, "people_files": [], "events": [], "encounters": [], "jobs": {}, "cards": {}, "unlocks": [], "warnings": []}
 
 
 ## "a | b | {x|y}" split on the bars that aren't inside {braces}
@@ -72,6 +72,8 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				"encounter": cur = {"id": arg, "at": [], "scene": "", "when": ""}; st.encounters.append(cur)
 				"job": cur = {"id": arg, "ko": arg, "en": arg, "level": "easy", "client": "", "pay": 0, "thanks": 1, "when": "", "note": "", "start": "", "ask": {}}; st.jobs[arg] = cur
 				"pattern": cur = {}   # notebook pattern pages: not in the Godot version yet
+				"card": cur = {"id": arg, "kind": "", "start": false}; st.cards[arg] = cur
+				"unlock": cur = {"id": arg, "when": [], "fx": []}; st.unlocks.append(cur)
 			continue
 		var m: RegExMatch
 		match sec:
@@ -220,6 +222,25 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				if not line.begins_with("glow "): _warn(st, file, ln, line)
 			"scene":
 				_scene_line(st, S, line, file, ln)
+			"card":
+				# say WHO FACE | 한국어  /  thing ICON | label | 한국어  /  person WHO  /  place ART | 한국어 | English  /  time ICON | 한국어  /  start
+				var p := split_bar(line)
+				var head: PackedStringArray = str(p[0]).split(" ", false)
+				match head[0]:
+					"say": cur.kind = "say"; cur.who = head[1]; cur.ex = head[2] if head.size() > 2 else "neutral"; cur.ko = p[1] if p.size() > 1 else ""
+					"thing": cur.kind = "thing"; cur.icon = head[1]; cur.label = p[1] if p.size() > 1 else ""; cur.ko = p[2] if p.size() > 2 else ""
+					"person": cur.kind = "person"; cur.who = head[1]
+					"place": cur.kind = "place"; cur.art = head[1]; cur.ko = p[1] if p.size() > 1 else ""; cur.en = p[2] if p.size() > 2 else ""
+					"time": cur.kind = "time"; cur.icon = head[1]; cur.ko = p[1] if p.size() > 1 else ""
+					"start": cur.start = true
+					_: _warn(st, file, ln, line)
+			"unlock":
+				if line.begins_with("when "):
+					for pair in line.substr(5).split(","):
+						var ab := pair.strip_edges().split("-")
+						if ab.size() == 2: cur.when.append([ab[0].strip_edges(), ab[1].strip_edges()])
+				elif line.begins_with("!"): cur.fx.append_array(parse_fx(line.substr(1)))
+				else: _warn(st, file, ln, line)
 			"endings", "pattern":
 				pass   # notebook grammar pages: not in the Godot version yet
 			_:

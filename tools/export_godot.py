@@ -17,7 +17,7 @@ import http.server, json, pathlib, re, shutil, socketserver, subprocess, sys, th
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GODOT = ROOT / "godot"
 FREE = ["village.story", "jobs.story", "encounters.story"]   # the free days: villagers are drawn live, not painted in
-STORIES = ["world.story", "prologue.story", "ch1.story", "village.story", "jobs.story", "encounters.story", "shed.story"]
+STORIES = ["world.story", "prologue.story", "ch1.story", "village.story", "jobs.story", "encounters.story", "shed.story", "boardlab.story"]
 BROWSERS = [r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"]
 ICON, COLS = 128, 16

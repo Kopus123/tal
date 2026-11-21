@@ -63,6 +63,22 @@ static func _page(main: Control, w: String) -> void:
 	note.text_submitted.connect(func(_t): note.release_focus(); Game.note("  wrote for %s: %s" % [w, r.note]))
 	sure.toggled.connect(func(on): r.sure = on; Game.save_words(); upd.call(); Game.sound.emit("solve" if on else "tap"); Game.note("  %s sure about %s" % ["is" if on else "isn't", w]))
 	_seen_in(inner, w, r)
+	_family(main, inner, w)
+
+
+## the same word in its other forms (갔어요 · 가요 · 가: they share a picture in world.story), and where you met each,
+## side by side: comparing them is how you see what stays the same and what changes
+static func _family(main: Control, inner: VBoxContainer, w: String) -> void:
+	var base: String = Game.world.words.get(w, {}).get("p", "").split(" ")[0]
+	if base == "": return
+	var fam: Array = Game.world.words.keys().filter(func(k): return k != w and Game.world.words[k].get("p", "").split(" ")[0] == base and Game.words.has(k) and not Game.words[k].ctx.is_empty())
+	if fam.is_empty(): return
+	inner.add_child(Kit.label("THE SAME WORD, OTHER FORMS", 14, Kit.MUTE))
+	for k in fam:
+		var b := Kit.button(k, false, 24); b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		b.pressed.connect(func(): Kit.close(inner); _page(main, k)); inner.add_child(b)
+		for line in Game.words[k].ctx.slice(0, 2):
+			var c := Kit.rich(20); c.text = "   " + Kit.esc(line).replace(k, "[bgcolor=#%s]%s[/bgcolor]" % [Kit.HILITE.to_html(false), k]); inner.add_child(c)
 
 
 static func _seen_in(inner: VBoxContainer, w: String, r: Dictionary) -> void:

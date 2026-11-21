@@ -141,7 +141,8 @@ func _use(id: String) -> void:
 	var free: bool = chapter_info(id).get("free", false)
 	ST = {"meta": world_st.meta.duplicate(), "cast": world_st.cast.duplicate(), "evidence": world_st.evidence.duplicate(),
 		"places": c.places, "nodes": c.nodes.duplicate(), "statements": c.statements, "examines": c.examines, "cases": c.cases,
-		"phones": c.phones, "hints": c.hints, "events": c.events, "encounters": c.encounters, "jobs": c.jobs, "free": free, "warnings": c.warnings}
+		"phones": c.phones, "hints": c.hints, "events": c.events, "encounters": c.encounters, "jobs": c.jobs, "free": free, "warnings": c.warnings,
+		"cards": c.get("cards", {}), "unlocks": c.get("unlocks", [])}
 	ST.meta.merge(c.meta, true); ST.cast.merge(c.cast, true); ST.evidence.merge(c.evidence, true)
 	if free: ST.nodes.merge(PNODES)
 
@@ -160,6 +161,7 @@ func start_chapter(id: String, restart := true) -> void:
 		if not ST.places.has(S.loc): S.loc = ST.meta.get("start-place", "")
 		changed.emit(); save(); return
 	S.F = {"started": 1}; S.cs = {}; S.visited = {}; S.node = ""; S.loc = ST.meta.get("start-place", ""); S.known[S.loc] = 1
+	if not ST.cards.is_empty(): _board_start()
 	_t0 = Time.get_ticks_msec(); note("\n===== new playthrough of %s, %s =====" % [id, Time.get_datetime_string_from_system(false, true)])
 	_stash(); go(ST.meta.get("start", ""))
 
@@ -209,6 +211,7 @@ func cond_value(t: String) -> Variant:
 			"has:": return W.inv.get(a, 0)
 			"on:": return events_on(W.day).any(func(e): return e.id == a)
 			"job:": return W.job == a
+			"linked:": var ab := a.split("-"); return ab.size() == 2 and is_linked(ab[0], ab[1])
 			"jobdone:": return W.jobs.get(a, {}).has("done")
 			"here:": return PEOPLE.has(a) and people_here().has(PEOPLE[a])
 	return S.F.get(t, 0)
@@ -325,6 +328,11 @@ func _effect(k: String, a: String) -> void:
 		"chapter": S.F["goChapter"] = a.strip_edges()
 		"job": _job_effect(a)
 		"away": W.g["away_" + a.strip_edges()] = W.day * 4 + W.slot
+		"card":
+			for v in a.split(","): _board_add(v.strip_edges())
+		"supply":   # bought at the shop: a spool of string, or a box of three thumbtacks
+			if a.strip_edges() == "string": board().strings += 1
+			else: board().tacks += 3
 		_: push_warning("effect not in the Godot version yet: " + k)
 
 
@@ -855,3 +863,83 @@ func _job_effect(a: String) -> void:
 	elif a == "fail":
 		W.jobs[j.id] = {"failed": W.day}; W.job = ""; sound.emit("wrong")
 		toast.emit("The job's off for today: %s. It'll be back another day." % j.en)
+
+
+## ---------- the case board lab (story/boardlab.story): cards you pin up and string together.
+## The board is your theory: connect anything to anything. The game reads it: when all the strings of an "unlock"
+## are up, its effects happen, silently (you find out by noticing a new place or option, like in real life).
+## Strings are few: taking one down frays it (every second time, it snaps) and bends a thumbtack. Buy more.
+const STRING_PRICE := 1000
+const TACK_PRICE := 500
+
+func board() -> Dictionary:
+	if not S.F.has("board"): S.F["board"] = {"cards": {}, "links": [], "strings": 4, "tacks": 6, "takedowns": 0}
+	return S.F.board
+
+func _board_start() -> void:
+	for id in ST.cards:
+		if ST.cards[id].start: _board_add(id, true)
+
+## a new card goes up in the next free spot (rows across the board)
+func _board_add(id: String, quiet := false) -> void:
+	var b := board()
+	if b.cards.has(id) or not ST.cards.has(id): return
+	var n: int = b.cards.size()
+	b.cards[id] = {"x": 0.025 + (n % 6) * 0.158, "y": 0.06 + (n / 6) * 0.3, "new": not quiet}
+	if not quiet:
+		toast.emit("New on your case board: " + card_label(ST.cards[id])); note("  new card: " + id)
+
+func card_label(c: Dictionary) -> String:
+	match c.kind:
+		"say": return ST.cast.get(c.who, {}).get("n", c.who) + ": " + plain(c.ko)
+		"thing": return plain(c.label)
+		"person": return ST.cast.get(c.who, {}).get("n", c.who)
+		"place", "time": return plain(c.ko)
+	return c.id
+
+func is_linked(a: String, b_: String) -> bool:
+	for l in board().links:
+		if (l[0] == a and l[1] == b_) or (l[0] == b_ and l[1] == a): return true
+	return false
+
+## "" when it worked, otherwise why not
+func board_link(a: String, b_: String) -> String:
+	var b := board()
+	if a == b_ or is_linked(a, b_): return "same"
+	if b.strings <= 0: return "no string"
+	if b.tacks <= 0: return "no tacks"
+	b.strings -= 1; b.tacks -= 1; b.links.append([a, b_])
+	note("  string: %s — %s" % [a, b_]); sound.emit("click")
+	_check_unlocks(); save(); changed.emit(); return ""
+
+func board_unlink(a: String, b_: String) -> void:
+	var b := board()
+	for i in b.links.size():
+		var l: Array = b.links[i]
+		if (l[0] == a and l[1] == b_) or (l[0] == b_ and l[1] == a):
+			b.links.remove_at(i); b.takedowns += 1
+			var snapped: bool = b.takedowns % 2 == 0
+			if not snapped: b.strings += 1
+			note("  took down: %s — %s%s (a tack bent)" % [a, b_, ", the string snapped" if snapped else ""])
+			toast.emit("The string snapped." if snapped else "The string's frayed now. A tack bent.")
+			sound.emit("tap"); save(); changed.emit(); return
+
+func board_move(id: String, x: float, y: float) -> void:
+	var c: Dictionary = board().cards.get(id, {})
+	if c.is_empty(): return
+	c.x = clampf(x, 0.0, 0.9); c.y = clampf(y, 0.0, 0.85); c.new = false; save()
+
+func board_buy(what: String) -> bool:
+	var price := STRING_PRICE if what == "string" else TACK_PRICE
+	if W.money < price: toast.emit("Not enough money."); return false
+	W.money -= price
+	if what == "string": board().strings += 1
+	else: board().tacks += 3
+	note("  bought " + what); sound.emit("click"); save(); changed.emit(); return true
+
+func _check_unlocks() -> void:
+	for u in ST.unlocks:
+		if S.F.has("unlocked_" + u.id): continue
+		if u.when.all(func(p): return is_linked(p[0], p[1])):
+			S.F["unlocked_" + u.id] = 1; note("  (the board opened: %s)" % u.id)
+			run_fx(u.fx)

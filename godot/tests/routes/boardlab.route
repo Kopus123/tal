@@ -1,0 +1,59 @@
+# Test area: the case board lab (story/boardlab.story). Godot only.
+# SPOILERS: the whole solution, plus the wrong turns that cost you.
+
+chapter boardlab
+idle
+expect @lab
+#@ Board lab · start
+nogo Bus stop
+nogo Museum
+# --- the restaurant: 아저씨 saw her this morning, and she got on the bus
+spot Restaurant
+choose Thank him
+idle
+expect @lab
+# --- a wrong string opens nothing; taking it down frays it
+link c_owner_bus p_sujin
+nogo Bus stop
+unlink c_owner_bus p_sujin
+# --- what he said, pinned to the right things: the bus stop opens (silently)
+link c_owner_bus p_halmeoni
+link c_owner_bus pl_busstop
+spot Bus stop
+idle
+expect @lab&go_busstop
+# --- 9 o'clock at the museum: the museum opens
+link c_text pl_museum
+spot The shop
+build 실 | 주세요
+number 1000
+idle
+link c_text t_nine
+spot Museum
+idle
+# --- telling 수진 before the board says it costs you her trust
+spot Courtyard
+choose Tell her
+idle
+expect !tolddone
+# --- the whole morning on the board, then tell her
+# --- out of string and tacks: the shop (ask in Korean, pay on the pad)
+spot The shop
+build 압정 | 주세요
+number 1000
+idle
+spot The shop
+build 실 | 주세요
+number 1000
+idle
+spot The shop
+build 실 | 주세요
+number 1000
+idle
+link c_owner_here pl_sikdang
+link c_staff pl_museum
+expect knows_story
+spot Courtyard
+choose Tell her
+idle
+expect tolddone

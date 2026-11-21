@@ -261,3 +261,25 @@ func s_back(_a: String) -> void:
 	idle()
 	if not g.place().has("back"): fail("no back arrow here"); return
 	g.enter(g.place().back)
+
+
+## ---------- the case board lab
+func s_link(a: String) -> void:
+	idle()
+	var p := a.split(" ", false)
+	for id in p:
+		if not g.board().cards.has(id): fail('"%s" is not on your board' % id); return
+	var r: String = g.board_link(p[0], p[1])
+	if r != "": fail("couldn't pin that string: " + r)
+
+func s_unlink(a: String) -> void:
+	var p := a.split(" ", false)
+	if not g.is_linked(p[0], p[1]): fail("there's no string between %s and %s" % [p[0], p[1]]); return
+	g.board_unlink(p[0], p[1])
+
+func s_buy(a: String) -> void:
+	if not g.board_buy(a): fail("couldn't buy " + a)
+
+func s_nogo(a: String) -> void:
+	idle()
+	if not _spot(a).is_empty(): fail('"%s" is open, but should not be yet' % a)

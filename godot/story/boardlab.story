@@ -16,6 +16,9 @@
 #    start                       you have it from the beginning (otherwise "! card ID" gives it)
 #    pinned                      it starts pinned up (everything else goes up loose: pin it with a thumbtack)
 #
+#  PHOTOS: in a place, "subject CARD X Y R" marks something worth a photo (percent of the picture; R of its width).
+#  A photo with it mostly in the frame counts as CARD when the board is read. Every photo looks the same on the board.
+#
 #    === unlock ID               when ALL these strings are on the board, the effects happen. Silently:
 #    when A-B, C-D               you find out by noticing a new option, like in real life.
 #    ! effects
@@ -113,9 +116,6 @@ say ajeossi worried | {버스} {탔어요}.
 === card p_ajeossi
 person ajeossi
 
-=== card pl_busstop
-place jeong | {버스 정류장} | the bus stop
-
 === card c_couple
 say yuna surprised | {할머니}{요}? 음... 아! {네}! {아침}{에} {봤어요}!
 
@@ -132,15 +132,16 @@ say staff surprised | 김순자 {선생님}{이요|요}? {아니요}... {안} {�
 person staff
 
 # ------------------------------------------------------------ what the board opens (silently)
-# 아저씨 says she got on the bus: pin that to her and to the bus stop, and you can go there
+# 아저씨 says she got on the bus: tie that to her and to a photo of the bus stop sign (through his window),
+# and you can go there
 === unlock busstop
-when c_owner_bus-p_halmeoni, c_owner_bus-pl_busstop
+when c_owner_bus-p_halmeoni, c_owner_bus-s_bussign
 ! set go_busstop
 
 # her calendar and the museum's text both say 9 o'clock at the museum: pin either to the museum and to the time
 # ...or to your question: where is she?
 === unlock busstop_q
-when c_owner_bus-q_where, c_owner_bus-pl_busstop
+when c_owner_bus-q_where, c_owner_bus-s_bussign
 ! set go_busstop
 
 === unlock museum
@@ -160,9 +161,10 @@ when c_text-pl_museum, c_text-q_nine
 when c_calendar-pl_museum, c_calendar-q_nine
 ! set go_museum
 
-# the whole story: she was at the restaurant in the morning, got on the bus, and never reached the museum
+# the whole story: she was at the restaurant in the morning, got on the bus (a photo of the route at the stop),
+# and never reached the museum
 === unlock story
-when c_owner_here-pl_sikdang, c_owner_bus-pl_busstop, c_staff-pl_museum
+when c_owner_here-pl_sikdang, c_owner_bus-s_route, c_staff-pl_museum
 ! set knows_story
 
 # ------------------------------------------------------------ places
@@ -192,6 +194,7 @@ travel no
 always lab_madang
 
 === place sikdang
+subject s_bussign 85 19 5
 back lab
 light indoors
 music calm
@@ -203,6 +206,7 @@ travel no
 always lab_sikdang
 
 === place jeong
+subject s_route 23 44 9
 back lab
 music calm
 sound birds
@@ -236,6 +240,7 @@ always lab_museum
 # ------------------------------------------------------------ scenes
 === scene lab_open
 ~ [Test area] 할머니 is missing. You have 수진's words, a calendar from the workshop, and a text on 할머니's phone.
+~ You have a camera (📷, bottom right when you're somewhere): photos of anything go up on your board.
 ~ Pin cards up with thumbtacks, then tie string between what belongs together. When your strings show you've understood something, new places open up. Nobody tells you when; you'll notice.
 
 === scene lab_back
@@ -247,10 +252,13 @@ ajeossi[surprised]: 순자 {할머니}{요}? {네}, {아침}{에} {여기} {있�
 ! card c_owner_here, p_ajeossi
 ajeossi: {김밥} {두 개} {샀어요}.
 ajeossi[worried]: {버스} {탔어요}.
-(He points through the window at the bus stop next door.)
-! card c_owner_bus, pl_busstop
+(He points through the window, at the bus stop sign outside.)
+! card c_owner_bus
 * [Accuse him of hiding her] -> lab_accuse if !accused
-* [Thank him and go back] -> lab_back
+* [Thank him] -> lab_thanks
+
+=== scene lab_thanks
+~ He nods and turns back to his stove. You can look around, or head back to your board (‹).
 
 === scene lab_accuse
 ! set accused; rel ajeossi =0; set g:rep_down
@@ -266,17 +274,18 @@ yuna[surprised]: {할머니}{요}? 음... 아! {네}! {아침}{에} {봤어요}!
 yuna: {오빠}, {사진}! {그} {사진}!
 (He shows you a selfie at this bus stop. Behind them, a little blurry: 할머니, holding a bundle in red cloth.)
 ! card c_photo
--> lab_back
 
 === scene lab_museum
 staff[surprised]: 김순자 {선생님}{이요|요}? {아니요}... {안} {왔어요}.
 ! card c_staff, p_staff
--> lab_back
 
 === scene lab_madang
 sujin[worried]: {할머니}... {어디}{예요|이에요}?
 * [Tell her what you've worked out] -> knows_story ? lab_tell : lab_wrong
-* [Not yet] -> lab_back
+* [Not yet] -> lab_notyet
+
+=== scene lab_notyet
+~ She goes back to staring at the gate.
 
 === scene lab_tell
 ~ You tell her: 할머니 had breakfast at the restaurant, got on the bus at the stop, and never reached the museum.
@@ -297,8 +306,9 @@ sujin[sad]: ...{아니요}.
 ajumma[happy]: {어서 오세요}! {뭐} {드릴까요}?
 (Spools of thread and little boxes of thumbtacks hang behind the counter.)
 @build Ask for what you need.
-tiles: {실} | {압정} | {주세요} | {김밥} | {물}
+tiles: {실} | {압정} | {필름} | {주세요} | {김밥} | {물}
 answer: {실} | {주세요} -> shop_string
+answer: {필름} | {주세요} -> shop_film
 answer: {압정} | {주세요} -> shop_tacks
 miss -> shop_huh
 
@@ -344,5 +354,25 @@ ajumma: {아니요}~ {천} {원}!
 
 === scene shop_tacks_ok
 ! money -1000 each time; supply tacks
+ajumma[happy]: {감사합니다}!
+-> lab_back
+
+=== scene shop_film
+ajumma: {필름}? {네}! {이}{천} {원}{이에요}.
+(A roll of black-and-white film: twelve shots.)
+-> shop_film_pay
+
+=== scene shop_film_pay
+@number Pay her. | won
+answer: 2000 -> shop_film_ok
+miss -> shop_film_wrong
+
+=== scene shop_film_wrong
+ajumma: {아니요}~ {이}{천} {원}!
+(She taps the price card.)
+-> shop_film_pay
+
+=== scene shop_film_ok
+! money -2000 each time; supply film
 ajumma[happy]: {감사합니다}!
 -> lab_back

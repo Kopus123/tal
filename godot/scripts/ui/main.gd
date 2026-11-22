@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "3.4"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "3.5"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -183,13 +183,14 @@ func _lab() -> void:
 		_act("◂ Back to the board", func(): lab_go = false; _refresh())
 		return
 	var id: String = card_sel
-	if id != "" and Game.ST.cards.has(id):
-		var cd: Dictionary = Game.ST.cards[id]
+	if id != "" and not Game.card(id).is_empty():
+		var cd: Dictionary = Game.card(id)
 		var ko: String = cd.get("ko", "")
 		match cd.kind:
 			"thing": ko = cd.label + ("\n" + cd.ko if cd.ko != "" else "")
 			"person": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who) + ("\n실종 · missing" if cd.get("missing", false) else "")
 			"say": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who) + ":\n" + cd.ko
+			"photo": ko = "사진 · photo\n" + cd.ko
 		var r := Kit.rich(28); r.text = Kit.ko(ko); r.meta_clicked.connect(func(w): _word(str(w))); body.add_child(r)
 		if cd.kind == "note" and cd.get("en", "") != "": body.add_child(Kit.label("(your note: " + cd.en + ")", 20, Kit.MUTE, true))
 		if cd.kind == "say":
@@ -213,7 +214,7 @@ func _lab() -> void:
 			var other: String = l[1] if l[0] == id else l[0]
 			var worn: bool = l.size() > 2 and l[2]
 			var a: String = l[0]; var b: String = l[1]
-			_act("✂  Take down the string to %s%s" % [Game.card_label(Game.ST.cards[other]), "  (frayed: it'll snap)" if worn else ""], func(): Game.board_unlink(a, b))
+			_act("✂  Take down the string to %s%s" % [Game.card_label(Game.card(other)), "  (frayed: it'll snap)" if worn else ""], func(): Game.board_unlink(a, b))
 		if pinned and cork.from == "": _act("Pull the thumbtack out", func(): Game.board_unpin(id))
 	else:
 		_text(Kit.esc(Game.desc()), 22)
@@ -221,7 +222,7 @@ func _lab() -> void:
 	var worn_n: int = bd.get("frayed", 0)
 	_text("🧵 String: %d%s   ·   📌 Thumbtacks: %d   ·   %s" % [bd.strings, " (%d frayed)" % worn_n if worn_n > 0 else "", bd.tacks, Game.won(Game.W.money)], 20, Kit.MUTE)
 	_act("Leave the board ▸", func(): lab_go = true; _refresh())
-	if id != "" and Game.ST.cards.has(id):   # the card itself, bigger; tap it to see it full screen
+	if id != "" and not Game.card(id).is_empty():   # the card itself, bigger; tap it to see it full screen
 		var pv: Control = cork.preview(id, 300.0); pv.mouse_filter = Control.MOUSE_FILTER_STOP; acts.add_child(pv)
 		pv.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed: card_big(id))
 		acts.add_child(Kit.label("(tap the card to see it bigger)", 16, Kit.MUTE))

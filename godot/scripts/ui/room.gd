@@ -27,6 +27,13 @@ var figs: Control
 var marks: Control
 var frame: Panel
 var back_btn: Button
+var cam_btn: Button                ## raise the camera (places, when you have one)
+var shutter: Button
+var cam_x: Button
+var veil: Control                  ## the dark around the viewfinder, the film count
+var cam_mode := false
+var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
+var _focused := false
 var _art_key := ""
 var _ripples := []
 var _empty := 0
@@ -59,8 +66,77 @@ func _ready() -> void:
 	back_btn.add_theme_stylebox_override("pressed", _round(Color(0.1, 0.1, 0.12, 0.8)))
 	back_btn.pressed.connect(func(): Game.sound.emit("tap"); Game.enter(Game.place().back))
 	add_child(back_btn)
-	resized.connect(func(): back_btn.position = Vector2(10, size.y - 94); _place_figs())
+	veil = Control.new(); veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	veil.draw.connect(_draw_veil); veil.visible = false; add_child(veil)
+	move_child(frame, -1)
+	cam_btn = _icon_btn("📷", func(): camera(true)); shutter = _icon_btn("", _snap); cam_x = _icon_btn("✕", func(): camera(false))
+	shutter.custom_minimum_size = Vector2(104, 104)
+	for st in ["normal", "hover", "focus"]: shutter.add_theme_stylebox_override(st, _ring(Color(1, 1, 1, 0.92)))
+	shutter.add_theme_stylebox_override("pressed", _ring(Color(0.8, 0.8, 0.8, 1)))
+	resized.connect(func(): back_btn.position = Vector2(10, size.y - 94); _place_cam_btns(); _place_figs())
+	set_process(false)
 	Game.lean.connect(_on_lean)
+
+
+func _icon_btn(t: String, f: Callable) -> Button:
+	var b := Button.new(); b.text = t; b.add_theme_font_size_override("font_size", 36); b.custom_minimum_size = Vector2(84, 84)
+	for st in ["normal", "hover", "focus"]: b.add_theme_stylebox_override(st, _round(Color(0.04, 0.05, 0.07, 0.6)))
+	b.add_theme_stylebox_override("pressed", _round(Color(0.1, 0.1, 0.12, 0.8)))
+	b.pressed.connect(f); b.visible = false; add_child(b); return b
+
+
+func _ring(c: Color) -> StyleBoxFlat:   ## the shutter: a white disc in a dark ring
+	var s := StyleBoxFlat.new(); s.bg_color = c; s.set_corner_radius_all(52); s.border_color = Color(0.05, 0.05, 0.07, 0.7); s.set_border_width_all(8)
+	return s
+
+
+func _place_cam_btns() -> void:
+	cam_btn.position = Vector2(size.x - 94, size.y - 94)
+	shutter.position = Vector2(size.x - 124, (size.y - 104) / 2)
+	cam_x.position = Vector2(size.x - 94, 10)
+
+
+## ---------- the camera: raise it, drag the viewfinder where you want, wait for it to focus, take the shot
+func camera(on: bool) -> void:
+	if on == cam_mode: return
+	cam_mode = on; Game.sound.emit("tap")
+	if on:
+		frame.size = size * 0.36; frame.position = (size - frame.size) / 2; _still = 0.0; _focused = false
+	refresh()
+
+
+func _snap() -> void:
+	if not cam_mode: return
+	var r := Rect2(frame.position / size * 100.0, frame.size / size * 100.0)
+	var why: String = Game.take_photo(r, _art_key)
+	if why == "no film": Game.sound.emit("wrong"); Game.toast.emit("Out of film. The shop sells it."); return
+	var f := ColorRect.new(); f.color = Color.WHITE; f.mouse_filter = Control.MOUSE_FILTER_IGNORE; f.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(f)
+	var tw := create_tween(); tw.tween_property(f, "modulate:a", 0.0, 0.45); tw.tween_callback(f.queue_free)
+	veil.queue_redraw()
+
+
+func _process(dt: float) -> void:   # the viewfinder settles and focuses once you stop moving it
+	if not cam_mode: set_process(false); return
+	_still += dt
+	if _still > 0.3 and not _focused:
+		_focused = true; Game.sound.emit("tap"); frame.modulate.a = 1.0; veil.queue_redraw()
+
+
+func _draw_veil() -> void:
+	var f := Rect2(frame.position, frame.size); var dim := Color(0, 0, 0, 0.5)
+	veil.draw_rect(Rect2(0, 0, size.x, f.position.y), dim)
+	veil.draw_rect(Rect2(0, f.end.y, size.x, size.y - f.end.y), dim)
+	veil.draw_rect(Rect2(0, f.position.y, f.position.x, f.size.y), dim)
+	veil.draw_rect(Rect2(f.end.x, f.position.y, size.x - f.end.x, f.size.y), dim)
+	var c := Color(1, 1, 1, 0.95 if _focused else 0.4); var k := 26.0
+	for corner in [f.position, Vector2(f.end.x, f.position.y), f.end, Vector2(f.position.x, f.end.y)]:
+		var sx := 1.0 if corner.x == f.position.x else -1.0; var sy := 1.0 if corner.y == f.position.y else -1.0
+		veil.draw_line(corner, corner + Vector2(k * sx, 0), c, 4); veil.draw_line(corner, corner + Vector2(0, k * sy), c, 4)
+	var font := ThemeDB.fallback_font
+	veil.draw_string(font, f.position + Vector2(4, -10), "🎞 %d" % Game.board().get("film", 0), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 1, 1, 0.9))
+	var tip := "Drag the frame  ·  wait for it to focus  ·  press the white button"
+	var tw := font.get_string_size(tip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	veil.draw_string(font, Vector2((size.x - tw) / 2, size.y - 22), tip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.75))
 
 
 func _round(c: Color) -> StyleBoxFlat:
@@ -106,11 +182,18 @@ func refresh() -> void:
 	if MOON.has(key) and dark > 0:
 		moon.enabled = true; moon.position = MOON[key][0] * Vector2(ART_W, ART_H); moon.energy = MOON[key][1]; moon.texture_scale = MOON[key][2]
 	else: moon.enabled = false
-	back_btn.visible = pl.has("back") and Game.node == ""
-	frame.visible = b.get("type", "") == "camera"
+	# the camera: yours to raise when you're standing somewhere (not mid-conversation, not at the board)
+	var can_shoot: bool = not Game.ST.cards.is_empty() and Game.node == "" and not exam and pl.get("mode", "") != "board"
+	if not can_shoot: cam_mode = false
+	cam_btn.visible = can_shoot and not cam_mode; shutter.visible = cam_mode; cam_x.visible = cam_mode; veil.visible = cam_mode
+	back_btn.visible = pl.has("back") and Game.node == "" and not cam_mode
+	marks.visible = not cam_mode and cam.zoom == Vector2.ONE
+	if cam_mode: set_process(true); veil.queue_redraw(); _place_cam_btns()
+	frame.visible = b.get("type", "") == "camera" or cam_mode
 	if frame.visible and not frame.has_meta("placed"):
 		frame.set_meta("placed", true); frame.size = size * Vector2(0.44, 0.52); frame.position = size * Vector2(0.28, 0.24)
 	if not frame.visible: frame.remove_meta("placed")
+	if cam_mode: frame.modulate.a = 1.0 if _focused else 0.5
 	_place_figs()
 	marks.queue_redraw()
 
@@ -134,14 +217,16 @@ func _gui_input(e: InputEvent) -> void:
 	# touches arrive as mouse events too (Godot's default), so mouse events cover phone and laptop alike.
 	# a press that moves more than a little is a drag (pointing the light): letting go after it taps nothing
 	if e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT):
-		if frame.visible: frame.position = (frame.position + e.relative).clamp(Vector2.ZERO, size - frame.size)
+		if frame.visible:
+			frame.position = (frame.position + e.relative).clamp(Vector2.ZERO, size - frame.size)
+			if cam_mode: _still = 0.0; _focused = false; frame.modulate.a = 0.5; veil.queue_redraw()
 		else: _aim(e.position)
 		if e.position.distance_to(_press_at) > DRAG_PX: _dragged = true
 	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
 			_press_at = e.position; _dragged = false
 			if not frame.visible: _aim(e.position)
-		elif not _dragged: _tap(e.position)
+		elif not _dragged and not cam_mode: _tap(e.position)
 
 
 func _aim(p: Vector2) -> void:

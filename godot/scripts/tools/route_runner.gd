@@ -272,6 +272,14 @@ func s_link(a: String) -> void:
 	var r: String = g.board_link(p[0], p[1])
 	if r != "": fail("couldn't pin that string: " + r)
 
+## photo X Y W H: take a photo with the frame there (percent of the picture)
+func s_photo(a: String) -> void:
+	idle()
+	var n := a.split(" ", false)
+	if n.size() != 4: fail("photo needs x y w h"); return
+	var r: String = g.take_photo(Rect2(float(n[0]), float(n[1]), float(n[2]), float(n[3])), g.place().get("art", ""))
+	if r != "": fail("couldn't take the photo: " + r)
+
 func s_pin(a: String) -> void:
 	idle()
 	for id in a.split(" ", false):

@@ -441,6 +441,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 
 실 = thread
 압정 = tack
+필름 = camera
 
 === grammar
 # piece | what it does (shown when you tap it)
@@ -727,6 +728,7 @@ sign       |               |          | SunHi  -10%  +0Hz
 
 실 | thread, string
 압정 | thumbtack
+필름 | film (for a camera)
 
 === names
 # name | kind | what tapping it says (kind: name or sound). Keep these spoiler-free.

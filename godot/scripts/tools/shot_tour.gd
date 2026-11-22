@@ -21,6 +21,12 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		if n >= MAX or cmd in ["expect", "fx", "saved", "encounters", "noboard", "nospot", "done", "shown"]: return
 		await _wait(0.45)
 		await shot("%s_%s" % [cmd, arg.left(18)])
+		if cmd == "photo":   # show the viewfinder where that photo was taken
+			var n := arg.split(" ", false); var rm: Control = main.room
+			rm.camera(true); await _wait(0.1)
+			rm.frame.position = Vector2(float(n[0]), float(n[1])) / 100.0 * rm.size; rm.frame.size = Vector2(float(n[2]), float(n[3])) / 100.0 * rm.size
+			rm._still = 1.0; rm._focused = true; rm.frame.modulate.a = 1.0; rm.veil.queue_redraw()
+			await _wait(0.3); await shot("viewfinder"); rm.camera(false)
 		if cmd == "phone":   # show the phone itself, open on that thread
 			main._open("phone"); await _wait(0.3); await shot("phone_list"); _close_sheets()
 	await _wait(0.5)

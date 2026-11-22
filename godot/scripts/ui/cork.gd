@@ -91,7 +91,7 @@ func _autoplace(id: String) -> void:
 
 func _help_text() -> void:
 	var t := ""
-	if from != "": t = "Holding a string from: %s\nTap another pinned card, then \"Tie the string here\" on the right." % Game.card_label(Game.ST.cards[from])
+	if from != "": t = "Holding a string from: %s\nTap another pinned card, then \"Tie the string here\" on the right." % Game.card_label(Game.card(from))
 	elif not Game.F.has("board_tied"): t = "Tap a card to look at it.  Pin cards up with thumbtacks,\nthen tie string between them (the buttons on the right)."
 	_help.visible = t != ""
 	(_help.get_node("L") as Label).text = t
@@ -102,13 +102,13 @@ func _help_text() -> void:
 
 ## ---------- the cards
 const SIZES := {"person": Vector2(124, 160), "missing": Vector2(168, 226), "place": Vector2(196, 150), "thing": Vector2(144, 176),
-	"time": Vector2(112, 100), "note": Vector2(136, 116), "say": Vector2(226, 142)}
+	"time": Vector2(112, 100), "note": Vector2(136, 116), "say": Vector2(226, 142), "photo": Vector2(186, 164)}
 
 func _kind(cd: Dictionary) -> String: return "missing" if cd.kind == "person" and cd.get("missing", false) else cd.kind
 
 
 func _make(id: String) -> Control:
-	var cd: Dictionary = Game.ST.cards[id]; var k := _kind(cd)
+	var cd: Dictionary = Game.card(id); var k := _kind(cd)
 	var c := Control.new(); c.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.size = SIZES.get(k, Vector2(140, 160))
 	c.set_meta("tilt", float(absi(hash(id)) % 9 - 4) * 0.9)
 	c.draw.connect(_draw_card.bind(c, id))
@@ -140,6 +140,9 @@ func _make(id: String) -> Control:
 			_text(c, Game.plain(cd.ko), Rect2(6, 18, 100, 76), 34, INK)
 		"note":
 			_text(c, Game.plain(cd.ko), Rect2(6, 14, 124, 98), 23, INK)
+		"photo":   # one you took: exactly what was in your frame, printed black and white, where and when underneath
+			_photo(c, photo_tex(cd), Rect2(8, 8, 170, 124), _mat_bw(), TextureRect.STRETCH_SCALE)
+			_text(c, Game.plain(cd.ko), Rect2(4, 133, 178, 28), 16, Color("3a3226"))
 		"say":
 			_photo(c, Kit.face(cd.who, cd.get("ex", "neutral")), Rect2(8, 12, 42, 42), _mat_bw())
 			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(0, 56, 58, 34), 14, Color("5a5a6a"))
@@ -162,9 +165,21 @@ func _text(c: Control, t: String, r: Rect2, sz: int, col: Color) -> Label:
 	l.position = r.position; l.size = r.size; l.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.add_child(l); return l
 
 
+## a photo you took: the part of the place's drawing that was in your frame
+static func photo_tex(cd: Dictionary) -> Texture2D:
+	var path := "res://art/%s.png" % cd.get("art", "")
+	if not ResourceLoader.exists(path): return null
+	var t: Texture2D = load(path)
+	var r: Array = cd.rect
+	var a := AtlasTexture.new(); a.atlas = t
+	a.region = Rect2(r[0] / 100.0 * t.get_width(), r[1] / 100.0 * t.get_height(), r[2] / 100.0 * t.get_width(), r[3] / 100.0 * t.get_height())
+	return a
+
+
 ## a card's picture on its own (the paper on the right shows it bigger)
 static func _picture(cd: Dictionary) -> Texture2D:
 	match cd.kind:
+		"photo": return photo_tex(cd)
 		"say", "person": return Kit.face(cd.who, cd.get("ex", "neutral"))
 		"thing":
 			if cd.icon == "photo" and ResourceLoader.exists("res://art/photo.png"): return load("res://art/photo.png")
@@ -197,7 +212,7 @@ static func _mat_sepia() -> ShaderMaterial:
 
 ## the paper of each card (its children draw on top of this)
 func _draw_card(c: Control, id: String) -> void:
-	var cd: Dictionary = Game.ST.cards.get(id, {}); var k := _kind(cd); var r := Rect2(Vector2.ZERO, c.size)
+	var cd: Dictionary = Game.card(id); var k := _kind(cd); var r := Rect2(Vector2.ZERO, c.size)
 	var lifted: bool = not _press.is_empty() and _press.moved and _press.id == id
 	c.draw_rect(Rect2(Vector2(3, 5) * (2.2 if lifted else 1.0), c.size), Color(0, 0, 0, 0.38 if lifted else 0.3))   # shadow
 	match k:
@@ -215,7 +230,7 @@ func _draw_card(c: Control, id: String) -> void:
 			while x <= r.size.x: pts.append(Vector2(x, r.size.y + (3.0 if int(x / 7) % 2 == 0 else -1.0))); x += 7.0
 			c.draw_polyline(pts, Color("fbfaf2"), 4.0)
 		"missing": c.draw_rect(r, Color("f3f0e6"))
-		"place", "person", "thing": c.draw_rect(r, Color("f6f3ec"))
+		"place", "person", "thing", "photo": c.draw_rect(r, Color("f6f3ec"))
 		_: c.draw_rect(r, Color.WHITE)
 	if c.has_meta("preview"): return
 	if id == sel: c.draw_rect(r.grow(5), Kit.HILITE, false, 5)

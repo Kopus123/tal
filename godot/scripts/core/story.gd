@@ -64,7 +64,7 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 			sec = h.get_string(1); var arg := h.get_string(2).strip_edges()
 			match sec:
 				"scene": S.scene = arg; S.last = {}; S.count = 0; S.early = []
-				"place": cur = {"id": arg, "spots": [], "desc": []}; st.places[arg] = cur
+				"place": cur = {"id": arg, "spots": [], "desc": [], "subjects": []}; st.places[arg] = cur
 				"phone": cur = {"id": arg, "m": [], "fx": [], "name": arg, "av": "?", "c": "#888"}; st.phones.append(cur)
 				"examine": cur = {"id": arg, "details": [], "art": "", "prompt": "", "compare": ""}; st.examines[arg] = cur
 				"person": cur = {"id": arg, "at": {}, "greet": [], "chat": [], "story": [], "ask": [], "bye": []}; st.people[arg] = cur
@@ -218,6 +218,12 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				m = R("^spot\\s+\"([^\"]+)\"\\s+([\\d.]+)\\s+([\\d.]+)\\s+(->|=>)\\s+(.+?)(?:\\s+if\\s+(\\S+))?$").search(line)
 				if m:
 					cur.spots.append({"l": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "kind": m.get_string(4), "t": m.get_string(5), "c": m.get_string(6)})
+					continue
+				# something in the picture worth photographing: subject CARD X Y R (percent; R of the width).
+				# A photo with it mostly in the frame counts as that card on the board (nobody tells you which ones do)
+				m = R("^subject\\s+(\\S+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)$").search(line)
+				if m:
+					cur.subjects.append({"is": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "r": float(m.get_string(4))})
 					continue
 				if not line.begins_with("glow "): _warn(st, file, ln, line)
 			"scene":

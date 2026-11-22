@@ -331,8 +331,10 @@ func _effect(k: String, a: String) -> void:
 		"card":
 			for v in a.split(","): _board_add(v.strip_edges())
 		"supply":   # bought at the shop: a spool of string, or a box of five thumbtacks
-			if a.strip_edges() == "string": board().strings += 1
-			else: board().tacks += 5
+			match a.strip_edges():
+				"string": board().strings += 1
+				"film": board().film += FILM_ROLL
+				_: board().tacks += 5
 		_: push_warning("effect not in the Godot version yet: " + k)
 
 
@@ -870,11 +872,13 @@ func _job_effect(a: String) -> void:
 ## are up, its effects happen, silently (you find out by noticing a new place or option, like in real life).
 ## Strings are few: taking one down frays it (every second time, it snaps) and bends a thumbtack. Buy more.
 const STRING_PRICE := 500
+const FILM_ROLL := 12   ## shots on a roll of film
 const TACK_PRICE := 1000
 
 func board() -> Dictionary:
-	if not S.F.has("board"): S.F["board"] = {"cards": {}, "links": [], "strings": 4, "frayed": 0, "tacks": 5, "bent": 0, "takedowns": 0, "pins": 1}
+	if not S.F.has("board"): S.F["board"] = {"cards": {}, "links": [], "strings": 4, "frayed": 0, "tacks": 5, "bent": 0, "takedowns": 0, "pins": 1, "film": FILM_ROLL, "photos": {}, "shots": 0}
 	var b: Dictionary = S.F.board
+	if not b.has("photos"): b.photos = {}; b.film = FILM_ROLL; b.shots = 0
 	if not b.has("pins"):   # a board from before thumbtacks pinned cards: whatever has string on it is pinned
 		for l in b.links:
 			for id in [l[0], l[1]]:
@@ -896,14 +900,51 @@ func _board_add(id: String, quiet := false) -> void:
 	b.cards[id] = {"x": at[0], "y": at[1], "new": not quiet} if at.size() == 2 else {"x": 0.5, "y": 0.5, "new": not quiet, "auto": true}   # the board finds it a spot
 	b.cards[id].pinned = ST.cards[id].get("pinned", false)   # most go up loose: a thumbtack pins them
 	if not quiet:
-		toast.emit("New on your case board: " + card_label(ST.cards[id])); note("  new card: " + id)
+		toast.emit("New on your case board: " + card_label(card(id))); note("  new card: " + id)
+
+## a card by its id: one from the story, or a photo you took
+func card(id: String) -> Dictionary:
+	if ST.cards.has(id): return ST.cards[id]
+	return board().photos.get(id, {})
+
+
+## what a card counts as when the board is read: a photo of something that matters counts as that thing
+func _as(id: String) -> String:
+	var p: Dictionary = board().photos.get(id, {})
+	return p.is if not p.is_empty() and p.is != "" else id
+
+
+func _linked_as(a: String, b_: String) -> bool:
+	for l in board().links:
+		var x := _as(l[0]); var y := _as(l[1])
+		if (x == a and y == b_) or (x == b_ and y == a): return true
+	return false
+
+
+## the camera: a photo of whatever's in the frame (r = the frame, in percent of the picture). Every photo looks the
+## same on the board (where and when it was taken); whether something that matters was in it stays the game's secret.
+func take_photo(r: Rect2, art: String) -> String:
+	var b := board()
+	if b.film <= 0: return "no film"
+	b.film -= 1; b.shots += 1
+	var best: Dictionary = {}
+	for s in place().get("subjects", []):
+		if r.grow(-s.r * 0.5).has_point(Vector2(s.x, s.y)) and (best.is_empty() or s.r > best.r): best = s
+	var id := "ph_%d" % b.shots
+	var where: String = place().get("name", loc)
+	b.photos[id] = {"id": id, "kind": "photo", "art": art, "rect": [r.position.x, r.position.y, r.size.x, r.size.y],
+		"ko": "%s · %d일 %s" % [where, W.day, SLOT_KO.get(slot_name(), "")], "is": best.get("is", ""), "start": false}
+	b.cards[id] = {"x": 0.5, "y": 0.5, "new": true, "auto": true, "pinned": false}
+	note("  photo %s at %s [%d,%d %dx%d]%s" % [id, loc, r.position.x, r.position.y, r.size.x, r.size.y, (" of " + best.is) if not best.is_empty() else " (nothing in particular)"])
+	sound.emit("click"); save(); changed.emit(); return ""
+
 
 func card_label(c: Dictionary) -> String:
 	match c.kind:
 		"say": return ST.cast.get(c.who, {}).get("n", c.who) + ": " + plain(c.ko)
 		"thing": return plain(c.label)
 		"person": return ST.cast.get(c.who, {}).get("n", c.who)
-		"place", "time", "note": return plain(c.ko)
+		"place", "time", "note", "photo": return plain(c.ko)
 	return c.id
 
 func is_linked(a: String, b_: String) -> bool:
@@ -971,6 +1012,6 @@ func board_buy(what: String) -> bool:
 func _check_unlocks() -> void:
 	for u in ST.unlocks:
 		if S.F.has("unlocked_" + u.id): continue
-		if u.when.all(func(p): return is_linked(p[0], p[1])):
+		if u.when.all(func(p): return _linked_as(p[0], p[1])):
 			S.F["unlocked_" + u.id] = 1; note("  (the board opened: %s)" % u.id)
 			run_fx(u.fx)

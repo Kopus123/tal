@@ -64,7 +64,7 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 			sec = h.get_string(1); var arg := h.get_string(2).strip_edges()
 			match sec:
 				"scene": S.scene = arg; S.last = {}; S.count = 0; S.early = []
-				"place": cur = {"id": arg, "spots": [], "desc": [], "subjects": [], "glow": []}; st.places[arg] = cur
+				"place": cur = {"id": arg, "spots": [], "desc": [], "subjects": [], "glow": [], "lamps": []}; st.places[arg] = cur
 				"phone": cur = {"id": arg, "m": [], "fx": [], "name": arg, "av": "?", "c": "#888"}; st.phones.append(cur)
 				"examine": cur = {"id": arg, "details": [], "art": "", "prompt": "", "compare": ""}; st.examines[arg] = cur
 				"person": cur = {"id": arg, "at": {}, "greet": [], "chat": [], "story": [], "ask": [], "bye": []}; st.people[arg] = cur
@@ -228,6 +228,11 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				m = R("^subject\\s+(\\S+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)$").search(line)
 				if m:
 					cur.subjects.append({"is": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "r": float(m.get_string(4))})
+					continue
+				m = R("^lamp\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+(#[0-9a-fA-F]{6}))?(\\s+steady)?$").search(line)
+				if m:
+					cur.lamps.append({"x": float(m.get_string(1)), "y": float(m.get_string(2)), "r": float(m.get_string(3)),
+						"c": m.get_string(4) if m.get_string(4) != "" else "#ffb866", "steady": m.get_string(5) != ""})
 					continue
 				m = R("^glow\\s+(.+?)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+([\\d.]+))?$").search(line)
 				if m:

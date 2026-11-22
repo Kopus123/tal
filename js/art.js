@@ -171,6 +171,71 @@ function artGolmok(){
   s+=person(178,214,{top:'#e9a3b4',bot:'#c9452f',hanbok:1,long:1,s:.95})+person(214,214,{top:'#9fb7d9',bot:'#2d3f66',hanbok:1,s:1});
   return svg(s);
 }
+/* the alley at night: painted for the dark, not the day turned down. Moon and stars, paper lanterns lit from inside,
+   a warm window at the end of the alley, moonlight along the wall tops and down the middle of the path. */
+function artGolmokNight(){
+  const D=`<defs>
+   <linearGradient id="nSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070b1c"/><stop offset=".55" stop-color="#14203d"/><stop offset="1" stop-color="#26385c"/></linearGradient>
+   <radialGradient id="nMoonHalo"><stop offset="0" stop-color="#f6efd4" stop-opacity=".55"/><stop offset=".35" stop-color="#c8d4f0" stop-opacity=".18"/><stop offset="1" stop-color="#c8d4f0" stop-opacity="0"/></radialGradient>
+   <radialGradient id="nMoon" cx=".42" cy=".4"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6dcbc"/></radialGradient>
+   <linearGradient id="nPath" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3044"/><stop offset="1" stop-color="#1a1d29"/></linearGradient>
+   <linearGradient id="nSheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6d7fa8" stop-opacity=".45"/><stop offset="1" stop-color="#6d7fa8" stop-opacity="0"/></linearGradient>
+   <radialGradient id="nPool"><stop offset="0" stop-color="#ffb860" stop-opacity=".5"/><stop offset=".5" stop-color="#ff9c40" stop-opacity=".16"/><stop offset="1" stop-color="#ff9c40" stop-opacity="0"/></radialGradient>
+   <radialGradient id="nWarm"><stop offset="0" stop-color="#ffd58a" stop-opacity=".9"/><stop offset=".4" stop-color="#ffb35c" stop-opacity=".35"/><stop offset="1" stop-color="#ff9c40" stop-opacity="0"/></radialGradient>
+   <radialGradient id="nLamp" cx=".45" cy=".4"><stop offset="0" stop-color="#fff3d0"/><stop offset=".45" stop-color="LC"/><stop offset="1" stop-color="LD"/></radialGradient>
+   <pattern id="nStone" width="26" height="16" patternUnits="userSpaceOnUse"><rect width="26" height="16" fill="#1a1e2c"/><ellipse cx="7" cy="5" rx="7" ry="4.5" fill="#222838"/><ellipse cx="20" cy="5.5" rx="6" ry="4" fill="#1f2535"/><ellipse cx="13" cy="12.5" rx="7.5" ry="4" fill="#252b3d"/><ellipse cx="7" cy="3.6" rx="5" ry="1.3" fill="#323b54" opacity=".35"/><ellipse cx="13" cy="11" rx="5" ry="1.1" fill="#323b54" opacity=".3"/></pattern>
+   <pattern id="nLat" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#ffd796"/><path d="M0 0H8M0 0V8" stroke="#7a4a22" stroke-width="1.1"/></pattern>
+   <radialGradient id="nVig" cx=".5" cy=".55" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+  </defs>`;
+  let s=D+`<rect width="400" height="300" fill="url(#nSky)"/>`;
+  // stars (fixed, so the picture is the same every time)
+  let seed=11;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+  for(let i=0;i<70;i++){const x=rnd()*400,y=rnd()*120,r=rnd()<.12?1.1:.55;s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="#e9eefc" opacity="${(.35+rnd()*.6).toFixed(2)}"/>`}
+  // the moon
+  s+=`<circle cx="309" cy="24" r="62" fill="url(#nMoonHalo)"/><circle cx="309" cy="24" r="12" fill="url(#nMoon)"/><circle cx="305" cy="21" r="2.4" fill="#d8cda8" opacity=".5"/><circle cx="312" cy="28" r="1.6" fill="#d8cda8" opacity=".45"/>`;
+  // hills, moonlit along their ridges
+  s+=`<path d="M0,150 Q60,96 120,132 T240,112 T400,122 V300 H0Z" fill="#17233e"/><path d="M0,150 Q60,96 120,132 T240,112 T400,122" stroke="#3d5480" stroke-width="1.2" fill="none" opacity=".7"/>`;
+  s+=`<path d="M0,176 Q90,134 170,162 T330,142 T400,152 V300 H0Z" fill="#121a2e"/>`;
+  // the alley in perspective: the walls run toward the house at the end (vanishing point 200,150)
+  // the house at the end: its window is the warmest thing in the picture
+  s+=`<circle cx="200" cy="140" r="40" fill="url(#nWarm)" opacity=".5"/>`;
+  s+=`<rect x="181" y="128" width="38" height="30" fill="#241c18"/><rect x="186" y="133" width="13" height="12" fill="url(#nLat)"/><rect x="201" y="133" width="13" height="12" fill="url(#nLat)"/>`;
+  s+=`<path d="M172,129 Q181,124 186,126 L214,126 Q219,124 228,129 L222,117 L178,117Z" fill="#11141e"/><path d="M178,117 L222,117" stroke="#5a6f9c" stroke-width=".7"/>`;
+  s+=`<path d="M186,150 L214,150 L219,158 L181,158Z" fill="#ffb35c" opacity=".22"/>`;
+  // the ground: stones in perspective, darker as it comes toward you, moonlight down the middle
+  s+=`<path d="M40,300 L178,160 L222,160 L360,300Z" fill="url(#nPath)"/>`;
+  for(let k=1;k<9;k++){const t=k/9,y=160+140*t*t,x1=178-138*t*t,x2=222+138*t*t;s+=`<path d="M${x1.toFixed(1)},${y.toFixed(1)} L${x2.toFixed(1)},${y.toFixed(1)}" stroke="#0f1119" stroke-width="${(.4+t*1.4).toFixed(2)}" opacity=".6"/>`}
+  for(let k=-4;k<=4;k++)s+=`<path d="M${200+k*5},160 L${200+k*40},300" stroke="#0f1119" stroke-width=".7" opacity=".45"/>`;
+  s+=`<path d="M196,160 L204,160 L232,300 L168,300Z" fill="url(#nSheen)" opacity=".8"/>`;
+  // the walls (stones leaning with the perspective), their tiled tops catching the moon
+  s+=`<pattern id="nStoneL" href="#nStone" patternTransform="skewY(17)"/><pattern id="nStoneR" href="#nStone" patternTransform="skewY(-17)"/>`;
+  s+=`<path d="M0,92 L178,146 L178,160 L40,300 L0,300Z" fill="url(#nStoneL)"/><path d="M400,92 L222,146 L222,160 L360,300 L400,300Z" fill="url(#nStoneR)"/>`;
+  s+=`<path d="M0,92 L178,146 L178,160 L40,300 L0,300Z" fill="#8ea6d8" opacity=".05"/><path d="M400,92 L222,146 L222,160 L360,300 L400,300Z" fill="#03040a" opacity=".38"/>`;
+  s+=`<path d="M40,300 L178,160" stroke="#07080d" stroke-width="2.5"/><path d="M360,300 L222,160" stroke="#07080d" stroke-width="2.5"/>`;   // where wall meets ground
+  s+=`<path d="M-4,84 L179,141 L179,148 L-4,97Z" fill="#0d0f16"/><path d="M404,84 L221,141 L221,148 L404,97Z" fill="#0d0f16"/>`;
+  for(let x=4;x<176;x+=9){const y=84+(x+4)*57/183;s+=`<path d="M${x},${(y+1).toFixed(1)} l0,${(13-x*.05).toFixed(1)}" stroke="#1d2130" stroke-width="2.2"/>`}
+  for(let x=396;x>224;x-=9){const y=84+(404-x)*57/183;s+=`<path d="M${x},${(y+1).toFixed(1)} l0,${(13-(400-x)*.05).toFixed(1)}" stroke="#151823" stroke-width="2.2"/>`}
+  s+=`<path d="M-4,84 L179,141" stroke="#8aa1d2" stroke-width="1.4" opacity=".8"/><path d="M404,84 L221,141" stroke="#8aa1d2" stroke-width="1.4" opacity=".45"/>`;
+  // a wooden gate in the left wall, standing on the ground line, with its own little roof
+  s+=`<path d="M64,275.7 L104,235 L104,174 L64,186Z" fill="#2a1d14"/><path d="M84,255 L84,180" stroke="#120c08" stroke-width="1.6"/>`;
+  s+=`<path d="M58,184 L110,168 L108,162 L62,177Z" fill="#0d0f16"/><path d="M62,177 L108,162" stroke="#8aa1d2" stroke-width=".9" opacity=".7"/>`;
+  s+=`<circle cx="81" cy="218" r="1.4" fill="#c9973f"/><circle cx="87" cy="215" r="1.4" fill="#c9973f"/><path d="M64,275.7 L104,235" stroke="#07080d" stroke-width="2"/>`;
+  // jars by the foot of the right wall, on the ground, in its shadow
+  s+=`<g><ellipse cx="300" cy="262" rx="15" ry="17" fill="#1a130f"/><ellipse cx="322" cy="272" rx="11" ry="12" fill="#16110d"/><ellipse cx="300" cy="246" rx="7.5" ry="2.2" fill="#2a211b"/><path d="M289,253 Q295,247 300,248" stroke="#6b7fa8" stroke-width="1" fill="none" opacity=".5"/><ellipse cx="310" cy="282" rx="28" ry="4" fill="#000" opacity=".35"/></g>`;
+  // a cat on the left wall, watching you; its eyes catch the lantern light
+  s+=`<g transform="translate(40,108) rotate(17)"><path d="M0,0 Q4,-12 12,-12 L14,-18 L17,-12 L21,-12 L23,-18 L25,-11 Q30,-6 28,0Z" fill="#06070b"/><path d="M28,-2 Q42,-4 40,-16" stroke="#06070b" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="16" cy="-8" r="1.2" fill="#ffd66b"/><circle cx="22" cy="-8" r="1.2" fill="#ffd66b"/></g>`;
+  // the lantern string, lit
+  s+=`<path d="M-10,40 Q100,70 200,48 T410,44" stroke="#05060a" fill="none" stroke-width="1.2"/>`;
+  const cs=[['#e2603f','#7a1e12'],['#4fb090','#1d4a3c'],['#f2c25a','#8a5a16'],['#6f93d6','#253f78']];
+  for(let i=0;i<9;i++){const x=10+i*46,y=40+Math.sin(i*1.3)*8+14,[c,d]=cs[i%4],id='nL'+i;
+    s+=`<radialGradient id="${id}" cx=".45" cy=".4"><stop offset="0" stop-color="#fff3d0"/><stop offset=".5" stop-color="${c}"/><stop offset="1" stop-color="${d}"/></radialGradient>`;
+    s+=`<circle cx="${x}" cy="${y+3}" r="26" fill="url(#nWarm)" opacity=".45"/>`;
+    s+=`<line x1="${x}" y1="${y-10}" x2="${x}" y2="${y-5}" stroke="#05060a"/><ellipse cx="${x}" cy="${y+3}" rx="6.5" ry="8.5" fill="url(#${id})"/>`;
+    s+=`<path d="M${x-6},${y+3} Q${x},${y+5} ${x+6},${y+3}" stroke="${d}" stroke-width=".6" fill="none" opacity=".6"/><rect x="${x-3}" y="${y-6}" width="6" height="2" fill="#05060a"/><rect x="${x-3}" y="${y+10}" width="6" height="2" fill="#05060a"/>`}
+  s+=`<rect width="400" height="300" fill="url(#nVig)"/>`;
+  return svg(s);
+}
+
 function artSan(){
   let s=`<rect width="400" height="300" fill="#cfe0dc"/>`+mountains('#86a596','#5f7f6f');
   s+=`<path d="M160,300 Q200,220 190,170 Q185,150 205,130" stroke="#d6c39b" stroke-width="40" fill="none"/>`;
@@ -445,7 +510,7 @@ const ART={
   ph_shed:()=>artPH('창고 · the shed',{window:1}), ph_door:()=>artPH('문 · the door'), ph_bench:()=>artPH('작업대 · the workbench'),
   ph_shelf:()=>artPH('선반 · the shelf'), ph_window:()=>artPH('창문 · the window',{window:1}), ph_floor:()=>artPH('구석 · the dark corner'),
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
-  gongbang:artGongbang, golmok:artGolmok, san:artSan, sikdang:artSikdang,
+  gongbang:artGongbang, golmok:artGolmok, golmok_night:artGolmokNight, san:artSan, sikdang:artSikdang,
   jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate, hall:artHall,
   mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true), mud:closeMud,
   photo_old:()=>closeMask(true).replace('<svg class="art"','<svg class="art" style="filter:sepia(.85) contrast(.9) brightness(1.08)"')

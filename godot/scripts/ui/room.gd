@@ -34,6 +34,7 @@ var veil: Control                  ## the dark around the viewfinder, the film c
 var cam_mode := false
 var glow: Control                  ## soft rings on what someone just named
 var drift: CPUParticles2D          ## dust, leaves, motes in the air
+var _lamps: Array = []             ## the place's own lights (lanterns, a lit window)
 var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
 var _focused := false
 var _resizing := false
@@ -209,6 +210,7 @@ func refresh() -> void:
 	if not frame.visible: frame.remove_meta("placed")
 	if cam_mode: frame.modulate.a = 1.0 if _focused else 0.5
 	_place_figs()
+	if _lamps_for != _art_key: _set_lamps(pl.get("lamps", []) if not exam else [])
 	marks.queue_redraw(); glow.queue_redraw()
 	_drift(pl.get("ambient", "") if not exam else "")
 
@@ -230,12 +232,29 @@ func _draw_glow() -> void:
 		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.25 * a), 12.0, true)
 
 
+## ---------- the place's own lights: each warms the drawing around it; lanterns breathe a little, like flames
+var _lamps_for := ""
+func _set_lamps(list: Array) -> void:
+	_lamps_for = _art_key
+	for l in _lamps: l.queue_free()
+	_lamps.clear()
+	for d in list:
+		var l := _light(Color(d.c), 0.9 if d.steady else 0.55, d.r / 100.0 * ART_W * 2.0 / 512.0); l.enabled = true
+		l.position = Vector2(d.x, d.y) / 100.0 * Vector2(ART_W, ART_H); vp.add_child(l); _lamps.append(l)
+		if d.steady: continue
+		var tw := l.create_tween().set_loops()
+		for i in 4:
+			var e := randf_range(0.42, 0.62); var t := randf_range(0.12, 0.45)
+			tw.tween_property(l, "energy", e, t).set_trans(Tween.TRANS_SINE)
+
+
 ## ---------- the air: dust in sunbeams, falling leaves, motes of light
 var _drift_kind := ""
 func _drift(kind: String) -> void:
 	if kind == _drift_kind and drift.emitting == (kind != ""): return
 	_drift_kind = kind; drift.emitting = false
-	if not kind in ["dust", "leaves", "motes"]: return
+	if not kind in ["dust", "leaves", "motes", "fireflies"]: return
+	drift.color_ramp = null
 	drift.position = Vector2(size.x / 2, 0); drift.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	drift.emission_rect_extents = Vector2(size.x / 2, 4); drift.direction = Vector2(0, 1); drift.spread = 25
 	match kind:
@@ -253,6 +272,12 @@ func _drift(kind: String) -> void:
 			drift.amount = 18; drift.lifetime = 7.0; drift.gravity = Vector2(0, -4); drift.initial_velocity_min = 4; drift.initial_velocity_max = 10
 			drift.angular_velocity_min = 0; drift.angular_velocity_max = 0; drift.scale_amount_min = 2.5; drift.scale_amount_max = 4.5
 			drift.color = Color(1, 0.88, 0.55, 0.7)
+		"fireflies":   # a few slow sparks that brighten and fade
+			drift.position = Vector2(size.x / 2, size.y * 0.7); drift.emission_rect_extents = Vector2(size.x * 0.45, size.y * 0.25); drift.direction = Vector2(0, -1); drift.spread = 180
+			drift.amount = 9; drift.lifetime = 7.0; drift.gravity = Vector2(0, -2); drift.initial_velocity_min = 3; drift.initial_velocity_max = 9
+			drift.angular_velocity_min = 0; drift.angular_velocity_max = 0; drift.scale_amount_min = 4; drift.scale_amount_max = 6
+			drift.color = Color(1, 0.92, 0.5, 1)
+			var g := Gradient.new(); g.set_color(0, Color(1, 1, 1, 0)); g.set_color(1, Color(1, 1, 1, 0)); g.add_point(0.5, Color(1, 1, 1, 0.9)); drift.color_ramp = g
 	drift.preprocess = drift.lifetime   # already in the air when you arrive
 	drift.emitting = true
 

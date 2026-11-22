@@ -899,8 +899,9 @@ func _board_add(id: String, quiet := false) -> void:
 	var at: Array = ST.cards[id].get("at", [])
 	b.cards[id] = {"x": at[0], "y": at[1], "new": not quiet} if at.size() == 2 else {"x": 0.5, "y": 0.5, "new": not quiet, "auto": true}   # the board finds it a spot
 	b.cards[id].pinned = ST.cards[id].get("pinned", false)   # most go up loose: a thumbtack pins them
-	if not quiet:
-		toast.emit("New on your case board: " + card_label(card(id))); note("  new card: " + id)
+	if not quiet:   # new things land in the evidence box; you choose what goes up
+		b.cards[id].boxed = true; b.cards[id].auto = true
+		toast.emit("New in your evidence box: " + card_label(card(id))); note("  new card (in the box): " + id)
 
 ## a card by its id: one from the story, or a photo you took
 func card(id: String) -> Dictionary:
@@ -934,7 +935,7 @@ func take_photo(r: Rect2, art: String) -> String:
 	var where: String = place().get("name", loc)
 	b.photos[id] = {"id": id, "kind": "photo", "art": art, "rect": [r.position.x, r.position.y, r.size.x, r.size.y],
 		"ko": "%s · %d일 %s" % [where, W.day, SLOT_KO.get(slot_name(), "")], "is": best.get("is", ""), "start": false}
-	b.cards[id] = {"x": 0.5, "y": 0.5, "new": true, "auto": true, "pinned": false}
+	b.cards[id] = {"x": 0.5, "y": 0.5, "new": true, "auto": true, "pinned": false, "boxed": true}   # into the box
 	note("  photo %s at %s [%d,%d %dx%d]%s" % [id, loc, r.position.x, r.position.y, r.size.x, r.size.y, (" of " + best.is) if not best.is_empty() else " (nothing in particular)"])
 	sound.emit("click"); save(); changed.emit(); return ""
 
@@ -953,11 +954,46 @@ func is_linked(a: String, b_: String) -> bool:
 	return false
 
 func is_pinned(id: String) -> bool: return board().cards.get(id, {}).get("pinned", false)
+func is_boxed(id: String) -> bool: return board().cards.get(id, {}).get("boxed", false)
+
+## the evidence box: what's in it (newest first), and how many you haven't looked at yet
+func boxed() -> Array:
+	var out: Array = []
+	for id in board().cards:
+		if is_boxed(id): out.push_front(id)
+	return out
+
+func box_unseen() -> int:
+	return boxed().filter(func(id): return board().cards[id].get("new", false)).size()
+
+func box_seen() -> void:
+	for id in boxed(): board().cards[id].new = false
+	save()
+
+## put a card away: its strings and its tack come back to you as they were (tidying never costs anything)
+func board_box(id: String) -> void:
+	var b := board()
+	if not b.cards.has(id) or is_boxed(id): return
+	for l in b.links.duplicate():
+		if id in [l[0], l[1]]:
+			b.links.erase(l); b.strings += 1
+			if l.size() > 2 and l[2]: b.frayed = b.get("frayed", 0) + 1
+	if is_pinned(id): b.tacks += 1
+	b.cards[id].pinned = false; b.cards[id].boxed = true; b.cards[id].new = false; b.cards[id].auto = true
+	note("  into the box: " + id); sound.emit("tap"); save(); changed.emit()
+
+## take one out of the box: it goes up loose (pin it with a thumbtack)
+func board_unbox(id: String) -> void:
+	var b := board()
+	if not is_boxed(id): return
+	b.cards[id].boxed = false; b.cards[id].new = false; b.cards[id].pinned = false; b.cards[id].auto = true
+	note("  out of the box: " + id); sound.emit("tap"); save(); changed.emit()
 
 ## pin a loose card up with a thumbtack ("" when it worked, otherwise why not)
 func board_pin(id: String) -> String:
 	var b := board()
 	if not b.cards.has(id) or is_pinned(id): return "same"
+	if is_boxed(id): return "boxed"
 	if b.tacks <= 0: return "no tacks"
 	b.tacks -= 1; b.cards[id].pinned = true
 	note("  pinned: " + id); sound.emit("click"); save(); changed.emit(); return ""

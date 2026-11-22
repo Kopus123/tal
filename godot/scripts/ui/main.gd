@@ -67,6 +67,7 @@ func _build() -> void:
 	card = _card(); room.add_child(card)
 	cork = load("res://scripts/ui/cork.gd").new(); cork.visible = false; arc.add_child(cork)
 	cork.selected.connect(func(id): card_sel = id; _refresh())
+	cork.box_open.connect(_box)
 	clock_btn = Kit.button("", true, 18); clock_btn.position = Vector2(12, 12); clock_btn.pressed.connect(_day_panel); room.add_child(clock_btn)
 
 	paper = PanelContainer.new(); paper.size_flags_horizontal = Control.SIZE_EXPAND_FILL; paper.custom_minimum_size.x = 400
@@ -216,6 +217,7 @@ func _lab() -> void:
 			var a: String = l[0]; var b: String = l[1]
 			_act("✂  Take down the string to %s%s" % [Game.card_label(Game.card(other)), "  (frayed: it'll snap)" if worn else ""], func(): Game.board_unlink(a, b))
 		if pinned and cork.from == "": _act("Pull the thumbtack out", func(): Game.board_unpin(id))
+		if cork.from == "": _act("📦  Put it in the box", func(): card_sel = ""; cork.sel = ""; Game.board_box(id); cork.refresh(); _refresh())
 	else:
 		_text(Kit.esc(Game.desc()), 22)
 		if cork.from != "": _act("Put the string down", func(): cork.drop())
@@ -239,6 +241,23 @@ func card_big(id: String) -> void:
 	x.position = Vector2(size.x - 92, 20)
 	x.pressed.connect(func(): o.queue_free())
 	o.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed: Game.sound.emit("tap"); o.queue_free())
+
+
+## the evidence box: everything you've taken down, and everything new. Put any of it back up.
+func _box() -> void:
+	var inner := Kit.sheet(self, "증거 상자 · Evidence box", 0.7)
+	var ids: Array = Game.boxed()
+	if ids.is_empty(): inner.add_child(Kit.label("Empty. Drag a card onto the box to put it away.", 20, Kit.MUTE, true))
+	for id in ids:
+		var cd: Dictionary = Game.card(id)
+		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 14); inner.add_child(row)
+		var pic := TextureRect.new(); pic.texture = cork._picture(cd); pic.custom_minimum_size = Vector2(110, 84)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(pic)
+		var l := Kit.label(("● " if Game.board().cards[id].get("new", false) else "") + Game.card_label(cd), 20, Kit.PAPER_INK, true)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(l)
+		var b := Kit.button("Put it up", true, 18); row.add_child(b)
+		b.pressed.connect(func(): Game.board_unbox(id); cork.refresh(); Kit.close(inner); _box())
+	Game.box_seen(); cork.queue_redraw_all()
 
 
 func _lab_pin(id: String) -> void:

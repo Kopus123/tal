@@ -41,6 +41,7 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		var pinned := ids.filter(func(i): return Game.is_pinned(i))
 		main.cork.carry(pinned[0]); main.cork.pick(pinned[1]); await _wait(0.3); await shot("board_carry")
 		main.cork.drop(); main._menu(); await _wait(0.3); await shot("board_menu"); _close_sheets()
+		main._box(); await _wait(0.3); await shot("board_box"); _close_sheets()
 	for what in ["notebook", "board", "phone"]:
 		if what == "phone" and not Game.has_phone(): continue
 		main._open(what); await _wait(0.4); await shot("open_" + what); _close_sheets()

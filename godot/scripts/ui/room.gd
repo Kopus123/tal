@@ -34,6 +34,8 @@ var veil: Control                  ## the dark around the viewfinder, the film c
 var cam_mode := false
 var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
 var _focused := false
+var _resizing := false
+var _last_snap := 0
 var _art_key := ""
 var _ripples := []
 var _empty := 0
@@ -101,12 +103,15 @@ func camera(on: bool) -> void:
 	if on == cam_mode: return
 	cam_mode = on; Game.sound.emit("tap")
 	if on:
+		frame.set_meta("placed", true)
 		frame.size = size * 0.36; frame.position = (size - frame.size) / 2; _still = 0.0; _focused = false
 	refresh()
 
 
 func _snap() -> void:
 	if not cam_mode: return
+	if Time.get_ticks_msec() - _last_snap < 700: return   # the film has to wind on
+	_last_snap = Time.get_ticks_msec()
 	var r := Rect2(frame.position / size * 100.0, frame.size / size * 100.0)
 	var why: String = Game.take_photo(r, _art_key)
 	if why == "no film": Game.sound.emit("wrong"); Game.toast.emit("Out of film. The shop sells it."); return
@@ -134,7 +139,10 @@ func _draw_veil() -> void:
 		veil.draw_line(corner, corner + Vector2(k * sx, 0), c, 4); veil.draw_line(corner, corner + Vector2(0, k * sy), c, 4)
 	var font := ThemeDB.fallback_font
 	veil.draw_string(font, f.position + Vector2(4, -10), "🎞 %d" % Game.board().get("film", 0), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 1, 1, 0.9))
-	var tip := "Drag the frame  ·  wait for it to focus  ·  press the white button"
+	var hc := f.end   # the corner you drag to resize
+	veil.draw_circle(hc, 16, Color(1, 1, 1, 0.9)); veil.draw_line(hc - Vector2(7, 7), hc + Vector2(7, 7), Color(0.1, 0.1, 0.12), 2.5)
+	veil.draw_line(hc + Vector2(7, 7), hc + Vector2(1, 7), Color(0.1, 0.1, 0.12), 2.5); veil.draw_line(hc + Vector2(7, 7), hc + Vector2(7, 1), Color(0.1, 0.1, 0.12), 2.5)
+	var tip := "Drag to move  ·  drag the corner (or pinch) to resize  ·  press the white button"
 	var tw := font.get_string_size(tip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 	veil.draw_string(font, Vector2((size.x - tw) / 2, size.y - 22), tip, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.75))
 
@@ -214,19 +222,34 @@ func _place_figs() -> void:
 
 ## ---------- input: tap a spot, drag the light (or the camera frame), or tap nothing
 func _gui_input(e: InputEvent) -> void:
+	if e is InputEventMagnifyGesture and cam_mode:   # pinch the viewfinder bigger or smaller
+		_frame_size(frame.size.x / size.x * e.factor, true); _still = 0.0; _focused = false; return
 	# touches arrive as mouse events too (Godot's default), so mouse events cover phone and laptop alike.
 	# a press that moves more than a little is a drag (pointing the light): letting go after it taps nothing
 	if e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT):
 		if frame.visible:
-			frame.position = (frame.position + e.relative).clamp(Vector2.ZERO, size - frame.size)
+			if _resizing: _frame_size((e.position.x - frame.position.x) / size.x, false)
+			else: frame.position = (frame.position + e.relative).clamp(Vector2.ZERO, size - frame.size)
 			if cam_mode: _still = 0.0; _focused = false; frame.modulate.a = 0.5; veil.queue_redraw()
 		else: _aim(e.position)
 		if e.position.distance_to(_press_at) > DRAG_PX: _dragged = true
 	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
 			_press_at = e.position; _dragged = false
+			_resizing = cam_mode and e.position.distance_to(frame.position + frame.size) < 56
 			if not frame.visible: _aim(e.position)
-		elif not _dragged and not cam_mode: _tap(e.position)
+		else:
+			_resizing = false
+			if not _dragged and not cam_mode: _tap(e.position)
+
+
+## the viewfinder's size, as a fraction of the picture's width (it keeps the picture's shape); pinch or drag its corner
+func _frame_size(k: float, keep_center: bool) -> void:
+	k = clampf(k, 0.12, 0.8)
+	var c := frame.position + frame.size / 2
+	frame.size = size * k
+	frame.position = ((c - frame.size / 2) if keep_center else frame.position).clamp(Vector2.ZERO, size - frame.size)
+	veil.queue_redraw()
 
 
 func _aim(p: Vector2) -> void:

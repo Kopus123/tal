@@ -283,8 +283,20 @@ func s_photo(a: String) -> void:
 func s_pin(a: String) -> void:
 	idle()
 	for id in a.split(" ", false):
+		g.board_unbox(id)   # out of the box first, like you would
 		var r: String = g.board_pin(id)
 		if r != "": fail("couldn't pin %s: %s" % [id, r]); return
+
+func s_box(a: String) -> void:
+	for id in a.split(" ", false):
+		if not g.board().cards.has(id): fail('"%s" is not on your board' % id); return
+		g.board_box(id)
+		if not g.is_boxed(id): fail("%s didn't go in the box" % id); return
+
+func s_unbox(a: String) -> void:
+	for id in a.split(" ", false):
+		if not g.is_boxed(id): fail("%s isn't in the box" % id); return
+		g.board_unbox(id)
 
 func s_unlink(a: String) -> void:
 	var p := a.split(" ", false)

@@ -8,6 +8,7 @@ extends Control
 ## pinned cards can have strings. A fresh string comes down frayed, a frayed one snaps; a tack pulled out is bent.
 
 signal selected(id: String)
+signal box_open                    ## the evidence box was tapped
 
 const INK := Color("1f2a4a")       ## pen ink
 const STRING := Color(0.74, 0.07, 0.07)
@@ -45,13 +46,13 @@ func _inner() -> Rect2:   ## the cork inside the frame
 func refresh() -> void:
 	var b: Dictionary = Game.board()
 	for id in _cards.keys():
-		if not b.cards.has(id): _cards[id].queue_free(); _cards.erase(id)
+		if not b.cards.has(id) or Game.is_boxed(id): _cards[id].queue_free(); _cards.erase(id)
 	for id in b.cards:
-		if not _cards.has(id): _cards[id] = _make(id); add_child(_cards[id])
+		if not _cards.has(id) and not Game.is_boxed(id): _cards[id] = _make(id); add_child(_cards[id])
 	if sel != "" and not _cards.has(sel): sel = ""
 	if size.x > 0:
 		for id in b.cards:
-			if b.cards[id].get("auto", false): _autoplace(id)
+			if b.cards[id].get("auto", false) and _cards.has(id): _autoplace(id)
 	move_child(_top, -1); move_child(_help, -1)   # strings over cards; the how-to over everything
 	_layout(); queue_redraw()
 
@@ -82,7 +83,7 @@ func _autoplace(id: String) -> void:
 			var p := Vector2(i / 8.0, j / 6.0); var at := r.position + p * room
 			var cover := 0.0
 			for o in b.cards:
-				if o == id or b.cards[o].get("auto", false): continue
+				if o == id or b.cards[o].get("auto", false) or not _cards.has(o): continue
 				var oc: Control = _cards[o]; var op: Vector2 = r.position + Vector2(b.cards[o].x, b.cards[o].y) * (r.size - oc.size * s)
 				cover += Rect2(at, me).intersection(Rect2(op, oc.size * s)).get_area()
 			if cover < least - 1.0: least = cover; best = p
@@ -262,7 +263,7 @@ func _gui_input(e: InputEvent) -> void:
 				_press.grab = e.position - _cards[_press.id].position   # where on the card your finger is
 				move_child(_cards[_press.id], _top.get_index() - 1)    # it comes to the front
 		else:
-			_release()
+			_release(e.position)
 	elif e is InputEventMouseMotion and not _press.is_empty() and (e.button_mask & MOUSE_BUTTON_MASK_LEFT):
 		if not _press.moved and e.position.distance_to(_press.at) > 22: _press.moved = true
 		if _press.moved and _press.id != "":   # drag the card
@@ -273,9 +274,14 @@ func _gui_input(e: InputEvent) -> void:
 			_place(_press.id, Game.board().cards[_press.id], r, _s()); _top.queue_redraw()
 
 
-func _release() -> void:
+func _release(p: Vector2) -> void:
 	var pr := _press; _press = {}
 	if pr.is_empty(): return
+	if pr.moved and pr.id != "" and box_rect().has_point(p):   # dropped on the box: put away
+		if sel == pr.id: sel = ""
+		if from == pr.id: from = ""
+		Game.board_box(pr.id); refresh(); selected.emit(sel); return
+	if not pr.moved and pr.id == "" and box_rect().has_point(p): Game.sound.emit("tap"); box_open.emit(); return
 	if pr.moved:
 		if pr.id != "": Game.save(); _place(pr.id, Game.board().cards[pr.id], _inner(), _s())   # saved once, when you let go
 		_top.queue_redraw(); return
@@ -364,6 +370,38 @@ func _draw() -> void:
 	for i in 6: draw_rect(Rect2(r.position + Vector2(0, i * 2 * s), Vector2(r.size.x, 2 * s)), Color(0, 0, 0, 0.16 - i * 0.025))
 
 
+## the evidence box, in the bottom right corner of the cork
+func box_rect() -> Rect2:
+	var s := _s(); var r := _inner(); var sz := Vector2(176, 104) * s
+	return Rect2(r.end - sz - Vector2(10, 4) * s, sz)
+
+
+func _draw_box() -> void:
+	var s := _s(); var r := box_rect(); var n: int = Game.box_unseen()
+	# new things stick up out of the top, with a little paper tag saying how many
+	if n > 0:
+		for i in mini(n, 3):
+			var w := Vector2(r.position.x + r.size.x * (0.22 + 0.22 * i), r.position.y + 10 * s)
+			var pts := PackedVector2Array([Vector2(-22, 0), Vector2(22, 0), Vector2(24, -34 - 6 * (i % 2)), Vector2(-20, -36 - 6 * (i % 2))])
+			var rot := deg_to_rad(-8.0 + 8.0 * i)
+			var poly := PackedVector2Array()
+			for q in pts: poly.append(w + (q * s).rotated(rot))
+			_top.draw_colored_polygon(poly, Color("f6f3ec") if i != 1 else Color("f8e36f"))
+			_top.draw_polyline(poly + PackedVector2Array([poly[0]]), Color(0, 0, 0, 0.25), 1.0)
+	_top.draw_rect(Rect2(r.position + Vector2(4, 6) * s, r.size), Color(0, 0, 0, 0.35))
+	_top.draw_rect(r, Color("a9783f"))
+	_top.draw_rect(Rect2(r.position, Vector2(r.size.x, 16 * s)), Color("8a5f2e"))                     # the rim
+	_top.draw_rect(Rect2(r.position + Vector2(r.size.x * 0.3, r.size.y * 0.42), Vector2(r.size.x * 0.4, 30 * s)), Color("efe6cf"))   # its label
+	var font := ThemeDB.fallback_font
+	var lw := font.get_string_size("증거", HORIZONTAL_ALIGNMENT_LEFT, -1, int(22 * s)).x
+	_top.draw_string(font, Vector2(r.get_center().x - lw / 2, r.position.y + r.size.y * 0.42 + 23 * s), "증거", HORIZONTAL_ALIGNMENT_LEFT, -1, int(22 * s), Color("3a2a1a"))
+	if n > 0:
+		var tag := Rect2(r.end.x - 40 * s, r.position.y - 14 * s, 34 * s, 28 * s)
+		_top.draw_rect(tag, Color("fbf6e9")); _top.draw_rect(tag, Color(0, 0, 0, 0.3), false, 1.0)
+		var t := str(n); var tw := font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, int(20 * s)).x
+		_top.draw_string(font, Vector2(tag.get_center().x - tw / 2, tag.end.y - 7 * s), t, HORIZONTAL_ALIGNMENT_LEFT, -1, int(20 * s), Color("b3241c"))
+
+
 ## a string hangs a little: more the longer it is
 func _curve(a: Vector2, b: Vector2) -> PackedVector2Array:
 	var sag := clampf(a.distance_to(b) * 0.07, 6.0, 34.0) * _s()
@@ -377,6 +415,7 @@ func _curve(a: Vector2, b: Vector2) -> PackedVector2Array:
 
 func _draw_top() -> void:
 	var s := _s(); var b: Dictionary = Game.board()
+	_draw_box()
 	for l in b.links:
 		if not (_cards.has(l[0]) and _cards.has(l[1])): continue
 		var pts := _curve(_pin(l[0]), _pin(l[1]))

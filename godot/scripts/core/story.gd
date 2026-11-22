@@ -72,7 +72,7 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				"encounter": cur = {"id": arg, "at": [], "scene": "", "when": ""}; st.encounters.append(cur)
 				"job": cur = {"id": arg, "ko": arg, "en": arg, "level": "easy", "client": "", "pay": 0, "thanks": 1, "when": "", "note": "", "start": "", "ask": {}}; st.jobs[arg] = cur
 				"pattern": cur = {}   # notebook pattern pages: not in the Godot version yet
-				"card": cur = {"id": arg, "kind": "", "start": false}; st.cards[arg] = cur
+				"card": cur = {"id": arg, "kind": "", "start": false, "at": []}; st.cards[arg] = cur
 				"unlock": cur = {"id": arg, "when": [], "fx": []}; st.unlocks.append(cur)
 			continue
 		var m: RegExMatch
@@ -229,7 +229,9 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				match head[0]:
 					"say": cur.kind = "say"; cur.who = head[1]; cur.ex = head[2] if head.size() > 2 else "neutral"; cur.ko = p[1] if p.size() > 1 else ""
 					"thing": cur.kind = "thing"; cur.icon = head[1]; cur.label = p[1] if p.size() > 1 else ""; cur.ko = p[2] if p.size() > 2 else ""
-					"person": cur.kind = "person"; cur.who = head[1]
+					"person": cur.kind = "person"; cur.who = head[1]; cur.missing = head.size() > 2 and head[2] == "missing"
+					"note": cur.kind = "note"; cur.color = head[1] if head.size() > 1 else "yellow"; cur.ko = p[1] if p.size() > 1 else ""; cur.en = p[2] if p.size() > 2 else ""
+					"at": cur.at = [float(head[1]) / 100.0, float(head[2]) / 100.0] if head.size() > 2 else []
 					"place": cur.kind = "place"; cur.art = head[1]; cur.ko = p[1] if p.size() > 1 else ""; cur.en = p[2] if p.size() > 2 else ""
 					"time": cur.kind = "time"; cur.icon = head[1]; cur.ko = p[1] if p.size() > 1 else ""
 					"start": cur.start = true

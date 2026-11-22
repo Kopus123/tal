@@ -94,10 +94,11 @@ func refresh() -> void:
 		_exam_miss = 0
 	# the light: night darkness (with a flashlight), or the time of day
 	var dark := float(pl.get("dark", "0"))
-	if exam or pl.get("light", "") == "own": night.color = Color.WHITE
+	if exam: night.color = Color.WHITE
 	elif dark > 0:
 		var v := 1.0 - dark
 		night.color = Color(v * 0.9, v * 0.95, v * 1.15).clamp()
+	elif pl.get("light", "") == "own": night.color = Color.WHITE
 	else:
 		var sky: Color = SKY[Game.slot_name()] if Game.S.F.has("started") else Color.WHITE
 		night.color = sky.lerp(Color.WHITE, 0.55) if pl.get("light", "") == "indoors" else sky

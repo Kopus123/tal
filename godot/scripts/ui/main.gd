@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := 10
+const BUILD := 11
 
 var room: Control
 var paper: PanelContainer
@@ -171,32 +171,51 @@ func _foot(t: String, f: Callable) -> void:
 	var b := Kit.button(t, false, 18); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(f); foot.add_child(b)
 
 
-## the case board lab: the card you're looking at, where you can go, what you have to pin with
+## the case board lab: the card you're looking at (and what you can do with it); leaving the board is one button away
+var lab_go := false
 func _lab() -> void:
 	var bd: Dictionary = Game.board()
+	if lab_go:
+		_text("Where to?", 22, Kit.MUTE)
+		for s in Game.spots_now():
+			if s.kind == "=>": _act(s.l, func(): lab_go = false; Game.tap_spot(s))
+		_act("◂ Back to the board", func(): lab_go = false; _refresh())
+		return
 	if card_sel != "" and Game.ST.cards.has(card_sel):
 		var cd: Dictionary = Game.ST.cards[card_sel]
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 12); body.add_child(row)
-		var pic := TextureRect.new(); pic.texture = load("res://scripts/ui/cork.gd")._picture(cd); pic.custom_minimum_size = Vector2(96, 96)
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(pic)
+		var pt: Texture2D = cork._picture(cd)
+		if pt:
+			var pic := TextureRect.new(); pic.texture = pt; pic.custom_minimum_size = Vector2(96, 96)
+			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(pic)
 		var v := VBoxContainer.new(); v.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(v)
-		var ko: String = cd.get("ko", "") if cd.kind != "thing" else cd.label + ("
+		var ko: String = cd.get("ko", "")
+		match cd.kind:
+			"thing": ko = cd.label + ("
 " + cd.ko if cd.ko != "" else "")
-		if cd.kind == "person": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who)
+			"person": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who) + ("
+실종 · missing" if cd.get("missing", false) else "")
+			"say": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who) + ":
+" + cd.ko
 		var r := Kit.rich(26); r.text = Kit.ko(ko); r.meta_clicked.connect(func(w): _word(str(w))); v.add_child(r)
+		if cd.kind == "note" and cd.get("en", "") != "": v.add_child(Kit.label("(your note: " + cd.en + ")", 16, Kit.MUTE, true))
 		if cd.kind == "say":
 			var hb := Kit.button("▶ Hear it", false, 16); hb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN; hb.pressed.connect(func(): voice.say(cd.ko, cd.who)); v.add_child(hb)
 		var tied: Array = []
 		for l in bd.links:
-			if card_sel in l: tied.append(Game.card_label(Game.ST.cards[l[1] if l[0] == card_sel else l[0]]))
-		if not tied.is_empty(): _text("Tied to: " + Kit.esc(", ".join(tied)), 17, Kit.MUTE)
+			if card_sel in [l[0], l[1]]: tied.append(Game.card_label(Game.ST.cards[l[1] if l[0] == card_sel else l[0]]))
+		_text("Tied to: " + Kit.esc(", ".join(tied)) if not tied.is_empty() else "Not tied to anything yet.", 17, Kit.MUTE)
+		if cork.from == "": _act("🧵  Pick up a string from this card", func(): cork.carry(card_sel))
+		elif cork.from != card_sel:
+			_act("📌  Tie the string here", func(): cork.tie(card_sel), true)
+			_act("Put the string down", func(): cork.drop())
+		else: _act("Put the string down", func(): cork.drop())
 	else:
 		_text(Kit.esc(Game.desc()), 20)
-	acts.add_child(Kit.label("GO TO", 14, Kit.MUTE))
-	for s in Game.spots_now():
-		if s.kind == "=>": _act(s.l, func(): Game.tap_spot(s))
-	_text("Strings: %d   ·   Thumbtacks: %d   ·   %s
-More at the shop." % [bd.strings, bd.tacks, Game.won(Game.W.money)], 17, Kit.MUTE)
+		if cork.from != "": _act("Put the string down", func(): cork.drop())
+	var worn: int = bd.get("frayed", 0)
+	_text("🧵 String: %d%s   ·   📌 Thumbtacks: %d   ·   %s" % [bd.strings, " (%d frayed)" % worn if worn > 0 else "", bd.tacks, Game.won(Game.W.money)], 17, Kit.MUTE)
+	_act("Leave the board ▸", func(): lab_go = true; _refresh())
 
 
 ## someone talks (or the narration, or a sign)

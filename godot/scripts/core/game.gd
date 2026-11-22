@@ -869,11 +869,11 @@ func _job_effect(a: String) -> void:
 ## The board is your theory: connect anything to anything. The game reads it: when all the strings of an "unlock"
 ## are up, its effects happen, silently (you find out by noticing a new place or option, like in real life).
 ## Strings are few: taking one down frays it (every second time, it snaps) and bends a thumbtack. Buy more.
-const STRING_PRICE := 1000
-const TACK_PRICE := 500
+const STRING_PRICE := 2000
+const TACK_PRICE := 1500
 
 func board() -> Dictionary:
-	if not S.F.has("board"): S.F["board"] = {"cards": {}, "links": [], "strings": 4, "tacks": 6, "takedowns": 0}
+	if not S.F.has("board"): S.F["board"] = {"cards": {}, "links": [], "strings": 4, "frayed": 0, "tacks": 6, "bent": 0, "takedowns": 0}
 	return S.F.board
 
 func _board_start() -> void:
@@ -884,8 +884,8 @@ func _board_start() -> void:
 func _board_add(id: String, quiet := false) -> void:
 	var b := board()
 	if b.cards.has(id) or not ST.cards.has(id): return
-	var n: int = b.cards.size()
-	b.cards[id] = {"x": 0.025 + (n % 6) * 0.158, "y": 0.06 + (n / 6) * 0.3, "new": not quiet}
+	var at: Array = ST.cards[id].get("at", [])
+	b.cards[id] = {"x": at[0], "y": at[1], "new": not quiet} if at.size() == 2 else {"x": 0.5, "y": 0.5, "new": not quiet, "auto": true}   # the board finds it a spot
 	if not quiet:
 		toast.emit("New on your case board: " + card_label(ST.cards[id])); note("  new card: " + id)
 
@@ -894,7 +894,7 @@ func card_label(c: Dictionary) -> String:
 		"say": return ST.cast.get(c.who, {}).get("n", c.who) + ": " + plain(c.ko)
 		"thing": return plain(c.label)
 		"person": return ST.cast.get(c.who, {}).get("n", c.who)
-		"place", "time": return plain(c.ko)
+		"place", "time", "note": return plain(c.ko)
 	return c.id
 
 func is_linked(a: String, b_: String) -> bool:
@@ -908,8 +908,10 @@ func board_link(a: String, b_: String) -> String:
 	if a == b_ or is_linked(a, b_): return "same"
 	if b.strings <= 0: return "no string"
 	if b.tacks <= 0: return "no tacks"
-	b.strings -= 1; b.tacks -= 1; b.links.append([a, b_])
-	note("  string: %s — %s" % [a, b_]); sound.emit("click")
+	var worn: bool = b.get("frayed", 0) > 0   # you use up the frayed bits first
+	if worn: b.frayed -= 1
+	b.strings -= 1; b.tacks -= 1; b.links.append([a, b_, worn]); S.F["board_tied"] = 1
+	note("  string: %s — %s%s" % [a, b_, " (frayed)" if worn else ""]); sound.emit("click")
 	_check_unlocks(); save(); changed.emit(); return ""
 
 func board_unlink(a: String, b_: String) -> void:
@@ -917,17 +919,18 @@ func board_unlink(a: String, b_: String) -> void:
 	for i in b.links.size():
 		var l: Array = b.links[i]
 		if (l[0] == a and l[1] == b_) or (l[0] == b_ and l[1] == a):
-			b.links.remove_at(i); b.takedowns += 1
-			var snapped: bool = b.takedowns % 2 == 0
-			if not snapped: b.strings += 1
+			# a fresh string comes down frayed; a frayed one snaps. The tack always bends.
+			var snapped: bool = l.size() > 2 and l[2]
+			b.links.remove_at(i); b.takedowns += 1; b.bent = b.get("bent", 0) + 1
+			if not snapped: b.strings += 1; b.frayed = b.get("frayed", 0) + 1
 			note("  took down: %s — %s%s (a tack bent)" % [a, b_, ", the string snapped" if snapped else ""])
-			toast.emit("The string snapped." if snapped else "The string's frayed now. A tack bent.")
+			toast.emit("The frayed string snapped. A tack bent." if snapped else "The string's frayed now: it'll snap next time. A tack bent.")
 			sound.emit("tap"); save(); changed.emit(); return
 
 func board_move(id: String, x: float, y: float) -> void:
 	var c: Dictionary = board().cards.get(id, {})
 	if c.is_empty(): return
-	c.x = clampf(x, 0.0, 0.9); c.y = clampf(y, 0.0, 0.85); c.new = false; save()
+	c.x = clampf(x, 0.0, 1.0); c.y = clampf(y, 0.0, 1.0); c.new = false   # saved when you let go
 
 func board_buy(what: String) -> bool:
 	var price := STRING_PRICE if what == "string" else TACK_PRICE

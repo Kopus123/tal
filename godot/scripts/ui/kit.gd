@@ -159,13 +159,14 @@ static func ko(s: String, dark := false) -> String:
 		out += _names(esc(s.substr(at, m.get_start() - at)), dark)
 		var entry := m.get_string(2) if m.get_string(2) != "" else m.get_string(1)
 		var st := status(entry)
-		out += "[url=w:%s][color=#%s]%s%s%s[/color][/url]" % [entry, cols[st], "[b]" if st == "new" else "", esc(m.get_string(1)), "[/b]" if st == "new" else ""]
+		out += "[url=w:%s][color=#%s][u]%s[/u][/color][/url]" % [entry, cols[st], esc(m.get_string(1))]
 		at = m.get_end()
 	return out + _names(esc(s.substr(at)), dark)
 
 
 static func rich(sz := 24, c: Color = PAPER_INK) -> RichTextLabel:
 	var r := RichTextLabel.new(); r.bbcode_enabled = true; r.fit_content = true; r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	r.add_theme_color_override("default_color", c); r.add_theme_font_size_override("normal_font_size", sz); r.meta_underlined = false
+	r.add_theme_color_override("default_color", c); r.meta_underlined = false
+	for k in ["normal_font_size", "bold_font_size", "italics_font_size", "bold_italics_font_size", "mono_font_size"]: r.add_theme_font_size_override(k, sz)
 	r.scroll_active = false
 	return r

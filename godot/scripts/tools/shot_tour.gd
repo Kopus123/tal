@@ -26,6 +26,11 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 	await _wait(0.5)
 	var ok: bool = await r.run(route)
 	await _wait(0.4); await shot("end" if ok else "FAILED_here")
+	if main.cork.visible:   # the case board: a card picked, a string in hand, the menu over the board
+		var ids: Array = Game.board().cards.keys()
+		main.cork.sel = ids[0]; main.cork.selected.emit(ids[0]); await _wait(0.3); await shot("board_card")
+		main.cork.carry(ids[0]); main.cork.sel = ids[1]; main.cork.selected.emit(ids[1]); await _wait(0.3); await shot("board_carry")
+		main.cork.drop(); main._menu(); await _wait(0.3); await shot("board_menu"); _close_sheets()
 	for what in ["notebook", "board", "phone"]:
 		if what == "phone" and not Game.has_phone(): continue
 		main._open(what); await _wait(0.4); await shot("open_" + what); _close_sheets()

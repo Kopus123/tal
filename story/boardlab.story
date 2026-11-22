@@ -10,6 +10,9 @@
 #    person WHO                  a person (their face)
 #    place ART | 한국어 | English   a place (its drawing)
 #    time ICON | 한국어            a time
+#    note COLOR | 한국어 | English  a sticky note in your own hand (a question you're asking: pink, yellow, blue)
+#    person WHO missing          the missing-person poster in the middle of it all
+#    at X Y                      where it goes up (percent across, down); otherwise the first free spot
 #    start                       you have it from the beginning (otherwise "! card ID" gives it)
 #
 #    === unlock ID               when ALL these strings are on the board, the effects happen. Silently:
@@ -35,43 +38,66 @@ Nothing more to find in the lab.
 
 # ------------------------------------------------------------ the cards
 === card c_sujin
+at 0 0
 say sujin sad | {아니요}... {할머니}{가|이/가} {없어요}. {방}{에} {없어요}. {마당}{에}{도} {없어요}.
 start
 
 === card c_calendar
+at 21 48
 thing calendar | {달력} | {오늘}: {축제}, {9시} {박물관}
 start
 
 === card c_text
+at 76 42
 thing phone | {박물관} · {핸드폰} | 김순자 {선생님}, {내일} {아침} {9시}, {박물관}{에서} {만나요}!
 start
 
 === card p_halmeoni
-person halmeoni
+at 47 40
+person halmeoni missing
 start
 
 === card p_sujin
+at 1 45
 person sujin
 start
 
 === card pl_madang
+at 0 100
 place madang | {마당} | the courtyard
 start
 
 === card pl_sikdang
+at 26 99
 place sikdang | {식당} | the restaurant
 start
 
 === card pl_museum
+at 80 100
 place museum | {박물관} | the museum
 start
 
 === card t_morning
+at 31 2
 time morning | {아침}
 start
 
 === card t_nine
+at 99 3
 time clock | {9시}
+start
+
+# the questions you're asking (your own sticky notes)
+=== card q_where
+at 56 0
+note pink | {할머니}, {어디}{예요|이에요}? | Where is she?
+at 58 4
+start
+
+=== card q_nine
+at 99 50
+note yellow | {9시}{에} {어디}? | Where was she at nine?
+at 60 40
 start
 
 === card c_owner_here
@@ -108,12 +134,26 @@ when c_owner_bus-p_halmeoni, c_owner_bus-pl_busstop
 ! set go_busstop
 
 # her calendar and the museum's text both say 9 o'clock at the museum: pin either to the museum and to the time
+# ...or to your question: where is she?
+=== unlock busstop_q
+when c_owner_bus-q_where, c_owner_bus-pl_busstop
+! set go_busstop
+
 === unlock museum
 when c_text-pl_museum, c_text-t_nine
 ! set go_museum
 
 === unlock museum2
 when c_calendar-pl_museum, c_calendar-t_nine
+! set go_museum
+
+# ...or to your question: where was she at nine?
+=== unlock museum_q
+when c_text-pl_museum, c_text-q_nine
+! set go_museum
+
+=== unlock museum_q2
+when c_calendar-pl_museum, c_calendar-q_nine
 ! set go_museum
 
 # the whole story: she was at the restaurant in the morning, got on the bus, and never reached the museum
@@ -259,30 +299,41 @@ ajumma[surprised]: {네}?
 -> lab_back
 
 === scene shop_string
-ajumma: {실}? {네}! {천} {원}{이에요}.
-(She holds up a spool of red thread.)
+ajumma: {실}? {네}! {이}{천} {원}{이에요}.
+(She holds up a spool of red thread. Not cheap.)
+-> shop_string_pay
+
+=== scene shop_string_pay
 @number Pay her. | won
-answer: 1000 -> shop_string_ok
-miss -> shop_wrongpay
+answer: 2000 -> shop_string_ok
+miss -> shop_string_wrong
+
+=== scene shop_string_wrong
+ajumma: {아니요}~ {이}{천} {원}!
+(She holds up two fingers and taps the price card.)
+-> shop_string_pay
 
 === scene shop_string_ok
-! money -1000 each time; supply string
+! money -2000 each time; supply string
 ajumma[happy]: {감사합니다}!
 -> lab_back
 
 === scene shop_tacks
-ajumma: {압정}? {네}! {천} {원}{이에요}.
+ajumma: {압정}? {네}! {천}{오}{백} {원}{이에요}.
 (A little box of three red thumbtacks.)
+-> shop_tacks_pay
+
+=== scene shop_tacks_pay
 @number Pay her. | won
-answer: 1000 -> shop_tacks_ok
-miss -> shop_wrongpay
+answer: 1500 -> shop_tacks_ok
+miss -> shop_tacks_wrong
+
+=== scene shop_tacks_wrong
+ajumma: {아니요}~ {천}{오}{백} {원}!
+(She taps the price card, slowly.)
+-> shop_tacks_pay
 
 === scene shop_tacks_ok
-! money -1000 each time; supply tacks
+! money -1500 each time; supply tacks
 ajumma[happy]: {감사합니다}!
--> lab_back
-
-=== scene shop_wrongpay
-ajumma: {아니요}~ {천} {원}!
-(She holds up one finger and taps the price card.)
 -> lab_back

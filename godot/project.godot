@@ -25,7 +25,8 @@ window/handheld/orientation=0
 
 textures/vram_compression/import_etc2_astc=true
 
-renderer/rendering_method="mobile"
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="forward_plus"
 environment/defaults/default_clear_color=Color(0.082, 0.102, 0.141, 1)
 
 [input_devices]

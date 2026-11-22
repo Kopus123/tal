@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ds5bt5e220g4q"
-path="res://.godot/imported/golmok_night.png-385093a2988eefe4dbaae116f8cccea5.ctex"
+uid="uid://hmpt8kgj2t3r"
+path="res://.godot/imported/normal.jpg-afe896fa91ff6df0211ee5852b1e4cd2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/golmok_night.png"
-dest_files=["res://.godot/imported/golmok_night.png-385093a2988eefe4dbaae116f8cccea5.ctex"]
+source_file="res://textures/grey_roof_tiles/normal.jpg"
+dest_files=["res://.godot/imported/normal.jpg-afe896fa91ff6df0211ee5852b1e4cd2.ctex"]
 
 [params]
 

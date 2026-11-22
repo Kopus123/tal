@@ -213,7 +213,7 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				if m: cur.ask[m.get_string(1)] = m.get_string(2); continue
 				_warn(st, file, ln, line)
 			"place":
-				m = R("^(name|sub|art|first|always|ambient|travel|music|sound|light|mode|dark|back)\\s+(.+)$").search(line)
+				m = R("^(name|sub|art|first|always|ambient|travel|music|sound|light|mode|dark|back|scene)\\s+(.+)$").search(line)
 				if m: cur[m.get_string(1)] = m.get_string(2); continue
 				m = R("^desc\\s+(?:if\\s+(\\S+):\\s*)?(.+)$").search(line)
 				if m: cur.desc.append({"c": m.get_string(1), "t": m.get_string(2)}); continue

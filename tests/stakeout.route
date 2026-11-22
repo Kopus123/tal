@@ -3,3 +3,7 @@
 chapter stakeout
 idle
 expect @so_alley
+#@ Alley · flashlight on
+pocket flashlight
+idle
+expect lit

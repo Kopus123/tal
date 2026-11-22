@@ -1,0 +1,1 @@
+Textures in this folder are CC0 (public domain) from Poly Haven (polyhaven.com): dark_brick_wall, large_grey_tiles, grey_roof_tiles, dark_planks. 1K maps: albedo, normal (OpenGL), roughness.

@@ -35,6 +35,11 @@ var cam_mode := false
 var glow: Control                  ## soft rings on what someone just named
 var drift: CPUParticles2D          ## dust, leaves, motes in the air
 var _lamps: Array = []             ## the place's own lights (lanterns, a lit window)
+## a place built in 3D ("scene alley"): its own viewport, shown in place of the drawing
+var vp3: SubViewport
+var set3: Node3D
+var _set_name := ""
+var _look := Vector2.ZERO
 var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
 var _focused := false
 var _resizing := false
@@ -82,7 +87,9 @@ func _ready() -> void:
 	shutter.custom_minimum_size = Vector2(104, 104)
 	for st in ["normal", "hover", "focus"]: shutter.add_theme_stylebox_override(st, _ring(Color(1, 1, 1, 0.92)))
 	shutter.add_theme_stylebox_override("pressed", _ring(Color(0.8, 0.8, 0.8, 1)))
-	resized.connect(func(): back_btn.position = Vector2(10, size.y - 94); _place_cam_btns(); _place_figs())
+	resized.connect(func():
+		back_btn.position = Vector2(10, size.y - 94); _place_cam_btns(); _place_figs()
+		if vp3: vp3.size = Vector2i(maxi(64, int(size.x)), maxi(64, int(size.y))))
 	set_process(false)
 	Game.lean.connect(_on_lean)
 
@@ -210,6 +217,7 @@ func refresh() -> void:
 	if not frame.visible: frame.remove_meta("placed")
 	if cam_mode: frame.modulate.a = 1.0 if _focused else 0.5
 	_place_figs()
+	_scene3d(pl.get("scene", "") if not exam else "")
 	if _lamps_for != _art_key: _set_lamps(pl.get("lamps", []) if not exam else [])
 	marks.queue_redraw(); glow.queue_redraw()
 	_drift(pl.get("ambient", "") if not exam else "")
@@ -230,6 +238,22 @@ func _draw_glow() -> void:
 		for i in 49: pts.append(c + Vector2(cos(TAU * i / 48.0) * rx, sin(TAU * i / 48.0) * ry))
 		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.95 * a), 4.0, true)
 		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.25 * a), 12.0, true)
+
+
+## ---------- a place built in 3D: made when you arrive, gone when you leave; drag to look around a little
+func _scene3d(name: String) -> void:
+	if name == _set_name:
+		if set3: set3.set_torch(bool(Game.F.get("lit", 0)))
+		return
+	_set_name = name
+	if vp3: vp3.queue_free(); vp3 = null; set3 = null
+	if name == "":
+		view.texture = vp.get_texture(); return
+	vp3 = SubViewport.new(); vp3.own_world_3d = true; vp3.size = Vector2i(maxi(64, int(size.x)), maxi(64, int(size.y)))
+	vp3.render_target_update_mode = SubViewport.UPDATE_ALWAYS; vp3.msaa_3d = Viewport.MSAA_2X; add_child(vp3)
+	set3 = load("res://scripts/ui/%s3d.gd" % name).new(); vp3.add_child(set3)
+	view.texture = vp3.get_texture(); _look = Vector2.ZERO
+	set3.set_torch(bool(Game.F.get("lit", 0)))
 
 
 ## ---------- the place's own lights: each warms the drawing around it; lanterns breathe a little, like flames
@@ -307,7 +331,10 @@ func _gui_input(e: InputEvent) -> void:
 			if _resizing: _frame_size((e.position.x - frame.position.x) / size.x, false)
 			else: frame.position = (frame.position + e.relative).clamp(Vector2.ZERO, size - frame.size)
 			if cam_mode: _still = 0.0; _focused = false; frame.modulate.a = 0.5; veil.queue_redraw()
-		else: _aim(e.position)
+		else:
+			_aim(e.position)
+			if set3 and not bool(Game.F.get("lit", 0)):   # no light to point: dragging looks around
+				_look = (_look - e.relative / size * 2.0).clamp(Vector2(-1, -1), Vector2(1, 1)); set3.look(_look.x, _look.y)
 		if e.position.distance_to(_press_at) > DRAG_PX: _dragged = true
 	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
@@ -329,6 +356,9 @@ func _frame_size(k: float, keep_center: bool) -> void:
 
 
 func _aim(p: Vector2) -> void:
+	if set3:   # in a 3D place: the beam goes where you point
+		set3.aim((p.x / size.x - 0.5) * 2.0, (p.y / size.y - 0.5) * 2.0)
+		return
 	torch.position = cam.get_screen_center_position() + (p / size - Vector2(0.5, 0.5)) * Vector2(ART_W, ART_H) / cam.zoom
 
 

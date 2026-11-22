@@ -31,7 +31,7 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 			main._open("phone"); await _wait(0.3); await shot("phone_list"); _close_sheets()
 	await _wait(0.5)
 	var ok: bool = await r.run(route)
-	await _wait(0.4); await shot("end" if ok else "FAILED_here")
+	await _wait(2.6); await shot("end" if ok else "FAILED_here")   # past the title card
 	if not main.cork.visible and not Game.board().cards.is_empty():   # open the board from the top bar
 		main.board_view = true; main._refresh(); await _wait(0.4); await shot("board_open")
 	if main.cork.visible:   # the case board: a card picked, a string in hand, the menu over the board

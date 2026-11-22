@@ -272,6 +272,12 @@ func s_link(a: String) -> void:
 	var r: String = g.board_link(p[0], p[1])
 	if r != "": fail("couldn't pin that string: " + r)
 
+func s_pin(a: String) -> void:
+	idle()
+	for id in a.split(" ", false):
+		var r: String = g.board_pin(id)
+		if r != "": fail("couldn't pin %s: %s" % [id, r]); return
+
 func s_unlink(a: String) -> void:
 	var p := a.split(" ", false)
 	if not g.is_linked(p[0], p[1]): fail("there's no string between %s and %s" % [p[0], p[1]]); return

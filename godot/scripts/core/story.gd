@@ -235,6 +235,7 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 					"place": cur.kind = "place"; cur.art = head[1]; cur.ko = p[1] if p.size() > 1 else ""; cur.en = p[2] if p.size() > 2 else ""
 					"time": cur.kind = "time"; cur.icon = head[1]; cur.ko = p[1] if p.size() > 1 else ""
 					"start": cur.start = true
+					"pinned": cur.pinned = true
 					_: _warn(st, file, ln, line)
 			"unlock":
 				if line.begins_with("when "):

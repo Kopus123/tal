@@ -3,13 +3,12 @@ extends Control
 ## people are black-and-white polaroids, the missing person is a poster, places are faded photos taped up,
 ## things are evidence photos with numbered tags, statements are torn notebook pages, times and your own
 ## questions are sticky notes.
-## Drag a card to move it. Tap it to look at it. Hold a card until the ring fills to pick up a string, then hold
-## another card to tie it there (holding takes a moment on purpose: think before you connect). Tap a string to take
-## it down: a fresh string comes down frayed, a frayed one snaps, and the thumbtack always bends.
+## Drag a card to move it. Tap it to look at it: the paper on the right shows it big, with what you can do with it
+## (pin it up with a thumbtack, pick up a string, tie the string here, take a string down). Cards go up loose; only
+## pinned cards can have strings. A fresh string comes down frayed, a frayed one snaps; a tack pulled out is bent.
 
 signal selected(id: String)
 
-const HOLD := 0.8                  ## seconds to hold for a pin
 const INK := Color("1f2a4a")       ## pen ink
 const STRING := Color(0.74, 0.07, 0.07)
 const WORN := Color(0.86, 0.5, 0.45)
@@ -17,9 +16,9 @@ const TACKS := [Color("c0392b"), Color("2f6fd1"), Color("e3b505"), Color("2e8b57
 
 var sel := ""                      ## the card you're looking at
 var from := ""                     ## a string picked up from this card, waiting to be pinned
-var _press := {}                   ## {id, at, t, moved, done}
+var _press := {}                   ## {id, at, grab, moved}
 var _cards := {}                   ## id -> Control
-var _top: Control                  ## strings, tacks and the hold ring: drawn over the cards
+var _top: Control                  ## strings and tacks: drawn over the cards
 var _help: PanelContainer          ## how to tie, until you've done it once (and while you carry a string)
 static var _bw: ShaderMaterial     ## old black-and-white photo
 static var _sepia: ShaderMaterial  ## old faded colour photo
@@ -28,16 +27,16 @@ static var _sepia: ShaderMaterial  ## old faded colour photo
 func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	resized.connect(_layout); set_process(false)
+	resized.connect(_layout)
 	_top = Control.new(); _top.mouse_filter = Control.MOUSE_FILTER_IGNORE; _top.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_top.draw.connect(_draw_top); add_child(_top)
 	_help = PanelContainer.new(); _help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_help.add_theme_stylebox_override("panel", Kit.box(10, Color(0.08, 0.06, 0.05, 0.85), Color.TRANSPARENT, 0, 12))
-	var hl := Kit.label("", 18, Color("f3ead2")); hl.name = "L"; hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; _help.add_child(hl)
+	var hl := Kit.label("", 20, Color("f3ead2")); hl.name = "L"; hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; _help.add_child(hl)
 	add_child(_help)
 
 
-func _s() -> float: return clampf(size.y / 720.0 * 0.8, 0.45, 1.4)   ## card scale
+func _s() -> float: return clampf(size.y / 720.0 * 0.86, 0.45, 1.4)   ## card scale
 func _inner() -> Rect2:   ## the cork inside the frame
 	var m := 46.0 * _s()
 	return Rect2(Vector2(m, m), size - Vector2(m, m) * 2)
@@ -67,6 +66,7 @@ func _layout() -> void:
 func _place(id: String, d: Dictionary, r: Rect2, s: float) -> void:
 	var c: Control = _cards[id]
 	c.scale = Vector2(s, s) * (1.06 if not _press.is_empty() and _press.moved and _press.id == id else 1.0)
+	c.rotation_degrees = c.get_meta("tilt", 0.0) * (1.0 if d.get("pinned", false) else 3.0)   # loose cards lie crooked
 	var room := r.size - c.size * s
 	c.position = r.position + Vector2(clampf(d.x, 0, 1) * room.x, clampf(d.y, 0, 1) * room.y)
 	c.queue_redraw()
@@ -91,8 +91,8 @@ func _autoplace(id: String) -> void:
 
 func _help_text() -> void:
 	var t := ""
-	if from != "": t = "Holding a string.  Now hold another card until the ring fills to tie it there.\nTap bare cork to put it down."
-	elif not Game.F.has("board_tied"): t = "To tie two cards together: hold your finger on one until the ring fills,\nthen hold the other one.  Tap a string to take it down."
+	if from != "": t = "Holding a string from: %s\nTap another pinned card, then \"Tie the string here\" on the right." % Game.card_label(Game.ST.cards[from])
+	elif not Game.F.has("board_tied"): t = "Tap a card to look at it.  Pin cards up with thumbtacks,\nthen tie string between them (the buttons on the right)."
 	_help.visible = t != ""
 	(_help.get_node("L") as Label).text = t
 	_help.size = Vector2.ZERO; _help.reset_size()
@@ -101,8 +101,8 @@ func _help_text() -> void:
 
 
 ## ---------- the cards
-const SIZES := {"person": Vector2(124, 156), "missing": Vector2(168, 222), "place": Vector2(196, 146), "thing": Vector2(144, 170),
-	"time": Vector2(112, 100), "note": Vector2(132, 112), "say": Vector2(214, 124)}
+const SIZES := {"person": Vector2(124, 160), "missing": Vector2(168, 226), "place": Vector2(196, 150), "thing": Vector2(144, 176),
+	"time": Vector2(112, 100), "note": Vector2(136, 116), "say": Vector2(226, 142)}
 
 func _kind(cd: Dictionary) -> String: return "missing" if cd.kind == "person" and cd.get("missing", false) else cd.kind
 
@@ -110,22 +110,22 @@ func _kind(cd: Dictionary) -> String: return "missing" if cd.kind == "person" an
 func _make(id: String) -> Control:
 	var cd: Dictionary = Game.ST.cards[id]; var k := _kind(cd)
 	var c := Control.new(); c.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.size = SIZES.get(k, Vector2(140, 160))
-	c.rotation_degrees = float(absi(hash(id)) % 9 - 4) * 0.9
+	c.set_meta("tilt", float(absi(hash(id)) % 9 - 4) * 0.9)
 	c.draw.connect(_draw_card.bind(c, id))
 	match k:
 		"person":
 			_photo(c, Kit.face(cd.who, cd.get("ex", "neutral")), Rect2(9, 9, 106, 106), _mat_bw())
-			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(4, 118, 116, 34), 20, INK)
+			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(2, 117, 120, 40), 23, INK)
 		"missing":
 			var band := ColorRect.new(); band.color = Color("b3241c"); band.position = Vector2(0, 0); band.size = Vector2(168, 46); band.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.add_child(band)
 			_text(c, "실종", Rect2(0, 2, 168, 42), 30, Color.WHITE)
 			_photo(c, Kit.face(cd.who, "neutral"), Rect2(18, 54, 132, 120), _mat_bw())
-			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(4, 176, 160, 26), 20, Color("1a1a1a"))
-			_text(c, "MISSING  ·  SEEN THIS MORNING?", Rect2(4, 201, 160, 18), 10, Color("6a6a6a"))
+			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(4, 175, 160, 30), 23, Color("1a1a1a"))
+			_text(c, "MISSING · SEEN HER?", Rect2(4, 204, 160, 20), 13, Color("6a6a6a"))
 		"place":
 			var tex: Texture2D = load("res://art/%s.png" % cd.art) if ResourceLoader.exists("res://art/%s.png" % cd.art) else null
 			_photo(c, tex, Rect2(7, 7, 182, 108), _mat_sepia(), TextureRect.STRETCH_KEEP_ASPECT_COVERED)
-			_text(c, Game.plain(cd.ko), Rect2(6, 117, 184, 26), 16, Color("3a3226"))
+			_text(c, Game.plain(cd.ko), Rect2(4, 116, 188, 32), 21, Color("3a3226"))
 			for side in [-1, 1]:   # two strips of tape across the top corners
 				var tp := ColorRect.new(); tp.color = Color(0.95, 0.91, 0.76, 0.72); tp.size = Vector2(50, 16); tp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				tp.position = Vector2(-8 if side < 0 else 154, -2 if side < 0 else -10); tp.rotation_degrees = -32 * side; c.add_child(tp)
@@ -133,17 +133,17 @@ func _make(id: String) -> Control:
 			var bg := ColorRect.new(); bg.color = Color("2f2f31"); bg.position = Vector2(7, 7); bg.size = Vector2(130, 114); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.add_child(bg)
 			var pic: Texture2D = load("res://art/photo.png") if cd.icon == "photo" and ResourceLoader.exists("res://art/photo.png") else Kit.icon("#" + cd.icon)
 			_photo(c, pic, Rect2(17, 15, 110, 98), _mat_sepia() if cd.icon == "photo" else null)
-			var tag := Label.new(); tag.text = "#%d" % _evidence_no(cd.id); tag.add_theme_font_size_override("font_size", 15); tag.add_theme_color_override("font_color", Color.BLACK)
+			var tag := Label.new(); tag.text = "#%d" % _evidence_no(cd.id); tag.add_theme_font_size_override("font_size", 17); tag.add_theme_color_override("font_color", Color.BLACK)
 			tag.add_theme_stylebox_override("normal", Kit.box(2, Color("f4c20d"), Color.TRANSPARENT, 0, 3)); tag.position = Vector2(2, 100); tag.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.add_child(tag)
-			_text(c, Game.plain(cd.label), Rect2(5, 124, 134, 42), 15, Color("2a2a2a"))
+			_text(c, Game.plain(cd.label), Rect2(3, 122, 138, 52), 18, Color("2a2a2a"))
 		"time":
-			_text(c, Game.plain(cd.ko), Rect2(6, 18, 100, 76), 32, INK)
+			_text(c, Game.plain(cd.ko), Rect2(6, 18, 100, 76), 34, INK)
 		"note":
-			_text(c, Game.plain(cd.ko), Rect2(8, 14, 116, 92), 20, INK)
+			_text(c, Game.plain(cd.ko), Rect2(6, 14, 124, 98), 23, INK)
 		"say":
 			_photo(c, Kit.face(cd.who, cd.get("ex", "neutral")), Rect2(8, 12, 42, 42), _mat_bw())
-			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(0, 56, 58, 18), 12, Color("5a5a6a"))
-			var q := _text(c, "“" + Game.plain(cd.ko) + "”", Rect2(62, 8, 146, 110), 15, INK)
+			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(0, 56, 58, 34), 14, Color("5a5a6a"))
+			var q := _text(c, "“" + Game.plain(cd.ko) + "”", Rect2(62, 6, 160, 132), 18, INK)
 			q.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT; q.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	return c
 
@@ -217,6 +217,7 @@ func _draw_card(c: Control, id: String) -> void:
 		"missing": c.draw_rect(r, Color("f3f0e6"))
 		"place", "person", "thing": c.draw_rect(r, Color("f6f3ec"))
 		_: c.draw_rect(r, Color.WHITE)
+	if c.has_meta("preview"): return
 	if id == sel: c.draw_rect(r.grow(5), Kit.HILITE, false, 5)
 	elif id == from: c.draw_rect(r.grow(5), STRING, false, 4)
 	elif Game.board().cards.get(id, {}).get("new", false): c.draw_rect(r.grow(3), Color(1, 1, 1, 0.7), false, 3)
@@ -237,19 +238,18 @@ func _card_at(p: Vector2) -> String:
 	return ""
 
 
-## ---------- touch
+## ---------- touch: drag to move, tap to look (everything else is a button on the paper)
 func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
-			_press = {"id": _card_at(e.position), "at": e.position, "t": 0.0, "moved": false, "done": false}
-			if _press.id != "": _press.grab = e.position - _cards[_press.id].position   # where on the card your finger is
-			if _press.id != "": move_child(_cards[_press.id], _top.get_index() - 1)   # it comes to the front
-			set_process(true)
+			_press = {"id": _card_at(e.position), "at": e.position, "moved": false}
+			if _press.id != "":
+				_press.grab = e.position - _cards[_press.id].position   # where on the card your finger is
+				move_child(_cards[_press.id], _top.get_index() - 1)    # it comes to the front
 		else:
-			_release(e.position)
-	elif e is InputEventMouseMotion and from != "" and _press.is_empty(): _top.queue_redraw()   # the string follows you
+			_release()
 	elif e is InputEventMouseMotion and not _press.is_empty() and (e.button_mask & MOUSE_BUTTON_MASK_LEFT):
-		if not _press.moved and e.position.distance_to(_press.at) > 14: _press.moved = true
+		if not _press.moved and e.position.distance_to(_press.at) > 22: _press.moved = true
 		if _press.moved and _press.id != "":   # drag the card
 			var c: Control = _cards[_press.id]; var r := _inner()
 			var room := r.size - c.size * _s()
@@ -258,57 +258,52 @@ func _gui_input(e: InputEvent) -> void:
 			_place(_press.id, Game.board().cards[_press.id], r, _s()); _top.queue_redraw()
 
 
-func _process(dt: float) -> void:
-	_top.queue_redraw()
-	if _press.is_empty() or _press.moved or _press.id == "" or _press.done: return
-	_press.t += dt
-	if _press.t >= HOLD:   # held long enough: pick up a string, or pin the one you're carrying
-		_press.done = true
-		if from == "": carry(_press.id)
-		elif from != _press.id: tie(_press.id)
-		else: drop()
+func _release() -> void:
+	var pr := _press; _press = {}
+	if pr.is_empty(): return
+	if pr.moved:
+		if pr.id != "": Game.save(); _place(pr.id, Game.board().cards[pr.id], _inner(), _s())   # saved once, when you let go
+		_top.queue_redraw(); return
+	pick(pr.id)   # a tap: look at that card (bare cork: look at nothing)
+
+
+func pick(id: String) -> void:
+	var was := sel; sel = id
+	if id != "": Game.sound.emit("tap")
+	for k in [was, sel]:
+		if _cards.has(k): _cards[k].queue_redraw()
+	_top.queue_redraw(); selected.emit(sel)
 
 
 func carry(id: String) -> void:
-	var b := Game.board()
-	if b.strings <= 0: Game.toast.emit("You're out of string. The shop sells it."); return
-	from = id; Game.sound.emit("click"); _layout(); selected.emit(sel)
+	if Game.board().strings <= 0: Game.toast.emit("You're out of string. The shop sells it."); return
+	from = id; Game.sound.emit("click"); _layout(); _cards[id].queue_redraw(); selected.emit(sel)
 
 
 func tie(id: String) -> void:
 	var r: String = Game.board_link(from, id)
-	if r == "no tacks": Game.toast.emit("You're out of thumbtacks. The shop sells them.")
-	elif r == "same": Game.toast.emit("Those two are already tied.")
-	from = ""; _layout(); selected.emit(sel)
+	if r == "same": Game.toast.emit("Those two are already tied.")
+	elif r == "no string": Game.toast.emit("You're out of string. The shop sells it.")
+	var was := from; from = ""
+	if _cards.has(was): _cards[was].queue_redraw()
+	_layout(); selected.emit(sel)
 
 
 func drop() -> void:
 	if from == "": return
-	from = ""; Game.toast.emit("You put the string down."); _layout(); selected.emit(sel)
+	var was := from; from = ""
+	if _cards.has(was): _cards[was].queue_redraw()
+	_layout(); selected.emit(sel)
 
 
-func _release(p: Vector2) -> void:
-	var pr := _press; _press = {}; set_process(false)
-	if pr.is_empty() or pr.done: _top.queue_redraw(); return
-	if pr.moved:
-		if pr.id != "": Game.save(); _place(pr.id, Game.board().cards[pr.id], _inner(), _s())   # saved once, when you let go
-		_top.queue_redraw(); return
-	if pr.id != "":
-		var was := sel; sel = pr.id; Game.sound.emit("tap")
-		if was != "" and _cards.has(was): _cards[was].queue_redraw()
-		_cards[sel].queue_redraw(); selected.emit(sel); return
-	# a tap on a string takes it down; a tap on bare cork drops the string you're holding, or lets go of the card
-	for l in Game.board().links:
-		if not (_cards.has(l[0]) and _cards.has(l[1])): continue
-		var pts := _curve(_pin(l[0]), _pin(l[1]))
-		for i in pts.size() - 1:
-			if Geometry2D.get_closest_point_to_segment(p, pts[i], pts[i + 1]).distance_to(p) < 18:
-				Game.board_unlink(l[0], l[1]); _top.queue_redraw(); return
-	if from != "": drop(); return
-	if sel != "":
-		var was := sel; sel = ""
-		if _cards.has(was): _cards[was].queue_redraw()
-		selected.emit("")
+## the selected card again, bigger, for the paper on the right
+func preview(id: String, width: float) -> Control:
+	var c := _make(id); c.set_meta("preview", true); c.rotation_degrees = 0
+	var k := minf(width / c.size.x, 300.0 / c.size.y)
+	var w := Control.new(); w.custom_minimum_size = c.size * k; w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	w.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	c.scale = Vector2(k, k); w.add_child(c)
+	return w
 
 
 ## ---------- drawing: the brick wall, the metal frame, the cork
@@ -372,14 +367,10 @@ func _draw_top() -> void:
 			_top.draw_circle(k, 4.0 * s, STRING.darkened(0.2))
 			for d in [Vector2(-7, -5), Vector2(6, -7), Vector2(-4, 8), Vector2(8, 5)]: _top.draw_line(k, k + d * s, WORN, 1.2 * s, true)
 	for id in _cards:
+		if not b.cards[id].get("pinned", false): continue
 		var tk := _pin(id); var col: Color = TACKS[absi(hash(id)) % TACKS.size()]
 		_top.draw_circle(tk + Vector2(3, 4) * s, 7.5 * s, Color(0, 0, 0, 0.35))
 		_top.draw_circle(tk, 7.5 * s, col.darkened(0.25)); _top.draw_circle(tk + Vector2(-1, -1) * s, 6 * s, col)
 		_top.draw_circle(tk + Vector2(-2.5, -2.5) * s, 2.2 * s, Color(1, 1, 1, 0.6))
-	if from != "" and _cards.has(from):
-		_top.draw_dashed_line(_pin(from), get_local_mouse_position(), Color(STRING, 0.75), 3.0 * s, 10.0 * s)
-	if not _press.is_empty() and not _press.moved and _press.id != "" and not _press.done and _press.t > 0.12:
-		var c: Control = _cards[_press.id]
-		var ctr := c.get_transform() * (c.size / 2)
-		_top.draw_arc(ctr, 44 * s, 0, TAU, 48, Color(0, 0, 0, 0.35), 9 * s)
-		_top.draw_arc(ctr, 44 * s, -PI / 2, -PI / 2 + TAU * minf(_press.t / HOLD, 1.0), 48, Color(1, 1, 1, 0.95), 7 * s)
+	if from != "" and _cards.has(from) and sel != "" and sel != from and _cards.has(sel):
+		_top.draw_dashed_line(_pin(from), _pin(sel), Color(STRING, 0.8), 3.0 * s, 10.0 * s)

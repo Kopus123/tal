@@ -12,22 +12,31 @@ spot Restaurant
 choose Thank him
 idle
 expect @lab
-# --- a wrong string opens nothing; taking it down frays it
+# --- strings only go between pinned cards: a wrong one opens nothing; taking it down frays it
+pin c_owner_bus p_sujin
 link c_owner_bus p_sujin
 nogo Bus stop
 unlink c_owner_bus p_sujin
 # --- what he said, pinned to the right things: the bus stop opens (silently)
 link c_owner_bus p_halmeoni
+pin pl_busstop
 link c_owner_bus pl_busstop
 spot Bus stop
 idle
 expect @lab&go_busstop
 # --- 9 o'clock at the museum: the museum opens
+pin c_text pl_museum
 link c_text pl_museum
 spot The shop
-build 실 | 주세요
-number 2000
+build 압정 | 주세요
+number 1200
+number 1000
 idle
+spot The shop
+build 실 | 주세요
+number 500
+idle
+pin t_nine
 link c_text t_nine
 spot Museum
 idle
@@ -40,17 +49,17 @@ expect !tolddone
 # --- out of string and tacks: the shop (ask in Korean, pay on the pad)
 spot The shop
 build 압정 | 주세요
-number 1200
-number 1500
+number 1000
 idle
 spot The shop
 build 실 | 주세요
-number 2000
+number 500
 idle
 spot The shop
 build 실 | 주세요
-number 2000
+number 500
 idle
+pin c_owner_here pl_sikdang c_staff
 link c_owner_here pl_sikdang
 link c_staff pl_museum
 expect knows_story

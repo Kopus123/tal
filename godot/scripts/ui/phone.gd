@@ -27,7 +27,7 @@ static func open(main: Control) -> void:
 	var top := HBoxContainer.new(); top.add_theme_constant_override("separation", 8); col.add_child(top)
 	var screen := PanelContainer.new(); screen.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	screen.add_theme_stylebox_override("panel", Kit.box(14, SCREEN, Color.TRANSPARENT, 0, 10)); col.add_child(screen)
-	var sc := ScrollContainer.new(); sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; screen.add_child(sc)
+	var sc := ScrollContainer.new(); sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.scroll_deadzone = 24; screen.add_child(sc)
 	var inner := VBoxContainer.new(); inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; inner.add_theme_constant_override("separation", 8); sc.add_child(inner)
 	var ctx := {"main": main, "o": o, "top": top, "inner": inner, "sc": sc}
 	_list(ctx)

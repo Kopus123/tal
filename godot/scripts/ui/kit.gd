@@ -57,6 +57,7 @@ static func sheet(parent: Control, title: String, wide := 0.8) -> VBoxContainer:
 	var x := button("✕", true); x.custom_minimum_size = Vector2(56, 56); head.add_child(x)
 	x.pressed.connect(func(): Game.sound.emit("tap"); o.queue_free())
 	var sc := ScrollContainer.new(); sc.size_flags_vertical = Control.SIZE_EXPAND_FILL; sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; col.add_child(sc)
+	sc.scroll_deadzone = 24
 	var inner := VBoxContainer.new(); inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; inner.add_theme_constant_override("separation", 10); sc.add_child(inner)
 	inner.set_meta("overlay", o)
 	return inner

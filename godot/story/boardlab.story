@@ -14,14 +14,15 @@
 #    person WHO missing          the missing-person poster in the middle of it all
 #    at X Y                      where it goes up (percent across, down); otherwise the first free spot
 #    start                       you have it from the beginning (otherwise "! card ID" gives it)
+#    pinned                      it starts pinned up (everything else goes up loose: pin it with a thumbtack)
 #
 #    === unlock ID               when ALL these strings are on the board, the effects happen. Silently:
 #    when A-B, C-D               you find out by noticing a new option, like in real life.
 #    ! effects
 #
-#  Strings: you have a few. Taking one down frays it (after 2 times it snaps) and bends a thumbtack.
-#  More string (실) and thumbtacks (압정) from the shop: ask in Korean, pay on the number pad.
-#  Pinning takes holding your finger down for a moment, so you think first.
+#  Cards go up loose; a thumbtack pins one, and only pinned cards can have strings. Taking a string down frays it
+#  (a frayed one snaps); pulling a tack out bends it. More string (실) and thumbtacks (압정) from the shop:
+#  ask in Korean, pay on the number pad.
 # ===================================================================
 
 === meta
@@ -56,6 +57,7 @@ start
 at 47 40
 person halmeoni missing
 start
+pinned
 
 === card p_sujin
 at 1 45
@@ -93,12 +95,14 @@ at 56 0
 note pink | {할머니}, {어디}{예요|이에요}? | Where is she?
 at 58 4
 start
+pinned
 
 === card q_nine
 at 99 50
 note yellow | {9시}{에} {어디}? | Where was she at nine?
 at 60 40
 start
+pinned
 
 === card c_owner_here
 say ajeossi surprised | 순자 {할머니}{요}? {네}, {아침}{에} {여기} {있었어요}.
@@ -170,7 +174,7 @@ sound room
 name 연구실
 sub The case board lab
 art gongbang
-desc Your case board. Pin things up, run string between what belongs together. Nobody tells you when you're right: go and see what's changed.
+desc Your case board. Pin cards up with thumbtacks, tie string between what belongs together. Nobody tells you when you're right: go and see what's changed.
 spot "Restaurant" 10 10 => place sikdang
 spot "Bus stop" 20 10 => place jeong if go_busstop
 spot "Museum" 30 10 => place museum if go_museum
@@ -232,7 +236,7 @@ always lab_museum
 # ------------------------------------------------------------ scenes
 === scene lab_open
 ~ [Test area] 할머니 is missing. You have 수진's words, a calendar from the workshop, and a text on 할머니's phone.
-~ Pin things together on the board. When what you've pinned shows you've understood something, new places open up. Nobody tells you when; you'll notice.
+~ Pin cards up with thumbtacks, then tie string between what belongs together. When your strings show you've understood something, new places open up. Nobody tells you when; you'll notice.
 
 === scene lab_back
 ~ You head back to your board.
@@ -304,41 +308,41 @@ ajumma[surprised]: {네}?
 -> lab_back
 
 === scene shop_string
-ajumma: {실}? {네}! {이}{천} {원}{이에요}.
-(She holds up a spool of red thread. Not cheap.)
+ajumma: {실}? {네}! {오}{백} {원}{이에요}.
+(She holds up a spool of red thread.)
 -> shop_string_pay
 
 === scene shop_string_pay
 @number Pay her. | won
-answer: 2000 -> shop_string_ok
+answer: 500 -> shop_string_ok
 miss -> shop_string_wrong
 
 === scene shop_string_wrong
-ajumma: {아니요}~ {이}{천} {원}!
-(She holds up two fingers and taps the price card.)
+ajumma: {아니요}~ {오}{백} {원}!
+(She taps the price card.)
 -> shop_string_pay
 
 === scene shop_string_ok
-! money -2000 each time; supply string
+! money -500 each time; supply string
 ajumma[happy]: {감사합니다}!
 -> lab_back
 
 === scene shop_tacks
-ajumma: {압정}? {네}! {천}{오}{백} {원}{이에요}.
-(A little box of three red thumbtacks.)
+ajumma: {압정}? {네}! {천} {원}{이에요}.
+(A little box of five thumbtacks.)
 -> shop_tacks_pay
 
 === scene shop_tacks_pay
 @number Pay her. | won
-answer: 1500 -> shop_tacks_ok
+answer: 1000 -> shop_tacks_ok
 miss -> shop_tacks_wrong
 
 === scene shop_tacks_wrong
-ajumma: {아니요}~ {천}{오}{백} {원}!
-(She taps the price card, slowly.)
+ajumma: {아니요}~ {천} {원}!
+(She holds up one finger and taps the price card.)
 -> shop_tacks_pay
 
 === scene shop_tacks_ok
-! money -1500 each time; supply tacks
+! money -1000 each time; supply tacks
 ajumma[happy]: {감사합니다}!
 -> lab_back

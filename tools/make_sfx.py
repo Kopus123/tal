@@ -71,9 +71,6 @@ def main():
     b = blank(.2); noise(b, 0, .16, .12, 1600); save("page", b)
     b = blank(.15); noise(b, 0, .1, .1, 900); save("open", b)
     b = blank(1.6); tone(b, 0, 1.5, 110, .06, "sine", 105); noise(b, 0, 1.6, .05, 400); save("wind", b)
-    b = blank(.25); noise(b, 0, .12, .35, 700); tone(b, 0, .08, 70, .25); noise(b, .05, .1, .12, 1800); save("step", b)
-    b = blank(.6); tone(b, 0, .12, 55, .6); tone(b, .2, .12, 50, .45); save("heart", b)
-    b = blank(.8); tone(b, 0, .7, 300, .25, "square", 900); tone(b, 0, .5, 1200, .1, "sine", 1600); noise(b, 0, .2, .3, 2500); save("spotted", b)
     print("ok:", ", ".join(sorted(p.stem for p in OUT.glob("*.wav"))))
 
 

@@ -1,30 +1,5 @@
-# Test area: the night stakeout (story/stakeout.story). Godot only.
-# SPOILERS: where they meet.
+# Test area: the night alley (story/stakeout.story). Godot only.
 
 chapter stakeout
 idle
 expect @so_alley
-#@ Stakeout · the alley
-hide Behind the wall
-# --- caught once, and got away: back where you came in
-escape
-expect @so_alley
-# --- caught and didn't get away
-failed
-idle
-expect @so_alley
-spot 시장
-expect @so_market
-#@ Stakeout · the market
-hide Behind the cabbages
-expect !meet
-hide Under the stall
-idle
-expect meet
-spot 골목
-spot 다리
-expect @so_river
-#@ Stakeout · the bridge
-hide The reeds
-idle
-expect saw_meeting

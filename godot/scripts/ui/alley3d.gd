@@ -49,9 +49,9 @@ func set_torch(on: bool) -> void: torch.visible = on
 
 
 # ---------------------------------------------------------------- materials
-func _mat(name: String, uv: Vector3, rough := 1.0, tri := true) -> StandardMaterial3D:
+func _mat(name: String, uv: Vector3, rough := 1.0, tri := true, albedo := "albedo") -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.albedo_texture = load("res://textures/%s/albedo.jpg" % name)
+	m.albedo_texture = load("res://textures/%s/%s.jpg" % [name, albedo])
 	m.normal_enabled = true; m.normal_texture = load("res://textures/%s/normal.jpg" % name); m.normal_scale = 1.2
 	m.roughness_texture = load("res://textures/%s/rough.jpg" % name); m.roughness = rough
 	m.uv1_scale = uv
@@ -91,7 +91,7 @@ func _floor() -> void:
 
 
 func _walls() -> void:
-	var brick := _mat("dark_brick_wall", Vector3(0.7, 0.7, 0.7))
+	var brick := _mat("dark_brick_wall", Vector3(0.7, 0.7, 0.7), 1.0, true, "albedo_black")
 	var roof := _mat("grey_roof_tiles", Vector3(0.9, 0.9, 0.9), 0.8)
 	for side in [-1, 1]:
 		var x: float = side * (W / 2 + 0.25)
@@ -104,7 +104,7 @@ func _walls() -> void:
 
 ## a brick archway across the alley: a block with a round-topped opening cut out
 func _arch(z: float) -> void:
-	var brick := _mat("dark_brick_wall", Vector3(0.7, 0.7, 0.7))
+	var brick := _mat("dark_brick_wall", Vector3(0.7, 0.7, 0.7), 1.0, true, "albedo_black")
 	var c := CSGCombiner3D.new(); c.position = Vector3(0, 0, z); add_child(c)
 	var block := CSGBox3D.new(); block.size = Vector3(W + 1.0, H + 0.6, 0.7); block.position = Vector3(0, (H + 0.6) / 2, 0); block.material = brick; c.add_child(block)
 	var hole_w := W - 0.9
@@ -118,7 +118,7 @@ func _arch(z: float) -> void:
 ## the end of the alley: a wooden door in a lit doorway, warm light spilling out onto the wet stone
 func _end_house() -> void:
 	var z := -L + 2.2
-	_box(Vector3(W + 1, H + 0.6, 0.5), Vector3(0, (H + 0.6) / 2, z), _mat("dark_brick_wall", Vector3(0.7, 0.7, 0.7)))
+	_box(Vector3(W + 1, H + 0.6, 0.5), Vector3(0, (H + 0.6) / 2, z), _mat("dark_brick_wall", Vector3(0.7, 0.7, 0.7), 1.0, true, "albedo_black"))
 	var wood := _mat("dark_planks", Vector3(0.6, 0.6, 0.6), 0.9)
 	_box(Vector3(0.75, 2.1, 0.08), Vector3(-0.45, 1.05, z + 0.3), wood)                     # one door leaf open
 	var glow := StandardMaterial3D.new(); glow.emission_enabled = true; glow.emission = Color(1.0, 0.7, 0.38); glow.emission_energy_multiplier = 3.0

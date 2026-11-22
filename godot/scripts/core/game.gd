@@ -52,6 +52,7 @@ var _t0 := 0
 
 
 func _ready() -> void:
+	changed.connect(func(): call_deferred("_case_tick"))   # keep the board up to date with the story
 	world_st = Story.parse(_read("res://story/world.story"), "world.story"); world = world_st
 	for c in world_st.chapters:
 		if c.file == "": continue
@@ -142,7 +143,7 @@ func _use(id: String) -> void:
 	ST = {"meta": world_st.meta.duplicate(), "cast": world_st.cast.duplicate(), "evidence": world_st.evidence.duplicate(),
 		"places": c.places, "nodes": c.nodes.duplicate(), "statements": c.statements, "examines": c.examines, "cases": c.cases,
 		"phones": c.phones, "hints": c.hints, "events": c.events, "encounters": c.encounters, "jobs": c.jobs, "free": free, "warnings": c.warnings,
-		"cards": c.get("cards", {}), "unlocks": c.get("unlocks", [])}
+		"cards": c.get("cards", {}), "unlocks": c.get("unlocks", []), "questions": c.get("questions", {})}
 	ST.meta.merge(c.meta, true); ST.cast.merge(c.cast, true); ST.evidence.merge(c.evidence, true)
 	if free: ST.nodes.merge(PNODES)
 
@@ -153,6 +154,7 @@ func _stash() -> void:
 
 ## start a chapter (restart = from the top; otherwise carry on where you were in it)
 func start_chapter(id: String, restart := true) -> void:
+	_vcards = {}
 	_stash()
 	var p: Dictionary = S.prog.get(id, {}) if not restart else {}
 	S.ch = id; _use(id); _leaning = false
@@ -285,7 +287,7 @@ func _effect(k: String, a: String) -> void:
 					toast.emit("Evidence: " + plain(ST.evidence.get(id, {}).get("label", id)))
 				S.F["ev_" + id] = 1
 		"statement":
-			if not S.F.has("st_" + a): S.F["st_" + a] = 1; toast.emit("Statement saved to your case board.")
+			if not S.F.has("st_" + a): S.F["st_" + a] = 1; toast.emit("Statement saved to your evidence box.")
 		"place": S.loc = a; S.known[a] = 1
 		"led": S.F["led"] = a
 		"sfx": sound.emit(a)
@@ -879,6 +881,8 @@ func board() -> Dictionary:
 	if not S.F.has("board"): S.F["board"] = {"cards": {}, "links": [], "strings": 4, "frayed": 0, "tacks": 5, "bent": 0, "takedowns": 0, "pins": 1, "film": FILM_ROLL, "photos": {}, "shots": 0}
 	var b: Dictionary = S.F.board
 	if not b.has("photos"): b.photos = {}; b.film = FILM_ROLL; b.shots = 0
+	if ST.cards.is_empty() and not b.has("stocked"):   # the story chapters: no shop for string yet, so plenty to start
+		b.stocked = 1; b.strings = maxi(b.strings, 16); b.tacks = maxi(b.tacks, 30); b.film = maxi(b.film, 24)
 	if not b.has("pins"):   # a board from before thumbtacks pinned cards: whatever has string on it is pinned
 		for l in b.links:
 			for id in [l[0], l[1]]:
@@ -895,18 +899,69 @@ func _board_start() -> void:
 ## a new card goes up in the next free spot (rows across the board)
 func _board_add(id: String, quiet := false) -> void:
 	var b := board()
-	if b.cards.has(id) or not ST.cards.has(id): return
-	var at: Array = ST.cards[id].get("at", [])
+	if b.cards.has(id) or card(id).is_empty(): return
+	var at: Array = card(id).get("at", [])
 	b.cards[id] = {"x": at[0], "y": at[1], "new": not quiet} if at.size() == 2 else {"x": 0.5, "y": 0.5, "new": not quiet, "auto": true}   # the board finds it a spot
-	b.cards[id].pinned = ST.cards[id].get("pinned", false)   # most go up loose: a thumbtack pins them
-	if not quiet:   # new things land in the evidence box; you choose what goes up
+	b.cards[id].pinned = card(id).get("pinned", false)   # most go up loose: a thumbtack pins them
+	if not quiet:   # new things land in the evidence box; you choose what goes up (the box shows how many are new)
 		b.cards[id].boxed = true; b.cards[id].auto = true
-		toast.emit("New in your evidence box: " + card_label(card(id))); note("  new card (in the box): " + id)
+		note("  new card (in the box): " + id)
 
-## a card by its id: one from the story, or a photo you took
+## a card by its id: one from the story, a photo you took, or (in the chapters) evidence "ev:ID", a statement "st:ID",
+## or a deduction's question note "q:ID"
+var _vcards := {}
 func card(id: String) -> Dictionary:
 	if ST.cards.has(id): return ST.cards[id]
-	return board().photos.get(id, {})
+	if board().photos.has(id): return board().photos[id]
+	if _vcards.has(id): return _vcards[id]
+	var c: Dictionary = {}
+	var k := id.get_slice(":", 0); var x := id.get_slice(":", 1)
+	match k:
+		"ev":
+			var e: Dictionary = ST.evidence.get(x, {})
+			if not e.is_empty(): c = {"id": id, "kind": "thing", "icon": e.icon, "label": e.label, "ko": e.ko, "start": false}
+		"st":
+			var n: Dictionary = ST.nodes.get(ST.statements.get(x, {}).get("node", ""), {})
+			if not n.is_empty(): c = {"id": id, "kind": "say", "who": n.get("who", ""), "ex": n.get("ex", "neutral"), "ko": n.get("ko", ""), "start": false}
+		"q":
+			var q: Dictionary = ST.questions.get(x, {})
+			if not q.is_empty(): c = {"id": id, "kind": "note", "color": "pink", "ko": q.ko, "en": q.en, "start": false}
+	if not c.is_empty(): _vcards[id] = c
+	return c
+
+
+## the board card for something a deduction needs ("fakemask" -> "ev:fakemask", "s_bus" -> "st:s_bus")
+func _vid(a: String) -> String:
+	if ST.evidence.has(a): return "ev:" + a
+	if ST.statements.has(a): return "st:" + a
+	return a
+
+
+## in the chapters: what you've found goes into the evidence box, and each deduction that needs proof gets its
+## question note. The game reads your strings: tie the right things to a question and it's solved, silently.
+## Deductions with nothing to prove just happen when the story gets there.
+var _ticking := false
+func _case_tick(finals := false) -> void:   ## finals: a last deduction with nothing to prove settles only when you look at the board
+	if _ticking or ST.is_empty() or ST.cases.is_empty(): return
+	_ticking = true
+	var b := board(); var added := false
+	var want: Array = []
+	for e in owned(): want.append("ev:" + e.id)
+	for s in owned_statements(): want.append("st:" + s.id)
+	for q in ST.cases:
+		if not q.needs.is_empty() and cond(q.c) and ST.questions.has(q.id): want.append("q:" + q.id)
+	for id in want:
+		if not b.cards.has(id) and not card(id).is_empty(): _board_add(id); added = true
+	for q in ST.cases:
+		if S.cs.has(q.id) or not cond(q.c): continue
+		var ok := false
+		if q.needs.is_empty(): ok = not q.final or (finals and S.node == "")
+		else: ok = q.needs.all(func(n): return n.alts.any(func(a): return _linked_as("q:" + q.id, _vid(a))))
+		if not ok: continue
+		S.cs[q.id] = 1; S.F["solved_" + q.id] = 1; note("  (the board settled: %s)" % q.id); save(); added = true
+		if q.final: _ticking = false; finale(); return
+	_ticking = false
+	if added: save(); changed.emit()
 
 
 ## what a card counts as when the board is read: a photo of something that matters counts as that thing
@@ -1017,7 +1072,7 @@ func board_link(a: String, b_: String) -> String:
 	if worn: b.frayed -= 1
 	b.strings -= 1; b.links.append([a, b_, worn]); S.F["board_tied"] = 1
 	note("  string: %s — %s%s" % [a, b_, " (frayed)" if worn else ""]); sound.emit("click")
-	_check_unlocks(); save(); changed.emit(); return ""
+	_check_unlocks(); _case_tick(); save(); changed.emit(); return ""
 
 func board_unlink(a: String, b_: String) -> void:
 	var b := board()

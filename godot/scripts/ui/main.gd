@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "3.5"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "3.6"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -122,10 +122,10 @@ func _refresh() -> void:
 		if b.has("ko") and not b.get("audio", false) and b.who != "narr": voice.say(b.ko, b.who)
 		elif b.get("audio", false): voice.say(b.ko, b.who)
 	_shown_node = Game.node
-	var lab: bool = pl.get("mode", "") == "board"
+	var lab: bool = pl.get("mode", "") == "board" or board_view
 	cork.visible = lab; room.visible = not lab
 	if lab: cork.refresh()
-	if b.is_empty() and lab: _lab()
+	if lab and (b.is_empty() or board_view): _lab()
 	elif b.is_empty(): _looking()
 	elif t == "card":
 		card.get_node("T").text = b.title; card.get_node("S").text = b.get("sub", "")
@@ -175,6 +175,7 @@ func _foot(t: String, f: Callable) -> void:
 
 ## the case board lab: the card you're looking at, big, and what you can do with it; leaving is one button away
 var lab_go := false
+var board_view := false   ## the case board, opened from the top bar (in the chapters)
 func _lab() -> void:
 	var bd: Dictionary = Game.board()
 	if lab_go:
@@ -223,7 +224,8 @@ func _lab() -> void:
 		if cork.from != "": _act("Put the string down", func(): cork.drop())
 	var worn_n: int = bd.get("frayed", 0)
 	_text("🧵 String: %d%s   ·   📌 Thumbtacks: %d   ·   %s" % [bd.strings, " (%d frayed)" % worn_n if worn_n > 0 else "", bd.tacks, Game.won(Game.W.money)], 20, Kit.MUTE)
-	_act("Leave the board ▸", func(): lab_go = true; _refresh())
+	if board_view: _act("Close the board ▸", func(): board_view = false; card_sel = ""; _refresh())
+	else: _act("Leave the board ▸", func(): lab_go = true; _refresh())
 	if id != "" and not Game.card(id).is_empty():   # the card itself, bigger; tap it to see it full screen
 		var pv: Control = cork.preview(id, 300.0); pv.mouse_filter = Control.MOUSE_FILTER_STOP; acts.add_child(pv)
 		pv.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed: card_big(id))
@@ -257,7 +259,7 @@ func _box() -> void:
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(l)
 		var b := Kit.button("Put it up", true, 18); row.add_child(b)
 		b.pressed.connect(func(): Game.board_unbox(id); cork.refresh(); Kit.close(inner); _box())
-	Game.box_seen(); cork.queue_redraw_all()
+	Game.box_seen(); cork.refresh()
 
 
 func _lab_pin(id: String) -> void:
@@ -456,7 +458,10 @@ func _open(what: String) -> void:
 	_play("tap")
 	match what:
 		"notebook": load("res://scripts/ui/notebook.gd").open(self, "")
-		"board": load("res://scripts/ui/board.gd").open(self)
+		"board":
+			board_view = not board_view; card_sel = ""
+			if board_view: Game._case_tick(true)   # looking at the board settles what's left to settle
+			_refresh()
 		"phone": load("res://scripts/ui/phone.gd").open(self)
 		"map": load("res://scripts/ui/places.gd").map(self)
 		"jobs": load("res://scripts/ui/places.gd").board(self)

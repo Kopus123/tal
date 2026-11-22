@@ -32,6 +32,8 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 	await _wait(0.5)
 	var ok: bool = await r.run(route)
 	await _wait(0.4); await shot("end" if ok else "FAILED_here")
+	if not main.cork.visible and not Game.board().cards.is_empty():   # open the board from the top bar
+		main.board_view = true; main._refresh(); await _wait(0.4); await shot("board_open")
 	if main.cork.visible:   # the case board: a card picked, a string in hand, the menu over the board
 		var ids: Array = Game.board().cards.keys()
 		main.cork.pick(ids[0]); await _wait(0.3); await shot("board_card")
@@ -39,7 +41,7 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		var loose := ids.filter(func(i): return not Game.is_pinned(i))
 		if not loose.is_empty(): main.cork.pick(loose[0]); await _wait(0.3); await shot("board_loose")
 		var pinned := ids.filter(func(i): return Game.is_pinned(i))
-		main.cork.carry(pinned[0]); main.cork.pick(pinned[1]); await _wait(0.3); await shot("board_carry")
+		if pinned.size() >= 2: main.cork.carry(pinned[0]); main.cork.pick(pinned[1]); await _wait(0.3); await shot("board_carry")
 		main.cork.drop(); main._menu(); await _wait(0.3); await shot("board_menu"); _close_sheets()
 		main._box(); await _wait(0.3); await shot("board_box"); _close_sheets()
 	for what in ["notebook", "board", "phone"]:

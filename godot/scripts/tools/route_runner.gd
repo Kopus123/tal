@@ -234,23 +234,45 @@ func s_fx(a: String) -> void:
 func s_solve(a: String) -> void: _solve(a, false)
 func s_nosolve(a: String) -> void: _solve(a, true)
 func _solve(a: String, expect_fail: bool) -> void:
+	idle()
+	g._case_tick(true)   # the board catches up with the story (you're looking at it)
 	var parts := a.split(";")
-	var head := parts[0].strip_edges().split(" ", false)
-	var id := head[0]
-	var fill := []
-	for w in " ".join(head.slice(1)).split("|"):
-		if w.strip_edges() != "": fill.append(w.strip_edges())
+	var id := parts[0].strip_edges().split(" ", false)[0]
 	var proofs := []
 	if parts.size() > 1:
 		for p in parts[1].split("+"): proofs.append(p.strip_edges())
+	var was: String = g.S.ch
 	var q = null
 	for c in g.ST.cases:
 		if c.id == id: q = c
-	if q == null: fail("no deduction " + id); return
-	if not g.cond(q.c): fail("deduction %s isn't on the board yet" % id); return
-	var r: String = g.solve(id, fill, proofs)
-	if expect_fail and r == "": fail("deduction %s was accepted but shouldn't be" % id)
-	if not expect_fail and r != "": fail("deduction %s not accepted (%s off)" % [id, r])
+	if q == null:   # a final deduction can end the chapter the moment it happens
+		if not expect_fail:
+			for chid in g.S.done:
+				for c in g.CH.get(chid, {}).get("cases", []):
+					if c.id == id: return   # it already closed its chapter
+		fail("no deduction " + id); return
+	if q.needs.is_empty():   # nothing to prove: it happens when the story gets there
+		g._case_tick(true)
+		if expect_fail: return
+		if not g.S.cs.has(id) and g.S.ch == was: fail("%s didn't settle by itself" % id)
+		return
+	var b: Dictionary = g.board()
+	b.strings = maxi(b.strings, 6); b.tacks = maxi(b.tacks, 6)   # the test isn't about shopping
+	var qid := "q:" + id
+	if not b.cards.has(qid): fail("the question for %s isn't on your board" % id); return
+	var made := []
+	for p in [qid] + proofs.map(func(x): return g._vid(x)):
+		if not b.cards.has(p): fail('"%s" is not on your board' % p); return
+		g.board_unbox(p); g.board_pin(p)
+	for p in proofs:
+		var v: String = g._vid(p)
+		if g.board_link(qid, v) == "": made.append(v)
+	g._case_tick()
+	var solved: bool = g.S.cs.has(id) or g.S.ch != was
+	if expect_fail:
+		if solved: fail("%s shouldn't settle with %s" % [id, ", ".join(proofs)])
+		for v in made: g.board_unlink(qid, v)
+	elif not solved: fail("%s didn't settle with %s" % [id, ", ".join(proofs)])
 
 func s_pocket(a: String) -> void:
 	idle()

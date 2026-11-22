@@ -11,7 +11,7 @@ extends RefCounted
 static func empty() -> Dictionary:
 	return {"meta": {}, "cast": {}, "words": {}, "meanings": {}, "names": {}, "grammar": {}, "tells": {}, "places": {}, "nodes": {},
 		"evidence": {}, "statements": {}, "examines": {}, "phones": [], "cases": [], "hints": [], "chapters": [], "map": [],
-		"calendar": [], "people": {}, "people_files": [], "events": [], "encounters": [], "jobs": {}, "cards": {}, "unlocks": [], "warnings": []}
+		"calendar": [], "people": {}, "people_files": [], "events": [], "encounters": [], "jobs": {}, "cards": {}, "unlocks": [], "questions": {}, "warnings": []}
 
 
 ## "a | b | {x|y}" split on the bars that aren't inside {braces}
@@ -130,6 +130,10 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 					var blanks := []
 					for t in tokens(m.get_string(4)): blanks.append(t[1])
 					st.cases.append({"id": m.get_string(1), "final": m.get_string(2) != "", "c": m.get_string(3), "text": m.get_string(4), "why": why, "needs": needs, "blanks": blanks})
+			"questions":   # ID | 한국어 | English: the pink note on the board for the deduction with that id
+				var qp: Array = split_bar(line).map(func(x): return str(x).strip_edges())
+				if qp.size() >= 2: st.questions[qp[0]] = {"ko": qp[1], "en": qp[2] if qp.size() > 2 else ""}
+				else: _warn(st, file, ln, line)
 			"evidence":
 				var p := _bar(line)
 				var id := p[0]

@@ -140,7 +140,8 @@ func _make(id: String) -> Control:
 		"time":
 			_text(c, Game.plain(cd.ko), Rect2(6, 18, 100, 76), 34, INK)
 		"note":
-			_text(c, Game.plain(cd.ko), Rect2(6, 14, 124, 98), 23, INK)
+			var qt: String = Game.plain(cd.ko)
+			_text(c, qt, Rect2(6, 14, 124, 98), 23 if qt.length() <= 10 else (19 if qt.length() <= 18 else 16), INK)
 		"photo":   # one you took: exactly what was in your frame, printed black and white, where and when underneath
 			_photo(c, photo_tex(cd), Rect2(8, 8, 170, 124), _mat_bw(), TextureRect.STRETCH_SCALE)
 			_text(c, Game.plain(cd.ko), Rect2(4, 133, 178, 28), 16, Color("3a3226"))
@@ -191,6 +192,7 @@ static func _picture(cd: Dictionary) -> Texture2D:
 
 
 func _evidence_no(id: String) -> int:
+	if id.begins_with("ev:"): return Game.ST.evidence.keys().find(id.substr(3)) + 1   # the chapter's evidence, in story order
 	var n := 0
 	for k in Game.ST.cards:
 		if Game.ST.cards[k].kind == "thing": n += 1

@@ -49,6 +49,18 @@ do if clearedOwner | The restaurant owner's phone call was nothing. He was talki
 dc if gotCard&read_threat | The messages to 할머니 came from the phone of the man from {서울}. | Every digit matches, up to where the ink smudged. | needs card "Whose phone number this is" + threat "The number the messages came from"
 d9 final if hidden&st_s_reason | Long ago, 할머니 {바꿨어요} the masks. The real one belongs to the {마을}, and she's hiding it from the man from {서울}. | That's why she ran. That's who is out there in the dark. | needs s_reason "Why she did it, in her words" + card/ticket "Something that points to who is after it"
 
+# the pink notes on the case board, one per deduction that needs proof (tie the proof to it)
+=== questions
+d1 | {이거}, {진짜} {탈}{이에요}? | The mask on the gate: is it the real one?
+dw | {밤}{에} {할머니}{는|은/는} {어디}{에} {있었어요}? | Where was 할머니 last night?
+d3 | {김밥} {두 개}. {누구}? | Two 김밥. Who was the second one for?
+d5 | {밤}{에} {다리}{에} {누구}{가|이/가} {있었어요}? | Who was on the bridge last night?
+dg | {그} {남자}{는|은/는} {할아버지}{예요|이에요}? | Was the man on the bridge 할아버지?
+do | {식당} {아저씨}{의} {전화}. {누구}? | The restaurant owner's phone call: who was it?
+dc | {그} {핸드폰}{은|은/는} {누구}{의} {핸드폰}{이에요}? | Whose phone sent the messages?
+d8 | {진짜} {탈}{은|은/는} {어디}{에} {있어요}? | Where is the real mask?
+d9 | {할머니}{는|은/는} {탈}{을|을/를} {바꿨어요}. {누구}{가|이/가} {찾아요}? | She swapped the masks. Who is looking for it?
+
 === evidence
 gramboots | {장화} | boots | 할아버지's rubber boots: smooth soles, caked with mountain mud. |
 ticket | {기차표} · {서울} | ticket | Found in the reeds by the bridge: a train ticket from Seoul, dated yesterday. | {서울} → 청솔

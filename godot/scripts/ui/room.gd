@@ -191,7 +191,7 @@ func refresh() -> void:
 		moon.enabled = true; moon.position = MOON[key][0] * Vector2(ART_W, ART_H); moon.energy = MOON[key][1]; moon.texture_scale = MOON[key][2]
 	else: moon.enabled = false
 	# the camera: yours to raise when you're standing somewhere (not mid-conversation, not at the board)
-	var can_shoot: bool = not Game.ST.cards.is_empty() and Game.node == "" and not exam and pl.get("mode", "") != "board"
+	var can_shoot: bool = not Game.ST.is_empty() and Game.node == "" and not exam and pl.get("mode", "") != "board"
 	if not can_shoot: cam_mode = false
 	cam_btn.visible = can_shoot and not cam_mode; shutter.visible = cam_mode; cam_x.visible = cam_mode; veil.visible = cam_mode
 	back_btn.visible = pl.has("back") and Game.node == "" and not cam_mode

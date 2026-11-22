@@ -20,7 +20,7 @@ if !talked: The restaurant owner sees everyone who walks past. Try talking to hi
 if !museumDone: She left on a bus. Her phone said where she was going. Listen for that stop.
 if !allSolved: Open the case board (the board button at the top) and work out what you can.
 if !ending: You've learned what you can at the museum. Take the bus home.
-if !solved_p4: Who wrote on the back of that photo in the workshop? What did 수진 just say?
+if !solved_p4: Open your case board (사건, at the top) and look at everything you have.
 The prologue is done. Look back through your notebook while you wait for Chapter 1.
 
 
@@ -29,6 +29,10 @@ p1 if read_museum&maskMissing | This morning 할머니 was supposed to meet the 
 p2 if talked&sawPhoto | She left the village by {버스}, carrying something wrapped in red cloth. | The restaurant owner saw her go, and the couple's photo shows the bundle.
 p3 if museumDone | But at the museum, she {안} {왔어요}. | She got on the bus and never arrived. | needs s_bus "Who saw her get on the bus?" + s_notcame "Who says she never arrived?"
 p4 final if ending | 할머니 is 수진's {엄마}, and her note says: {찾지 마세요}. | Not just the village grandmother. Her mother. And she doesn't want to be found.
+
+# the pink notes on the case board, one per deduction that needs proof (tie the proof to it)
+=== questions
+p3 | {할머니}{가|이/가} {박물관}{에} {왔어요}? | Did 할머니 make it to the museum?
 
 === evidence
 letter | {편지} | letter | 할머니's reply to your letter. The reason you came to 청솔마을. | {탐정님}, 청솔마을{에} {오세요}. {탈}{은|은/는}... {비밀}{이에요}.

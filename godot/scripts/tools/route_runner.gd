@@ -302,6 +302,15 @@ func s_photo(a: String) -> void:
 	var r: String = g.take_photo(Rect2(float(n[0]), float(n[1]), float(n[2]), float(n[3])), g.place().get("art", ""))
 	if r != "": fail("couldn't take the photo: " + r)
 
+## a stakeout: hide LABEL (creep into that hiding place), escape (caught, got away), failed (caught, didn't)
+func s_hide(a: String) -> void:
+	idle()
+	if not g.place().get("hides", []).any(func(h): return h.l == a.strip_edges()): fail("no hiding place \"%s\" here" % a); return
+	g.so_hide(a.strip_edges())
+
+func s_escape(_a: String) -> void: idle(); g.so_escaped()
+func s_failed(_a: String) -> void: idle(); g.so_failed()
+
 func s_pin(a: String) -> void:
 	idle()
 	for id in a.split(" ", false):

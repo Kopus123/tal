@@ -191,8 +191,8 @@ func finale() -> void:
 	finished.emit(S.ch)
 
 
-func place() -> Dictionary: return ST.places.get(S.loc, {})
-func beat() -> Dictionary: return ST.nodes.get(S.node, {})
+func place() -> Dictionary: return ST.get("places", {}).get(S.loc, {})
+func beat() -> Dictionary: return ST.get("nodes", {}).get(S.node, {})
 
 
 ## ---------- conditions: "a&!b", "money>=500", "rel:sujin>=2", "@shed", "time:night", "hold:sh_oil"
@@ -556,12 +556,47 @@ func enter(p: String) -> bool:
 	S.loc = p; S.node = ""; S.known[p] = 1; _end_lean()
 	note("went to: %s (%s)" % [ST.places[p].get("sub", p), p])
 	var pl := place()
+	if pl.get("mode", "") == "stakeout": so_reset()
 	if pl.has("always"): go(pl.always); return true
 	if pl.has("first") and not S.visited.has(p):
 		S.visited[p] = 1; go(pl.first); return true
 	S.visited[p] = 1; save()
 	if not check_events(): changed.emit()
 	return true
+
+
+## ---------- a stakeout: you're somewhere in the picture, in the open or hidden; people patrol with lights
+func so() -> Dictionary: return S.F.get("so", {})
+
+func so_reset() -> void:
+	var st: Vector2 = place().get("start", Vector2(50, 92))
+	S.F["so"] = {"x": st.x, "y": st.y, "hid": ""}
+
+## you crept into a hiding place; something may be said nearby that you only hear from there
+func so_hide(label: String) -> void:
+	for h in place().get("hides", []):
+		if h.l != label: continue
+		S.F["so"] = {"x": h.x, "y": h.y, "hid": label}
+		note("  hid: " + label)
+		for w in place().get("whispers", []):
+			if w.at == label and cond(w.c) and not S.F.has("wh_%s_%s" % [loc, w.scene]):
+				S.F["wh_%s_%s" % [loc, w.scene]] = 1; save(); go(w.scene); return
+		save(); changed.emit(); return
+
+## out in the open, on the way somewhere
+func so_move(x: float, y: float) -> void:
+	S.F["so"] = {"x": x, "y": y, "hid": ""}
+
+## a light found you, and you ran: away (back to where you came in) or not
+func so_escaped() -> void:
+	S.F["so_escapes"] = S.F.get("so_escapes", 0) + 1; note("  caught, got away")
+	toast.emit("You got away. Your heart won't slow down."); so_reset(); save(); changed.emit()
+
+func so_failed() -> void:
+	S.F["so_caught"] = S.F.get("so_caught", 0) + 1; note("  caught, didn't get away")
+	var sc: String = place().get("caught", "")
+	if sc != "": go(sc)
+	else: so_reset(); save(); changed.emit()
 
 
 ## the things you can tap right now (the first spot per label whose COND holds)

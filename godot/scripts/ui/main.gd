@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "3.8"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "4.0"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -67,6 +67,7 @@ func _build() -> void:
 	row.add_child(arc)
 	room = load("res://scripts/ui/room.gd").new(); arc.add_child(room)
 	room.wants.connect(func(w): _open("jobs" if w == "board" else w))
+	room.caught.connect(_escape)
 	card = _card(); room.add_child(card)
 	cork = load("res://scripts/ui/cork.gd").new(); cork.visible = false; arc.add_child(cork)
 	cork.selected.connect(func(id): card_sel = id; _refresh())
@@ -519,6 +520,41 @@ func _menu() -> void:
 	var b3 := Kit.button("⌨  Korean keyboard test"); b3.pressed.connect(func(): Kit.close(inner); _keyboard_test()); inner.add_child(b3)
 	var b5 := Kit.button("💬  What was said"); b5.pressed.connect(func(): Kit.close(inner); _log_sheet()); inner.add_child(b5)
 	var b4 := Kit.button("⚙  Settings"); b4.pressed.connect(func(): Kit.close(inner); _settings()); inner.add_child(b4)
+
+
+## a light found you: "누구예요?!" Run: tap left, right, left, right, fast, before they catch your sleeve
+func _escape() -> void:
+	var o := ColorRect.new(); o.color = Color(0.25, 0.02, 0.02, 0.88); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(o)
+	var cc := CenterContainer.new(); cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); o.add_child(cc)
+	var col := VBoxContainer.new(); col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 18); cc.add_child(col)
+	var shout := Kit.label("누구예요?!", 64, Color("ffd7c9")); shout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; col.add_child(shout)
+	var tip := Kit.label("RUN!  Tap  ◀  ▶  ◀  ▶  as fast as you can", 24, Color("f3ead2")); tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; col.add_child(tip)
+	var bar := ProgressBar.new(); bar.custom_minimum_size = Vector2(560, 30); bar.max_value = 1.0; bar.step = 0.001; bar.show_percentage = false; col.add_child(bar)
+	bar.add_theme_stylebox_override("background", Kit.box(8, Color(0, 0, 0, 0.45), Color.TRANSPARENT, 0, 0))
+	bar.add_theme_stylebox_override("fill", Kit.box(8, Color("f0b35a"), Color.TRANSPARENT, 0, 0))
+	var row := HBoxContainer.new(); row.alignment = BoxContainer.ALIGNMENT_CENTER; row.add_theme_constant_override("separation", 60); col.add_child(row)
+	var st := {"v": 0.25, "last": "", "t": 4.5, "done": false}
+	for side in ["◀", "▶"]:
+		var b := Kit.button(side, true, 60); b.custom_minimum_size = Vector2(200, 180); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; row.add_child(b)
+		b.button_down.connect(func():
+			st.v += 0.085 if st.last != side else 0.01   # alternate: left, right, left...
+			st.last = side; _play("step"))
+	voice.say("{누구}{예요|이에요}?!", "sign")
+	var end := func(ok: bool):
+		if st.done: return
+		st.done = true; o.queue_free()
+		if ok: Game.so_escaped()
+		else: Game.so_failed()
+	var tick := func(dt: float):
+		if st.done: return
+		st.t -= dt; st.v = clampf(st.v - dt * 0.22, 0.0, 1.0); bar.value = st.v
+		if st.v >= 1.0: end.call(true)
+		elif st.t <= 0.0 or st.v <= 0.0: end.call(false)
+	while not st.done:
+		await get_tree().process_frame
+		if not is_instance_valid(o): return
+		tick.call(get_process_delta_time())
 
 
 ## 기록: every line so far in this chapter, newest at the bottom; tap ▶ to hear one again

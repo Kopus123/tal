@@ -64,7 +64,7 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 			sec = h.get_string(1); var arg := h.get_string(2).strip_edges()
 			match sec:
 				"scene": S.scene = arg; S.last = {}; S.count = 0; S.early = []
-				"place": cur = {"id": arg, "spots": [], "desc": [], "subjects": [], "glow": []}; st.places[arg] = cur
+				"place": cur = {"id": arg, "spots": [], "desc": [], "subjects": [], "glow": [], "hides": [], "walkers": [], "whispers": []}; st.places[arg] = cur
 				"phone": cur = {"id": arg, "m": [], "fx": [], "name": arg, "av": "?", "c": "#888"}; st.phones.append(cur)
 				"examine": cur = {"id": arg, "details": [], "art": "", "prompt": "", "compare": ""}; st.examines[arg] = cur
 				"person": cur = {"id": arg, "at": {}, "greet": [], "chat": [], "story": [], "ask": [], "bye": []}; st.people[arg] = cur
@@ -213,7 +213,7 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				if m: cur.ask[m.get_string(1)] = m.get_string(2); continue
 				_warn(st, file, ln, line)
 			"place":
-				m = R("^(name|sub|art|first|always|ambient|travel|music|sound|light|mode|dark|back)\\s+(.+)$").search(line)
+				m = R("^(name|sub|art|first|always|ambient|travel|music|sound|light|mode|dark|back|caught)\\s+(.+)$").search(line)
 				if m: cur[m.get_string(1)] = m.get_string(2); continue
 				m = R("^desc\\s+(?:if\\s+(\\S+):\\s*)?(.+)$").search(line)
 				if m: cur.desc.append({"c": m.get_string(1), "t": m.get_string(2)}); continue
@@ -229,6 +229,19 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				if m:
 					cur.subjects.append({"is": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "r": float(m.get_string(4))})
 					continue
+				# a stakeout (mode stakeout): where you come in, places to hide, people on patrol with a light, and
+				# what you overhear while hidden in a particular spot
+				m = R("^start\\s+([\\d.]+)\\s+([\\d.]+)$").search(line)
+				if m: cur.start = Vector2(float(m.get_string(1)), float(m.get_string(2))); continue
+				m = R("^hide\\s+\"([^\"]+)\"\\s+([\\d.]+)\\s+([\\d.]+)$").search(line)
+				if m: cur.hides.append({"l": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3))}); continue
+				m = R("^walker\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+(\\w+))?$").search(line)
+				if m:
+					cur.walkers.append({"a": Vector2(float(m.get_string(1)), float(m.get_string(2))), "b": Vector2(float(m.get_string(3)), float(m.get_string(4))),
+						"sec": float(m.get_string(5)), "r": float(m.get_string(6)), "who": m.get_string(7) if m.get_string(7) != "" else "ajeossi"})
+					continue
+				m = R("^whisper\\s+\"([^\"]+)\"\\s+->\\s+(\\S+)(?:\\s+if\\s+(\\S+))?$").search(line)
+				if m: cur.whispers.append({"at": m.get_string(1), "scene": m.get_string(2), "c": m.get_string(3)}); continue
 				m = R("^glow\\s+(.+?)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+([\\d.]+))?$").search(line)
 				if m:
 					cur.glow.append({"w": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "r": float(m.get_string(4)), "h": float(m.get_string(5)) if m.get_string(5) != "" else 0.0})

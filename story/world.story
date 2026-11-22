@@ -137,6 +137,7 @@ village    | 마을     | Free days | village.story + jobs.story + encounters.st
 # test areas ("dev"): not in the chapter list; Menu > Jump ahead > Test areas, with Playtest tools on
 shed       | 창고     | Escape room | shed.story | dev
 boardlab   | 연구실   | Case board lab | boardlab.story | dev
+stakeout   | 잠복     | Night stakeout | stakeout.story | dev
 
 === people
 # id | file in story/people/   (who lives in the village on free days: see js/core/villagers.js)

@@ -4,6 +4,7 @@ extends Control
 ## The drawing is lit inside its own little world (a SubViewport) so the light doesn't touch the paper on the right.
 
 signal wants(what: String)   ## a spot that opens something on the screen (the notice board, the phone)
+signal caught                ## a stakeout: a light found you
 
 const ART_W := 1600.0
 const ART_H := 1200.0
@@ -34,6 +35,14 @@ var veil: Control                  ## the dark around the viewfinder, the film c
 var cam_mode := false
 var glow: Control                  ## soft rings on what someone just named
 var drift: CPUParticles2D          ## dust, leaves, motes in the air
+## a stakeout
+var watch: Control                 ## the people on patrol (dark shapes) and you, the eye at the top
+var _walk: Array = []              ## {d, t, tex, light, step}
+var _sus := 0.0                    ## how close they are to seeing you (1 = seen)
+var _me := Vector2(-1, -1)         ## where you are (percent), while you creep somewhere
+var _moving := false
+var _beat := 0.0
+var _so_place := ""
 var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
 var _focused := false
 var _resizing := false
@@ -71,6 +80,8 @@ func _ready() -> void:
 	back_btn.pressed.connect(func(): Game.sound.emit("tap"); Game.enter(Game.place().back))
 	add_child(back_btn)
 	drift = CPUParticles2D.new(); drift.emitting = false; add_child(drift)
+	watch = Control.new(); watch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); watch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	watch.draw.connect(_draw_watch); add_child(watch)
 	glow = Control.new(); glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	glow.draw.connect(_draw_glow); add_child(glow)
 	var gt := create_tween().set_loops(); gt.tween_property(glow, "modulate:a", 0.35, 0.9).set_trans(Tween.TRANS_SINE); gt.tween_property(glow, "modulate:a", 1.0, 0.9).set_trans(Tween.TRANS_SINE)
@@ -127,7 +138,10 @@ func _snap() -> void:
 
 
 func _process(dt: float) -> void:   # the viewfinder settles and focuses once you stop moving it
-	if not cam_mode: set_process(false); return
+	if _so_place != "": _so_tick(dt)
+	if not cam_mode:
+		if _so_place == "": set_process(false)
+		return
 	_still += dt
 	if _still > 0.3 and not _focused:
 		_focused = true; Game.sound.emit("tap"); frame.modulate.a = 1.0; veil.queue_redraw()
@@ -209,6 +223,7 @@ func refresh() -> void:
 	if not frame.visible: frame.remove_meta("placed")
 	if cam_mode: frame.modulate.a = 1.0 if _focused else 0.5
 	_place_figs()
+	_stakeout(pl)
 	marks.queue_redraw(); glow.queue_redraw()
 	_drift(pl.get("ambient", "") if not exam else "")
 
@@ -255,6 +270,126 @@ func _drift(kind: String) -> void:
 			drift.color = Color(1, 0.88, 0.55, 0.7)
 	drift.preprocess = drift.lifetime   # already in the air when you arrive
 	drift.emitting = true
+
+
+## ---------- the stakeout: set up the patrol when you arrive; take it down when you leave
+func _stakeout(pl: Dictionary) -> void:
+	var on: bool = pl.get("mode", "") == "stakeout"
+	if not on:
+		if _so_place != "": _so_clear()
+		return
+	if _so_place == Game.loc and Game.so().get("x", -1.0) == _me.x and Game.so().get("y", -1.0) == _me.y: return
+	if _so_place != Game.loc:
+		_so_clear(); _so_place = Game.loc
+		for d in pl.get("walkers", []):
+			var t := TextureRect.new(); t.texture = Kit.figure(d.who); t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT; t.modulate = Color(0.06, 0.06, 0.08, 0.95); t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			watch.add_child(t)
+			var l := _light(Color(1.0, 0.86, 0.6), 1.7, d.r / 100.0 * ART_W * 2.0 / 512.0); l.enabled = true; vp.add_child(l)
+			_walk.append({"d": d, "t": randf(), "tex": t, "light": l, "step": 0.0, "dir": 1.0})
+		_sus = 0.0
+	if not _moving:
+		var s: Dictionary = Game.so(); _me = Vector2(s.get("x", 50.0), s.get("y", 92.0))
+	set_process(true); watch.queue_redraw()
+
+
+func _so_clear() -> void:
+	for w in _walk: w.tex.queue_free(); w.light.queue_free()
+	_walk.clear(); _so_place = ""; _sus = 0.0; _moving = false; watch.queue_redraw()
+
+
+## each frame: they walk their beat (and stop while something's being said); their light finds you or doesn't
+func _so_tick(dt: float) -> void:
+	var paused: bool = Game.node != "" or not visible
+	var me_px := _me / 100.0 * size
+	var hidden: bool = Game.so().get("hid", "") != "" and not _moving
+	var lit: bool = bool(Game.F.get("lit", 0))
+	var seen := false
+	for w in _walk:
+		var d: Dictionary = w.d
+		if not paused: w.t = fmod(w.t + dt / d.sec, 2.0)
+		var k: float = w.t if w.t <= 1.0 else 2.0 - w.t          # there and back
+		var face: float = 1.0 if w.t <= 1.0 else -1.0
+		var pos: Vector2 = d.a.lerp(d.b, smoothstep(0.0, 1.0, k))
+		var dir: Vector2 = (d.b - d.a).normalized() * face
+		var h := size.y * 0.34 * clampf(pos.y / 80.0, 0.6, 1.2)
+		w.tex.size = Vector2(h * 200.0 / 424.0, h); w.tex.position = pos / 100.0 * size - Vector2(w.tex.size.x / 2, h)
+		w.tex.flip_h = face < 0
+		var beam: Vector2 = pos + dir * d.r * 0.9 + Vector2(0, 4)  # the light falls ahead of them
+		w.light.position = beam / 100.0 * Vector2(ART_W, ART_H)
+		var r_px: float = d.r / 100.0 * size.x
+		var beam_px := beam / 100.0 * size
+		if not hidden and me_px.distance_to(beam_px) < r_px: seen = true                      # in the beam, in the open
+		if lit and me_px.distance_to(pos / 100.0 * size) < r_px * 2.4: seen = true             # your own light gives you away
+		if not paused:   # footsteps: louder the closer they are
+			w.step += dt
+			if w.step > 0.55:
+				w.step = 0.0
+				var near := clampf(1.0 - me_px.distance_to(pos / 100.0 * size) / size.x, 0.0, 1.0)
+				_sfx("step", lerpf(-30.0, -4.0, near))
+	if not paused:
+		_sus = clampf(_sus + (dt * 1.5 if seen else -dt * 0.45), 0.0, 1.0)
+		if _sus > 0.35:
+			_beat += dt
+			if _beat > lerpf(1.0, 0.35, _sus): _beat = 0.0; _sfx("heart", lerpf(-14.0, 0.0, _sus))
+		if _sus >= 1.0:
+			_sus = 0.0; _moving = false; _sfx("spotted", 0.0); Game.note("  spotted"); caught.emit()
+	watch.queue_redraw()
+
+
+func _sfx(n: String, db: float) -> void:
+	if Settings.get_("sound") == 0: return
+	var s := load("res://sfx/%s.wav" % n) as AudioStream
+	if s == null: return
+	var p := AudioStreamPlayer.new(); p.stream = s; p.volume_db = db; add_child(p); p.play(); p.finished.connect(p.queue_free)
+
+
+## a tap in a stakeout: creep to a hiding place, or toward a way out (in the open the whole way)
+func _so_tap(p: Vector2) -> void:
+	if _moving: return
+	var pct := p / size * 100.0
+	var best: Dictionary = {}; var bd := 1e9; var kind := ""
+	for h in Game.place().get("hides", []):
+		var dd := (Vector2(h.x, h.y) - pct).length()
+		if dd < 10 and dd < bd: bd = dd; best = h; kind = "hide"
+	for s in Game.spots_now():
+		var dd := (Vector2(s.x, s.y) - pct).length()
+		if dd < 10 and dd < bd: bd = dd; best = s; kind = "spot"
+	if best.is_empty(): _ripple(p); return
+	var to := Vector2(best.x, best.y)
+	var secs := clampf(_me.distance_to(to) / 40.0, 0.35, 1.6)
+	_moving = true; Game.so_move(_me.x, _me.y); Game.sound.emit("tap")
+	var tw := create_tween(); tw.tween_property(self, "_me", to, secs).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(func():
+		_moving = false
+		if _so_place == "": return
+		if kind == "hide": Game.so_hide(best.l)
+		else: Game.so_move(to.x, to.y); Game.tap_spot(best))
+
+
+## you (a crouched shadow), the hiding places, and the eye: how close they are to seeing you
+func _draw_watch() -> void:
+	if _so_place == "": return
+	var font := ThemeDB.fallback_font
+	var hid: String = Game.so().get("hid", "") if not _moving else ""
+	for h in Game.place().get("hides", []):
+		var c := Vector2(h.x, h.y) / 100.0 * size
+		watch.draw_arc(c, 22, 0, TAU, 32, Color(0.75, 0.85, 1.0, 0.35 if h.l != hid else 0.8), 2.0)
+		var w := font.get_string_size(h.l, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		watch.draw_string(font, c + Vector2(-w / 2, 40), h.l, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.85, 0.9, 1.0, 0.55))
+	var me := _me / 100.0 * size
+	var col := Color(0.02, 0.02, 0.03, 0.55) if hid != "" else Color(0.02, 0.02, 0.03, 0.9)
+	watch.draw_circle(me + Vector2(0, -14), 9, col); watch.draw_colored_polygon(PackedVector2Array([me + Vector2(-14, 4), me + Vector2(14, 4), me + Vector2(9, -8), me + Vector2(-9, -8)]), col)
+	if hid == "": watch.draw_arc(me + Vector2(0, -6), 24, 0, TAU, 32, Color(1, 1, 1, 0.5), 2.0)   # you're in the open
+	# the eye
+	var e := Vector2(size.x / 2, 34)
+	var lid := PackedVector2Array()
+	for i in 17: lid.append(e + Vector2(lerpf(-34, 34, i / 16.0), -sin(PI * i / 16.0) * 16))
+	for i in 17: lid.append(e + Vector2(lerpf(34, -34, i / 16.0), sin(PI * i / 16.0) * 16))
+	watch.draw_colored_polygon(lid, Color(0, 0, 0, 0.45))
+	var open := Color(1, 1 - _sus, 1 - _sus, 0.35 + 0.6 * _sus)
+	watch.draw_polyline(lid + PackedVector2Array([lid[0]]), open, 2.5, true)
+	if _sus > 0.02: watch.draw_circle(e, 4 + 9 * _sus, Color(0.9, 0.15, 0.1, 0.35 + 0.6 * _sus))
 
 
 ## ---------- villagers standing in the picture (free days)
@@ -311,6 +446,7 @@ func _tap(p: Vector2) -> void:
 	var pct := p / size * 100.0
 	var b: Dictionary = Game.beat()
 	if b.get("type", "") == "examine": _exam_tap(pct); return
+	if _so_place != "" and Game.node == "": _so_tap(p); return
 	if Game.node != "":
 		# looking closely at something: a tap well away from it (it sits in the middle) steps back from it
 		if Game._leaning and (p - size / 2).length() > size.x * STEP_BACK: Game.step_back()

@@ -21,6 +21,8 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		if n >= MAX or cmd in ["expect", "fx", "saved", "encounters", "noboard", "nospot", "done", "shown"]: return
 		await _wait(0.45)
 		await shot("%s_%s" % [cmd, arg.left(18)])
+		if cmd == "escape":   # what being caught looks like
+			main._escape(); await _wait(0.6); await shot("caught_run"); _close_big()
 		if cmd == "photo":   # show the viewfinder where that photo was taken
 			var n := arg.split(" ", false); var rm: Control = main.room
 			rm.camera(true); await _wait(0.1)

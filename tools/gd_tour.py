@@ -5,6 +5,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 GODOT = r"C:\Users\2006a\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe"
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 out = ROOT / "build" / "shots"; shutil.rmtree(out, ignore_errors=True)
+subprocess.run([GODOT, "--headless", "--path", str(ROOT / "godot"), "--import"], capture_output=True, timeout=600)   # pictures exported since the last import
 args = [GODOT, "--path", str(ROOT / "godot"), "--resolution", "1544x720", "--", "--shots", out.as_posix(), *sys.argv[1:]]
 try:
     r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=400)

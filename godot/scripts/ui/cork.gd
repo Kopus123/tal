@@ -302,8 +302,16 @@ func preview(id: String, width: float) -> Control:
 	var k := minf(width / c.size.x, 300.0 / c.size.y)
 	var w := Control.new(); w.custom_minimum_size = c.size * k; w.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	w.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	c.scale = Vector2(k, k); w.add_child(c)
+	c.scale = Vector2(k, k); crisp(c, k); w.add_child(c)
 	return w
+
+
+## a card shown scaled up: its words drawn at the big size instead of stretched (stretched text goes blurry)
+static func crisp(c: Control, k: float) -> void:
+	for l in c.get_children():
+		if l is Label:
+			l.add_theme_font_size_override("font_size", int(round(l.get_theme_font_size("font_size") * k)))
+			l.size *= k; l.scale = Vector2.ONE / k
 
 
 ## ---------- drawing: the brick wall, the metal frame, the cork

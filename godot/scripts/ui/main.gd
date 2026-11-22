@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "3.3"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "3.4"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -221,7 +221,23 @@ func _lab() -> void:
 	var worn_n: int = bd.get("frayed", 0)
 	_text("🧵 String: %d%s   ·   📌 Thumbtacks: %d   ·   %s" % [bd.strings, " (%d frayed)" % worn_n if worn_n > 0 else "", bd.tacks, Game.won(Game.W.money)], 20, Kit.MUTE)
 	_act("Leave the board ▸", func(): lab_go = true; _refresh())
-	if id != "" and Game.ST.cards.has(id): acts.add_child(cork.preview(id, 300.0))   # the card itself, big
+	if id != "" and Game.ST.cards.has(id):   # the card itself, bigger; tap it to see it full screen
+		var pv: Control = cork.preview(id, 300.0); pv.mouse_filter = Control.MOUSE_FILTER_STOP; acts.add_child(pv)
+		pv.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed: card_big(id))
+		acts.add_child(Kit.label("(tap the card to see it bigger)", 16, Kit.MUTE))
+
+
+## a card over the whole screen; tap anywhere (or ✕) to put it back
+func card_big(id: String) -> void:
+	Game.sound.emit("tap")
+	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.82); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(o)
+	var c: Control = cork._make(id); c.set_meta("preview", true); c.rotation_degrees = 0
+	var k := minf(size.x * 0.9 / c.size.x, size.y * 0.88 / c.size.y)
+	c.scale = Vector2(k, k); cork.crisp(c, k); c.position = (size - c.size * k) / 2; o.add_child(c)
+	var x := Kit.button("✕", true, 28); x.custom_minimum_size = Vector2(72, 72); o.add_child(x)
+	x.position = Vector2(size.x - 92, 20)
+	x.pressed.connect(func(): o.queue_free())
+	o.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed: Game.sound.emit("tap"); o.queue_free())
 
 
 func _lab_pin(id: String) -> void:

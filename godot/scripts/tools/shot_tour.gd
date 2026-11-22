@@ -29,6 +29,7 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 	if main.cork.visible:   # the case board: a card picked, a string in hand, the menu over the board
 		var ids: Array = Game.board().cards.keys()
 		main.cork.pick(ids[0]); await _wait(0.3); await shot("board_card")
+		main.card_big(ids[0]); await _wait(0.3); await shot("board_card_big"); _close_big()
 		var loose := ids.filter(func(i): return not Game.is_pinned(i))
 		if not loose.is_empty(): main.cork.pick(loose[0]); await _wait(0.3); await shot("board_loose")
 		var pinned := ids.filter(func(i): return Game.is_pinned(i))
@@ -49,6 +50,11 @@ func shot(name: String) -> void:
 
 
 func _wait(s: float) -> void: await main.get_tree().create_timer(s).timeout
+
+
+func _close_big() -> void:
+	for c in main.get_children():
+		if c is ColorRect and c.color.a > 0.8: c.queue_free()
 
 
 func _close_sheets() -> void:

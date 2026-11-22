@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := 13
+const BUILD := "3.03"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -96,7 +96,7 @@ func _build() -> void:
 	pockets_box = HFlowContainer.new(); pockets_box.add_theme_constant_override("h_separation", 8); pk.add_child(pockets_box)
 	pocket_hint = Kit.label("", 15, Kit.MUTE, true); pk.add_child(pocket_hint)
 	foot = HBoxContainer.new(); foot.add_theme_constant_override("separation", 8); col.add_child(foot)
-	var bl := Kit.label("build %d" % BUILD, 12, Color(1, 1, 1, 0.25)); bl.anchor_top = 1; bl.anchor_bottom = 1; bl.offset_top = -18; bl.offset_left = 16; add_child(bl)
+	var bl := Kit.label("build %s" % BUILD, 12, Color(1, 1, 1, 0.25)); bl.anchor_top = 1; bl.anchor_bottom = 1; bl.offset_top = -18; bl.offset_left = 16; add_child(bl)
 	toast_box = VBoxContainer.new(); toast_box.set_anchors_preset(Control.PRESET_CENTER_TOP); toast_box.position.y = 20; toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_box.grow_horizontal = Control.GROW_DIRECTION_BOTH; add_child(toast_box)
 

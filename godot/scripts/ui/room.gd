@@ -220,13 +220,14 @@ func _draw_glow() -> void:
 	if not b.has("ko"): return
 	var named: Array = Story.tokens(b.ko).map(func(t): return t[1])
 	for g in Game.place().get("glow", []):
-		if not g.w in named: continue
+		if not g.w in named or Game.know_level(g.w) == 2: continue   # a word you know doesn't need pointing at
+		var a := 0.45 if Game.know_level(g.w) == 1 else 1.0
 		var c := Vector2(g.x, g.y) / 100.0 * size; var rx: float = g.r / 100.0 * size.x
 		var ry: float = (g.h / 100.0 * size.y) if g.h > 0 else rx
 		var pts := PackedVector2Array()
 		for i in 49: pts.append(c + Vector2(cos(TAU * i / 48.0) * rx, sin(TAU * i / 48.0) * ry))
-		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.95), 4.0, true)
-		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.25), 12.0, true)
+		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.95 * a), 4.0, true)
+		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.25 * a), 12.0, true)
 
 
 ## ---------- the air: dust in sunbeams, falling leaves, motes of light

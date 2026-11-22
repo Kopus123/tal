@@ -48,6 +48,8 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 	for t in ["words", "gram", "pat", "num", "key"]:
 		nb.tab = t; main._open("notebook"); await _wait(0.4); await shot("notebook_" + t); _close_sheets()
 	main._settings(); await _wait(0.3); await shot("settings"); _close_sheets()
+	if not Game.jobs_today().is_empty() or not Game.job_on().is_empty():
+		main._open("jobs"); await _wait(0.3); await shot("jobs"); _close_sheets()
 	main._log_sheet(); await _wait(0.5); await shot("log"); _close_sheets()
 	for what in ["board", "phone"]:
 		if what == "phone" and not Game.has_phone(): continue

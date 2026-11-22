@@ -22,6 +22,11 @@ static func board(main: Control) -> void:
 		inner.add_child(Kit.label("%s · %s" % [j.ko, j.en], 24))
 		inner.add_child(Kit.label("for %s · %s · %s" % [Game.ST.cast.get(j.client, {}).get("n", j.client), Game.won(j.pay), j.level], 17, Kit.MUTE))
 		inner.add_child(Kit.label(j.note, 19, Kit.PAPER_INK, true))
+		for w in j.get("ask", {}).keys():   # leads: who to ask, and where they are right now
+			var p: Dictionary = Game.PEOPLE.get(w, {})
+			var at: Dictionary = Game.where_now(p) if not p.is_empty() and not Game.away_now(w) else {}
+			var pl: Dictionary = Game.ST.places.get(at.get("place", ""), {})
+			inner.add_child(Kit.label("·  Ask %s: %s" % [Game.ST.cast.get(w, {}).get("n", w), ("%s (%s) right now" % [pl.name, pl.get("sub", "")]) if not pl.is_empty() else "not around right now"], 18, Kit.MUTE, true))
 		if mine:
 			var q := Kit.button("Give up for today"); q.pressed.connect(func(): Kit.close(inner); Game._job_effect("fail"); Game.changed.emit()); inner.add_child(q)
 		elif cur.is_empty():

@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "3.7"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "3.8"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -179,7 +179,8 @@ func _foot(t: String, f: Callable) -> void:
 
 ## the case board lab: the card you're looking at, big, and what you can do with it; leaving is one button away
 var lab_go := false
-var board_view := false   ## the case board, opened from the top bar (in the chapters)
+var board_view := false
+var _en_open := ""         ## a line whose folded-away English you asked to see   ## the case board, opened from the top bar (in the chapters)
 func _lab() -> void:
 	var bd: Dictionary = Game.board()
 	if lab_go:
@@ -295,7 +296,11 @@ func _say_beat(b: Dictionary) -> void:
 			var r := Kit.rich(30); r.text = Kit.ko(b.ko); r.meta_clicked.connect(func(w): _word(str(w))); right.add_child(r)
 		var again := Kit.button("▶ Again", false, 16); again.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		again.pressed.connect(func(): voice.say(b.ko, who)); right.add_child(again)
-		if b.has("en"): _text(Kit.esc(b.en), 19, Kit.MUTE)
+		if b.has("en"):
+			if b.get("audio", false) or _en_open == b.id or not Game.line_known(b.ko): _text(Kit.esc(b.en), 19, Kit.MUTE)
+			else:   # you know every word: the Korean is enough
+				var sh := Kit.button("show what they do", false, 15); sh.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+				sh.pressed.connect(func(): _en_open = b.id; _refresh()); body.add_child(sh)
 	var shown := 0
 	for o in b.get("ch", []):
 		if not Game.cond(o.c): continue
@@ -530,7 +535,9 @@ func _log_sheet() -> void:
 			f.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; f.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(f)
 		var col := VBoxContainer.new(); col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; col.add_theme_constant_override("separation", 0); row.add_child(col)
 		col.add_child(Kit.label("You" if e.who == "you" else ("Written" if e.who == "sign" else Game.ST.cast.get(e.who, {}).get("n", e.who)), 15, Kit.MUTE))
-		var r := Kit.rich(22); r.text = Kit.ko(e.ko); r.meta_clicked.connect(func(w): _word(str(w))); col.add_child(r)
+		if e.get("heard", false): col.add_child(Kit.label("🔊 Heard, not written down yet", 20, Kit.MUTE))
+		else:
+			var r := Kit.rich(22); r.text = Kit.ko(e.ko); r.meta_clicked.connect(func(w): _word(str(w))); col.add_child(r)
 		if e.get("en", "") != "": col.add_child(Kit.label(e.en, 16, Kit.MUTE, true))
 		var say := Kit.button("▶", false, 18); var k: String = e.ko; var who: String = e.who
 		say.pressed.connect(func(): voice.say(k, who)); row.add_child(say)
@@ -544,7 +551,7 @@ func _settings() -> void:
 	var inner := Kit.sheet(self, "설정 · settings", 0.62)
 	var rows := [["auto", "Read lines aloud by themselves", [[1, "On"], [0, "Off"]]], ["voices", "Voices", [[1, "On"], [0, "Off"]]],
 		["slow", "Voice speed", [[0, "Normal"], [1, "Slow"]]], ["size", "Korean text size", [[0, "Small"], [1, "Medium"], [2, "Large"]]],
-		["glow", "Things glow when named", [[1, "On"], [0, "Off"]]], ["sound", "Sound effects", [[1, "On"], [0, "Off"]]], ["music", "Music", [[2, "On"], [1, "Low"], [0, "Off"]]],
+		["glow", "Things glow when named", [[1, "On"], [0, "Off"]]], ["fade", "Hints fade as you learn words", [[1, "On"], [0, "Off"]]], ["sound", "Sound effects", [[1, "On"], [0, "Off"]]], ["music", "Music", [[2, "On"], [1, "Low"], [0, "Off"]]],
 		["amb", "Background sounds", [[2, "On"], [1, "Low"], [0, "Off"]]]]
 	for r in rows:
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); inner.add_child(row)

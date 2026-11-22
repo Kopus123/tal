@@ -359,15 +359,21 @@ func go(id: String) -> void:
 	if ST.free and PSTART.has(id): W.seen[id] = W.day   # a villager's conversation, heard today
 	var nd: Dictionary = ST.nodes[id]
 	run_fx(nd.get("fx", []), id)
-	if nd.has("ko"): _met(nd.ko)
-	if nd.has("ko") or (nd.get("who", "") == "narr" and nd.has("en")): _log(nd.get("who", "narr"), nd.get("ko", ""), nd.get("en", ""), nd.get("ex", "neutral"))
+	if nd.has("ko") and not nd.get("audio", false): _met(nd.ko)
+	if nd.has("ko") or (nd.get("who", "") == "narr" and nd.has("en")): _log(nd.get("who", "narr"), nd.get("ko", ""), nd.get("en", ""), nd.get("ex", "neutral"), nd.get("audio", false))
 	save(); changed.emit()
 
 
 ## what was said: kept so you can scroll back (the menu's 기록)
-func _log(who: String, ko_: String, en: String = "", ex: String = "neutral") -> void:
+func _log(who: String, ko_: String, en: String = "", ex: String = "neutral", heard := false) -> void:
 	if not S.has("log"): S["log"] = []
-	S.log.append({"who": who, "ko": ko_, "en": en, "ex": ex})
+	S.log.append({"who": who, "ko": ko_, "en": en, "ex": ex, "heard": heard})
+
+
+## you did something: what you'd only heard gets written down now (in the log, and its words in your notebook)
+func reveal_heard() -> void:
+	for e in S.get("log", []):
+		if e.get("heard", false): e.heard = false; _met(e.ko)
 	if S.log.size() > 200: S.log = S.log.slice(S.log.size() - 200)
 
 
@@ -386,7 +392,8 @@ func next() -> void:
 func choose(o: Dictionary) -> void:
 	if o.get("ko", "").contains("안녕"): S.F["said_hi_" + S.loc] = W.day
 	note("  chose: " + plain(o.get("en", o.get("ko", ""))))
-	if o.get("ko", "") != "": _log("you", o.ko)
+	reveal_heard()
+	if o.get("ko", "") != "": _log("you", o.ko); _used(o.ko, not leads_to_rewind(o.go))
 	sound.emit("tap"); run_fx(o.get("fx", []), S.node + ">" + o.go); go(o.go)
 
 
@@ -436,7 +443,8 @@ func answer_build(tiles: Array) -> void:
 	note("  built: " + " ".join(tiles.map(func(t): return plain(t))))
 	for a in b.ans:
 		if a[0].size() == tiles.size() and range(tiles.size()).all(func(i): return a[0][i] == tiles[i]):
-			_log("you", ("" if b.get("join", false) else " ").join(tiles)); go(a[1]); return
+			reveal_heard(); _log("you", ("" if b.get("join", false) else " ").join(tiles)); _used(" ".join(tiles), not leads_to_rewind(a[1])); go(a[1]); return
+	reveal_heard(); _used(" ".join(tiles), false)
 	go(b.get("miss", ""))
 
 
@@ -459,6 +467,7 @@ func answer_type(val: String) -> String:
 		# beginners misspell: about a third of the letters can be off (안녕하세요 with 3 slips still counts)
 		var lim := maxi(2, int(round(bn * 0.3)))
 		if bd <= lim and _tnorm(best[0]).contains("안녕"): S.F["said_hi_" + S.loc] = W.day
+		if bd <= lim: reveal_heard(); _log("you", best[0]); _used(best[0], not leads_to_rewind(best[1]))
 		if bd == 0: go(best[1]); return "exact"
 		if bd <= lim: typed_close = {"yours": val, "correct": plain(best[0]), "target": best[1]}; changed.emit(); return "close"
 	for c in COMMON:
@@ -681,6 +690,51 @@ func word(w: String) -> Dictionary:
 	return words[w]
 
 
+## ---------- knowing a word: counted quietly. m = {s: times seen, u: used right, x: used wrong, k: right in a row}
+func _m(w: String) -> Dictionary:
+	var r := word(w)
+	if not r.has("m"): r["m"] = {"s": 0, "u": 0, "x": 0, "k": 0}
+	return r.m
+
+
+## you said it (picked it, built it, typed it): right uses in a row make the hints fade; a slip brings them back
+func _used(text: String, ok: bool) -> void:
+	for t in Story.tokens(text):
+		if not world.words.has(t[1]) or world.words[t[1]].get("g", false): continue
+		var m := _m(t[1])
+		if ok: m.u += 1; m.k += 1
+		else: m.x += 1; m.k = 0
+	save_words()
+
+
+## how much help a word still needs: 0 all of it, 1 fading, 2 you know it (setting "Hints fade as you learn words")
+func know_level(w: String) -> int:
+	if Settings.get_("fade") == 0 or not words.has(w) or not words[w].has("m"): return 0
+	var m: Dictionary = words[w].m
+	if m.k >= 4: return 2
+	if m.k >= 2: return 1
+	return 1 if words[w].get("sure", false) and m.s >= 6 and m.x == 0 else 0
+
+
+## every real word in the line is one you know (grammar pieces don't count)
+func line_known(text: String) -> bool:
+	var ids: Array = Story.tokens(text).map(func(t): return t[1]).filter(func(w): return world.words.has(w) and not world.words[w].get("g", false))
+	return not ids.is_empty() and ids.all(func(w): return know_level(w) == 2)
+
+
+## does this choice play out and then rewind you (a wrong answer)?
+func leads_to_rewind(t: String) -> bool:
+	var id := t
+	for i in 40:
+		var nd: Dictionary = ST.nodes.get(target(id), {})
+		if nd.is_empty(): return false
+		if nd.has("rewind"): return true
+		if nd.has("ch") or nd.has("ans") or nd.has("type"): return false
+		id = nd.get("next", "")
+		if id == "": return false
+	return false
+
+
 ## a pattern page opens once you've met enough of its words (the "when" ones, or else the forms on the right)
 func pattern_open(p: Dictionary) -> bool:
 	var ws: Array = p.when if not p.when.is_empty() else p.pairs.map(func(x): return x[1])
@@ -701,6 +755,7 @@ func _met(text: String) -> void:
 	var line := plain(text)
 	for t in Story.tokens(text):
 		var r := word(t[1])
+		if world.words.has(t[1]): _m(t[1]).s += 1
 		var ctx: Array = r.ctx
 		ctx.erase(line); ctx.push_front(line)
 		if ctx.size() > 5: ctx.resize(5)
@@ -811,7 +866,9 @@ func talk_to(id: String) -> void:
 		if ok.call(x) and not seen.has(x.scene): st = x; break
 	if st != null and js == "": go(st.scene); return
 	var pool: Array = p.chat.filter(func(x): return ok.call(x) and seen.get(x.scene, -1) != day)
-	pool.sort_custom(func(a, b): return seen.get(a.scene, 0) < seen.get(b.scene, 0))
+	pool.sort_custom(func(a, b):
+		var sa: int = seen.get(a.scene, 0); var sb: int = seen.get(b.scene, 0)
+		return sa < sb if sa != sb else weak_words(a.scene) > weak_words(b.scene))
 	var asks: Array = p.ask.filter(func(x): return cond(x.c) and words.has(x.word) and seen.get(x.scene, -1) != day)
 	if asks.is_empty() and js == "": go(pool[0].scene if not pool.is_empty() else _bye(p)); return
 	var opts := []
@@ -823,6 +880,15 @@ func talk_to(id: String) -> void:
 	var key := "_talk_" + id
 	ST.nodes[key] = {"id": key, "who": "narr", "en": "What do you want to talk to %s about?" % ST.cast.get(id, {}).get("n", id), "ch": opts}
 	go(key)
+
+
+## how many words in a villager's conversation you've met but don't know yet (repetition where you need it)
+func weak_words(scene: String) -> int:
+	var ids := {}
+	for id in PNODES:
+		if (id == scene or id.begins_with(scene + ".")) and PNODES[id].has("ko"):
+			for t in Story.tokens(PNODES[id].ko): ids[t[1]] = 1
+	return ids.keys().filter(func(w): return world.words.has(w) and not world.words[w].get("g", false) and words.has(w) and know_level(w) < 2).size()
 
 
 ## ---------- events and encounters (free days)

@@ -160,7 +160,8 @@ static func ko(s: String, dark := false) -> String:
 		out += _names(esc(s.substr(at, m.get_start() - at)), dark)
 		var entry := m.get_string(2) if m.get_string(2) != "" else m.get_string(1)
 		var st := status(entry)
-		out += "[url=w:%s][color=#%s][u]%s[/u][/color][/url]" % [entry, cols[st], esc(m.get_string(1))]
+		if st != "gram" and Game.know_level(entry) == 2: out += "[url=w:%s]%s[/url]" % [entry, esc(m.get_string(1))]   # you know it: no hint
+		else: out += "[url=w:%s][color=#%s][u]%s[/u][/color][/url]" % [entry, cols[st], esc(m.get_string(1))]
 		at = m.get_end()
 	return out + _names(esc(s.substr(at)), dark)
 

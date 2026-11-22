@@ -178,6 +178,7 @@ spot "Courtyard" 40 10 => place madang
 spot "The shop" 50 10 => place shop
 
 === place madang
+back lab
 music calm
 sound birds
 name 마당
@@ -187,6 +188,7 @@ travel no
 always lab_madang
 
 === place sikdang
+back lab
 light indoors
 music calm
 sound room
@@ -197,6 +199,7 @@ travel no
 always lab_sikdang
 
 === place jeong
+back lab
 music calm
 sound birds
 name 버스 정류장
@@ -206,6 +209,7 @@ travel no
 always lab_jeong
 
 === place shop
+back lab
 music none
 sound market
 name 가게
@@ -215,6 +219,7 @@ travel no
 always lab_shop
 
 === place museum
+back lab
 light indoors
 music none
 sound room

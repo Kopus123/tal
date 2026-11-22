@@ -242,6 +242,7 @@ func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
 			_press = {"id": _card_at(e.position), "at": e.position, "t": 0.0, "moved": false, "done": false}
+			if _press.id != "": _press.grab = e.position - _cards[_press.id].position   # where on the card your finger is
 			if _press.id != "": move_child(_cards[_press.id], _top.get_index() - 1)   # it comes to the front
 			set_process(true)
 		else:
@@ -251,8 +252,8 @@ func _gui_input(e: InputEvent) -> void:
 		if not _press.moved and e.position.distance_to(_press.at) > 14: _press.moved = true
 		if _press.moved and _press.id != "":   # drag the card
 			var c: Control = _cards[_press.id]; var r := _inner()
-			var room := r.size - c.size * c.scale
-			var np: Vector2 = (c.position + e.relative - r.position) / room
+			var room := r.size - c.size * _s()
+			var np: Vector2 = (e.position - _press.grab - r.position) / room   # the card stays under your finger
 			Game.board_move(_press.id, np.x, np.y)
 			_place(_press.id, Game.board().cards[_press.id], r, _s()); _top.queue_redraw()
 

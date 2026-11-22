@@ -3,20 +3,189 @@ extends RefCounted
 ## No "check my guess": you work words out yourself. Only numbers get a picture (nothing around you could tell you
 ## what 사 means; everything else you work out from where it's used).
 
+## the notebook: tabs along the top (words, grammar, patterns, numbers, misheard, what the colors mean).
+## Words: filter by how well you know them, search Korean or your own notes, sort, and tap one to open its page.
+static var tab := "words"
+static var filt := "all"
+static var sort_by := "ko"
+static var query := ""
+
+const TABS := [["words", "단어 · Words"], ["gram", "문법 · Grammar"], ["pat", "패턴 · Patterns"], ["num", "숫자 · Numbers"], ["mix", "잘못 들음 · Misheard"], ["key", "표시 · Key"]]
+
 static func open(main: Control, w: String) -> void:
 	if w != "": _page(main, w); return
-	var inner := Kit.sheet(main, "수첩 · your notebook", 0.7)
-	var met: Array = Game.words.keys().filter(func(k): return not Game.words[k].ctx.is_empty() and not Game.world.words.get(k, {}).get("g", false))
-	if met.is_empty(): inner.add_child(Kit.label("No words yet. Tap an underlined word when you see one.", 20, Kit.MUTE, true)); return
-	for group in [["Not written down yet", func(r): return r.note.strip_edges() == ""], ["Your guess", func(r): return r.note.strip_edges() != "" and not r.sure], ["Got it", func(r): return r.sure]]:
-		var ws: Array = met.filter(func(k): return group[1].call(Game.words[k]))
-		if ws.is_empty(): continue
-		inner.add_child(Kit.label("%s · %d" % [group[0].to_upper(), ws.size()], 14, Kit.MUTE))
-		var flow := HFlowContainer.new(); flow.add_theme_constant_override("h_separation", 8); flow.add_theme_constant_override("v_separation", 8); inner.add_child(flow)
-		for k in ws:
-			var r: Dictionary = Game.words[k]
-			var b := Kit.button(k + ("  · " + r.note if r.note.strip_edges() != "" else ""), false, 22)
-			b.pressed.connect(func(): _page(main, k)); flow.add_child(b)
+	var inner := Kit.sheet(main, "수첩 · your notebook", 0.88)
+	_draw(main, inner)
+
+
+static func _draw(main: Control, inner: VBoxContainer) -> void:
+	Kit.clear(inner)
+	var bar := HFlowContainer.new(); bar.add_theme_constant_override("h_separation", 8); bar.add_theme_constant_override("v_separation", 8); inner.add_child(bar)
+	for t in TABS:
+		if t[0] == "mix" and Game.S.mx.is_empty(): continue
+		var b := Kit.button(t[1], t[0] == tab, 18)
+		b.pressed.connect(func(): tab = t[0]; Game.sound.emit("tap"); _draw(main, inner)); bar.add_child(b)
+	match tab:
+		"words": _words(main, inner)
+		"gram": _grammar(main, inner)
+		"pat": _patterns(main, inner)
+		"num": _numbers(main, inner)
+		"mix": _misheard(main, inner)
+		"key": _key(inner)
+
+
+static func _st(k: String) -> String: return Kit.status(k)
+
+## ---------- words
+static func _vocab() -> Array:
+	return Game.words.keys().filter(func(k): return not Game.words[k].ctx.is_empty() and Game.world.words.has(k) and not Game.world.words[k].get("g", false))
+
+
+static func _words(main: Control, inner: VBoxContainer) -> void:
+	var all := _vocab()
+	if all.is_empty(): inner.add_child(Kit.label("No words yet. Tap an underlined word when you see one.", 20, Kit.MUTE, true)); return
+	var n_sure := all.filter(func(k): return _st(k) == "sure").size(); var n_guess := all.filter(func(k): return _st(k) == "guess").size()
+	inner.add_child(Kit.label("%d got it  ·  %d guessing  ·  %d words seen" % [n_sure, n_guess, all.size()], 16, Kit.MUTE))
+	var tools := HFlowContainer.new(); tools.add_theme_constant_override("h_separation", 8); tools.add_theme_constant_override("v_separation", 8); inner.add_child(tools)
+	var grid := GridContainer.new(); grid.columns = 3; grid.add_theme_constant_override("h_separation", 10); grid.add_theme_constant_override("v_separation", 10)
+	var fill := func(): _fill(main, grid, all)
+	for f in [["all", "All"], ["todo", "No note yet"], ["guess", "Guessing"], ["sure", "Got it"]]:
+		var b := Kit.button(f[1], f[0] == filt, 17)
+		b.pressed.connect(func(): filt = f[0]; _draw(main, inner)); tools.add_child(b)
+	var sep := Control.new(); sep.custom_minimum_size = Vector2(16, 1); tools.add_child(sep)
+	for s in [["ko", "ㄱㄴㄷ"], ["en", "A–Z"], ["new", "Newest"]]:
+		var b := Kit.button(s[1], s[0] == sort_by, 17)
+		b.pressed.connect(func(): sort_by = s[0]; _draw(main, inner)); tools.add_child(b)
+	var q := LineEdit.new(); q.text = query; q.placeholder_text = "Search Korean or your notes"; q.add_theme_font_size_override("font_size", 20)
+	q.custom_minimum_size = Vector2(0, 50); q.clear_button_enabled = true
+	var qs := Kit.box(10, Kit.PAPER_LIGHT, Kit.LINE, 2, 8); qs.content_margin_left = 14
+	q.add_theme_stylebox_override("normal", qs); q.add_theme_stylebox_override("focus", qs)
+	q.add_theme_color_override("font_color", Kit.PAPER_INK); q.add_theme_color_override("font_placeholder_color", Kit.MUTE); q.add_theme_color_override("caret_color", Kit.PAPER_INK)
+	inner.add_child(q)
+	q.text_changed.connect(func(t): query = t.strip_edges(); fill.call())   # only the list redraws, so you keep typing
+	inner.add_child(grid)
+	fill.call()
+
+
+static func _fill(main: Control, grid: GridContainer, all: Array) -> void:
+	Kit.clear(grid)
+	var list: Array = all.duplicate()
+	match filt:
+		"todo": list = list.filter(func(k): return _st(k) in ["new", "seen"])
+		"guess": list = list.filter(func(k): return _st(k) == "guess")
+		"sure": list = list.filter(func(k): return _st(k) == "sure")
+	if query != "":
+		var ql := query.to_lower()
+		list = list.filter(func(k): return k.contains(query) or Game.words[k].note.to_lower().contains(ql))
+	match sort_by:
+		"ko": list.sort()
+		"en": list.sort_custom(func(a, b):
+			var x: String = Game.words[a].note.strip_edges().to_lower(); var y: String = Game.words[b].note.strip_edges().to_lower()
+			if (x == "") != (y == ""): return y == ""
+			return x < y if x != y else a < b)
+		"new": list.reverse()
+	if list.is_empty(): grid.add_child(Kit.label("Nothing here.", 20, Kit.MUTE)); return
+	for k in list: grid.add_child(_tile(main, k))
+
+
+## a word as a little index card: the Korean big, your note under it, a stripe in its color
+static func _tile(main: Control, k: String) -> Button:
+	var st := _st(k); var col := Color("#" + Kit.STATUS_COLORS[st])
+	var b := Button.new(); b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.custom_minimum_size = Vector2(0, 86)
+	var sb := Kit.box(10, Kit.PAPER_LIGHT, Kit.LINE, 1, 10); sb.border_width_left = 8; sb.border_color = col
+	var sp := sb.duplicate(); sp.bg_color = Kit.PAPER_LIGHT.darkened(0.08)
+	for s in ["normal", "hover", "focus"]: b.add_theme_stylebox_override(s, sb)
+	b.add_theme_stylebox_override("pressed", sp)
+	var v := VBoxContainer.new(); v.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.offset_left = 18; v.offset_top = 8; v.offset_right = -8; v.add_theme_constant_override("separation", 0); b.add_child(v)
+	var kw := Kit.label(k, 28, col.darkened(0.15)); kw.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(kw)
+	var note: String = Game.words[k].note.strip_edges()
+	var nl := Kit.label(note if note != "" else "—", 17, Kit.PAPER_INK if note != "" else Kit.MUTE); nl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; nl.clip_text = true; v.add_child(nl)
+	b.pressed.connect(func(): Game.sound.emit("tap"); _page(main, k))
+	return b
+
+
+## ---------- grammar: the little pieces you've met, the endings, and the tells you've noticed
+static func _grammar(main: Control, inner: VBoxContainer) -> void:
+	var gram: Array = Game.words.keys().filter(func(k): return Game.world.words.get(k, {}).get("g", false) and not Game.words[k].ctx.is_empty())
+	inner.add_child(Kit.label("PIECES THAT STICK TO WORDS", 14, Kit.MUTE))
+	if gram.is_empty(): inner.add_child(Kit.label("The ones you run into collect here.", 18, Kit.MUTE))
+	for k in gram: inner.add_child(_row(main, k, Game.world.grammar.get(k, ""), true))
+	inner.add_child(Kit.label("ENDINGS", 14, Kit.MUTE))
+	for e in Game.world.get("endings", []): inner.add_child(_row(main, e.k, e.d, false))
+	var tells: Array = Game.world.tells.keys()
+	var caught: Array = tells.filter(func(k): return Game.words.has(k) and not Game.words[k].ctx.is_empty())
+	inner.add_child(Kit.label("TELLS · %d of %d noticed" % [caught.size(), tells.size()], 14, Kit.MUTE))
+	for k in caught: inner.add_child(_row(main, k, Game.world.tells[k], true))
+	if caught.size() < tells.size(): inner.add_child(Kit.label("How people say things can give them away. Listen to the endings.", 18, Kit.MUTE, true))
+
+
+static func _row(main: Control, k: String, d: String, tap: bool) -> Control:
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 14)
+	var kb := Kit.button(k, false, 24); kb.custom_minimum_size = Vector2(150, 0); kb.disabled = not tap
+	if tap: kb.pressed.connect(func(): main.voice.say("{%s}" % k, "word"))
+	row.add_child(kb)
+	var dl := Kit.label(d, 19, Kit.PAPER_INK, true); dl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(dl)
+	return row
+
+
+## ---------- patterns: pages that open as you notice the same change happening to different words
+static func _patterns(main: Control, inner: VBoxContainer) -> void:
+	var pats: Array = Game.world.get("patterns", [])
+	var open: Array = pats.filter(func(p): return Game.pattern_open(p))
+	for p in open:
+		inner.add_child(Kit.label(p.title, 26))
+		inner.add_child(Kit.label(p.note, 19, Kit.MUTE, true))
+		for pr in p.pairs:
+			if p.when.is_empty() and not (Game.words.has(pr[1]) and not Game.words[pr[1]].ctx.is_empty()): continue
+			var r := Kit.rich(26); r.text = "%s  [color=#8a7d66]→[/color]  %s" % [Kit.esc(pr[0]), Kit.ko("{%s}" % pr[1]) if Game.world.words.has(pr[1]) else Kit.esc(pr[1])]
+			r.meta_clicked.connect(func(x): main._word(str(x))); inner.add_child(r)
+		inner.add_child(HSeparator.new())
+	var left := pats.size() - open.size()
+	if left > 0: inner.add_child(Kit.label(("%d more to spot." % left if not open.is_empty() else "Nothing yet.") + " Keep listening to how people say things.", 19, Kit.MUTE, true))
+
+
+## ---------- numbers: Korean has two sets; this page shows both, brighter where you've heard them
+static func _numbers(main: Control, inner: VBoxContainer) -> void:
+	inner.add_child(Kit.label("Korean has two sets of numbers. Native numbers count hours and things: 아홉 시 = 9 o'clock, 두 개 = two of them. Sino-Korean numbers are for money, minutes and phone numbers: 천 원 = 1,000 won, 삼십 분 = 30 minutes. So 9:30 is 아홉 시 삼십 분.", 19, Kit.PAPER_INK, true))
+	for set in [["NATIVE · hours, counting", [["하나 / 한", "1"], ["둘 / 두", "2"], ["셋 / 세", "3"], ["넷 / 네", "4"], ["다섯", "5"], ["여섯", "6"], ["일곱", "7"], ["여덟", "8"], ["아홉", "9"], ["열", "10"], ["열한", "11"], ["열두", "12"]]],
+			["SINO-KOREAN · money, minutes, phones", [["공", "0"], ["일", "1"], ["이", "2"], ["삼", "3"], ["사", "4"], ["오", "5"], ["육", "6"], ["칠", "7"], ["팔", "8"], ["구", "9"], ["십", "10"], ["백", "100"], ["천", "1,000"], ["만", "10,000"]]]]:
+		inner.add_child(Kit.label(set[0], 14, Kit.MUTE))
+		var g := GridContainer.new(); g.columns = 6; g.add_theme_constant_override("h_separation", 8); g.add_theme_constant_override("v_separation", 8); inner.add_child(g)
+		for c in set[1]:
+			var k: String = c[0].split(" / ")[0]
+			var met: bool = Game.words.has(k) and not Game.words[k].ctx.is_empty()
+			var b := Kit.button("%s\n%s" % [c[0], c[1]], met, 20); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.pressed.connect(func(): main.voice.say("{%s}" % k, "word")); g.add_child(b)
+	inner.add_child(Kit.label("Dark ones are numbers you've heard in the story. Tap any to hear it.", 17, Kit.MUTE, true))
+
+
+## ---------- misheard: what they said, next to what you thought you heard
+static func _misheard(main: Control, inner: VBoxContainer) -> void:
+	inner.add_child(Kit.label("When a line is only spoken and you pick a word that sounds almost the same, the pair is kept here. Tap each to hear the difference.", 18, Kit.MUTE, true))
+	for key in Game.S.mx:
+		var p: PackedStringArray = str(key).split("/")
+		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 12); inner.add_child(row)
+		for i in 2:
+			var w: String = p[i] if i < p.size() else ""
+			var b := Kit.button("%s\n%s" % [w, "what they said" if i == 0 else "what you heard"], i == 0, 22); b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(func(): main.voice.say("{%s}" % w, "word")); row.add_child(b)
+			if i == 0: row.add_child(Kit.label("≠", 30, Kit.MUTE))
+		if int(Game.S.mx[key]) > 1: row.add_child(Kit.label("×%d" % Game.S.mx[key], 18, Kit.MUTE))
+
+
+## ---------- key: what the colors mean
+static func _key(inner: VBoxContainer) -> void:
+	inner.add_child(Kit.label("WORD COLORS", 14, Kit.MUTE))
+	for row in [["new", "새", "New: the first time you've run into this word."], ["seen", "새", "No note yet: you've seen it before but haven't written what it means."],
+			["guess", "새", "Guessing: you wrote what you think it means."], ["sure", "새", "Got it: you ticked \"I'm sure\"."], ["gram", "는", "A grammar piece: a little part that sticks to words. Tap it for an explanation."]]:
+		var r := Kit.rich(22); r.text = "[color=#%s][u]%s[/u][/color]   %s" % [Kit.STATUS_COLORS[row[0]], row[1], row[2]]; inner.add_child(r)
+	inner.add_child(Kit.label("ON THE CASE BOARD", 14, Kit.MUTE))
+	for t in ["Pink notes are questions. Tie the things that answer one to it; nobody tells you when it's right, you'll notice.",
+			"Photos you take are captioned only with where and when. Whether one matters is for you to work out.",
+			"Taking a string down frays it; a frayed one snaps next time. A tack you pull out is bent."]:
+		inner.add_child(Kit.label("·  " + t, 19, Kit.PAPER_INK, true))
 
 
 static func _page(main: Control, w: String) -> void:

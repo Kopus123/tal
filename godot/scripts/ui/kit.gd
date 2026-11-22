@@ -166,6 +166,7 @@ static func ko(s: String, dark := false) -> String:
 
 
 static func rich(sz := 24, c: Color = PAPER_INK) -> RichTextLabel:
+	sz = int(round(sz * Settings.text_scale()))   # your Korean text size setting
 	var r := RichTextLabel.new(); r.bbcode_enabled = true; r.fit_content = true; r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.add_theme_color_override("default_color", c); r.meta_underlined = false
 	for k in ["normal_font_size", "bold_font_size", "italics_font_size", "bold_italics_font_size", "mono_font_size"]: r.add_theme_font_size_override(k, sz)

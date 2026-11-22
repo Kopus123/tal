@@ -44,7 +44,12 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		if pinned.size() >= 2: main.cork.carry(pinned[0]); main.cork.pick(pinned[1]); await _wait(0.3); await shot("board_carry")
 		main.cork.drop(); main._menu(); await _wait(0.3); await shot("board_menu"); _close_sheets()
 		main._box(); await _wait(0.3); await shot("board_box"); _close_sheets()
-	for what in ["notebook", "board", "phone"]:
+	var nb = load("res://scripts/ui/notebook.gd")
+	for t in ["words", "gram", "pat", "num", "key"]:
+		nb.tab = t; main._open("notebook"); await _wait(0.4); await shot("notebook_" + t); _close_sheets()
+	main._settings(); await _wait(0.3); await shot("settings"); _close_sheets()
+	main._log_sheet(); await _wait(0.5); await shot("log"); _close_sheets()
+	for what in ["board", "phone"]:
 		if what == "phone" and not Game.has_phone(): continue
 		main._open(what); await _wait(0.4); await shot("open_" + what); _close_sheets()
 	print("shots: %d saved in %s%s" % [n, dir, "" if ok else "  (the route failed: see FAILED_here)"])

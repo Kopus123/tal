@@ -11,7 +11,7 @@ extends RefCounted
 static func empty() -> Dictionary:
 	return {"meta": {}, "cast": {}, "words": {}, "meanings": {}, "names": {}, "grammar": {}, "tells": {}, "places": {}, "nodes": {},
 		"evidence": {}, "statements": {}, "examines": {}, "phones": [], "cases": [], "hints": [], "chapters": [], "map": [],
-		"calendar": [], "people": {}, "people_files": [], "events": [], "encounters": [], "jobs": {}, "cards": {}, "unlocks": [], "questions": {}, "warnings": []}
+		"calendar": [], "people": {}, "people_files": [], "events": [], "encounters": [], "jobs": {}, "cards": {}, "unlocks": [], "questions": {}, "endings": [], "patterns": [], "warnings": []}
 
 
 ## "a | b | {x|y}" split on the bars that aren't inside {braces}
@@ -64,14 +64,14 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 			sec = h.get_string(1); var arg := h.get_string(2).strip_edges()
 			match sec:
 				"scene": S.scene = arg; S.last = {}; S.count = 0; S.early = []
-				"place": cur = {"id": arg, "spots": [], "desc": [], "subjects": []}; st.places[arg] = cur
+				"place": cur = {"id": arg, "spots": [], "desc": [], "subjects": [], "glow": []}; st.places[arg] = cur
 				"phone": cur = {"id": arg, "m": [], "fx": [], "name": arg, "av": "?", "c": "#888"}; st.phones.append(cur)
 				"examine": cur = {"id": arg, "details": [], "art": "", "prompt": "", "compare": ""}; st.examines[arg] = cur
 				"person": cur = {"id": arg, "at": {}, "greet": [], "chat": [], "story": [], "ask": [], "bye": []}; st.people[arg] = cur
 				"event": cur = {"id": arg, "when": "", "slot": "", "place": "", "scene": "", "missed": []}; st.events.append(cur)
 				"encounter": cur = {"id": arg, "at": [], "scene": "", "when": ""}; st.encounters.append(cur)
 				"job": cur = {"id": arg, "ko": arg, "en": arg, "level": "easy", "client": "", "pay": 0, "thanks": 1, "when": "", "note": "", "start": "", "ask": {}}; st.jobs[arg] = cur
-				"pattern": cur = {}   # notebook pattern pages: not in the Godot version yet
+				"pattern": cur = {"id": arg, "title": arg, "note": "", "need": 3, "when": [], "pairs": []}; st.patterns.append(cur)
 				"card": cur = {"id": arg, "kind": "", "start": false, "at": []}; st.cards[arg] = cur
 				"unlock": cur = {"id": arg, "when": [], "fx": []}; st.unlocks.append(cur)
 			continue
@@ -229,7 +229,11 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 				if m:
 					cur.subjects.append({"is": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "r": float(m.get_string(4))})
 					continue
-				if not line.begins_with("glow "): _warn(st, file, ln, line)
+				m = R("^glow\\s+(.+?)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+([\\d.]+))?$").search(line)
+				if m:
+					cur.glow.append({"w": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "r": float(m.get_string(4)), "h": float(m.get_string(5)) if m.get_string(5) != "" else 0.0})
+					continue
+				_warn(st, file, ln, line)
 			"scene":
 				_scene_line(st, S, line, file, ln)
 			"card":
@@ -254,8 +258,19 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 						if ab.size() == 2: cur.when.append([ab[0].strip_edges(), ab[1].strip_edges()])
 				elif line.begins_with("!"): cur.fx.append_array(parse_fx(line.substr(1)))
 				else: _warn(st, file, ln, line)
-			"endings", "pattern":
-				pass   # notebook grammar pages: not in the Godot version yet
+			"endings":   # the notebook's grammar page: ENDING | what it does
+				var ep := _bar(line)
+				if ep.size() >= 2: st.endings.append({"k": ep[0], "d": " | ".join(ep.slice(1))})
+			"pattern":   # a notebook pattern page: title, note, need N, when a, b, and "base > form" pairs
+				m = R("^(title|note)\\s+(.+)$").search(line)
+				if m: cur[m.get_string(1)] = m.get_string(2); continue
+				m = R("^need\\s+(\\d+)$").search(line)
+				if m: cur.need = int(m.get_string(1)); continue
+				m = R("^when\\s+(.+)$").search(line)
+				if m: cur.when = Array(m.get_string(1).split(",")).map(func(x): return x.strip_edges()); continue
+				m = R("^(.+?)\\s*>\\s*(.+)$").search(line)
+				if m: cur.pairs.append([m.get_string(1).strip_edges(), m.get_string(2).strip_edges()]); continue
+				_warn(st, file, ln, line)
 			_:
 				_warn(st, file, ln, "nothing reads the section === " + sec)
 	return st

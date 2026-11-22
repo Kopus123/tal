@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "3.6"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "3.7"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -29,6 +29,7 @@ var _numpad := ""
 var _reply: Array = []               ## small talk while typing: [ko, en]
 var _shown_node := ""
 var voice := Voice.new()
+var scape: Node                      ## the place's music and background sound
 var cork: Control                    ## the case board lab
 var card_sel := ""
 var busy := false                    ## your own line is playing: wait for it
@@ -46,7 +47,9 @@ func _ready() -> void:
 	Game.finished.connect(_finished)
 	Game.reply.connect(func(k, e): _reply = [k, e]; voice.say(k, Game.beat().get("to", "sign")); _refresh())
 	var args := OS.get_cmdline_user_args()
+	scape = load("res://scripts/ui/scape.gd").new(); add_child(scape)
 	if "--shots" in args:
+		AudioServer.set_bus_mute(0, true)   # screenshot tours run silently
 		var i := args.find("--shots")
 		tour = load("res://scripts/tools/shot_tour.gd").new()   # kept here: a tour nobody holds on to is freed mid-way
 		tour.run(self, args[i + 1] if i + 1 < args.size() else "user://shots", args[i + 2] if i + 2 < args.size() else "shed", args[i + 3] if i + 3 < args.size() else "")
@@ -119,9 +122,10 @@ func _refresh() -> void:
 	if kb and (t != "type" or Game.node != _shown_node): kb.queue_free(); kb = null
 	if Game.node != _shown_node:
 		_build_seq = []; _picks = []; _numpad = ""; _reply = []
-		if b.has("ko") and not b.get("audio", false) and b.who != "narr": voice.say(b.ko, b.who)
+		if b.has("ko") and not b.get("audio", false) and b.who != "narr" and Settings.get_("auto") == 1: voice.say(b.ko, b.who)
 		elif b.get("audio", false): voice.say(b.ko, b.who)
 	_shown_node = Game.node
+	if scape: scape.update(pl)
 	var lab: bool = pl.get("mode", "") == "board" or board_view
 	cork.visible = lab; room.visible = not lab
 	if lab: cork.refresh()
@@ -367,13 +371,41 @@ func _build_beat(b: Dictionary) -> void:
 	_leave_btn()
 
 
+## what you typed against what was right: the letters that line up stay plain; yours that don't are struck in red,
+## and the ones you missed are marked green (spaces and punctuation don't count)
+static func _diff(yours: String, right: String) -> Array:
+	var skip := func(c: String) -> bool: return " .?!~,·…".contains(c)
+	var u: Array = []; for c in yours: if not skip.call(c): u.append(c)
+	var ci: Array = []; for i in right.length(): if not skip.call(right[i]): ci.append(i)
+	var cc: Array = ci.map(func(i): return right[i])
+	var L: Array = []
+	for i in u.size() + 1:
+		var row: Array = []; row.resize(cc.size() + 1); row.fill(0); L.append(row)
+	for i in range(u.size() - 1, -1, -1):
+		for j in range(cc.size() - 1, -1, -1):
+			L[i][j] = L[i + 1][j + 1] + 1 if u[i] == cc[j] else maxi(L[i + 1][j], L[i][j + 1])
+	var ok_u := {}; var ok_c := {}; var a := 0; var b := 0
+	while a < u.size() and b < cc.size():
+		if u[a] == cc[b]: ok_u[a] = 1; ok_c[b] = 1; a += 1; b += 1
+		elif L[a + 1][b] >= L[a][b + 1]: a += 1
+		else: b += 1
+	var y := ""
+	for k in u.size(): y += Kit.esc(u[k]) if ok_u.has(k) else "[color=#b3241c][s]%s[/s][/color]" % Kit.esc(u[k])
+	var r := ""
+	for k in right.length():
+		var n: int = ci.find(k)
+		r += Kit.esc(right[k]) if n < 0 or ok_c.has(n) else "[bgcolor=#cfe9d6][color=#1f6b3a]%s[/color][/bgcolor]" % Kit.esc(right[k])
+	return [y, r]
+
+
 ## typed answers: the game's own Korean keyboard opens over the bottom of the screen
 func _type_beat(b: Dictionary) -> void:
 	_text(Kit.esc(b.en))
 	if not _reply.is_empty():
 		_text("[b]%s[/b]" % Kit.ko(_reply[0]), 26); _text(Kit.esc(_reply[1]), 18, Kit.MUTE)
 	if not Game.typed_close.is_empty():
-		_text("[color=#8a7d66]Close enough! Watch the difference.[/color]\nYou wrote: [b]%s[/b]\nCorrect: [b]%s[/b]" % [Kit.esc(Game.typed_close.yours), Kit.esc(Game.typed_close.correct)], 22)
+		var df := _diff(Game.typed_close.yours, Game.typed_close.correct)
+		_text("[color=#8a7d66]Close enough! Watch the marked letters.[/color]\nYou wrote:  %s\nRight:  %s" % [df[0], df[1]], 24)
 		_act("Continue", func(): Game.close_go_on(), true); return
 	if kb == null:
 		kb = load("res://scripts/ui/korean_keyboard.gd").new(); add_child(kb)
@@ -480,7 +512,49 @@ func _menu() -> void:
 	var b1 := Kit.button("💡  Think (a nudge)"); b1.pressed.connect(func(): hint.text = Game.hint(); Game.note("  HINT: " + hint.text)); inner.add_child(b1); inner.add_child(hint)
 	var b2 := Kit.button("📖  Chapters"); b2.pressed.connect(func(): Kit.close(inner); load("res://scripts/ui/places.gd").chapters(self)); inner.add_child(b2)
 	var b3 := Kit.button("⌨  Korean keyboard test"); b3.pressed.connect(func(): Kit.close(inner); _keyboard_test()); inner.add_child(b3)
-	var b4 := Kit.button("🔊  Voices: " + ("on" if voice.on else "off")); b4.pressed.connect(func(): voice.on = not voice.on; b4.text = "🔊  Voices: " + ("on" if voice.on else "off")); inner.add_child(b4)
+	var b5 := Kit.button("💬  What was said"); b5.pressed.connect(func(): Kit.close(inner); _log_sheet()); inner.add_child(b5)
+	var b4 := Kit.button("⚙  Settings"); b4.pressed.connect(func(): Kit.close(inner); _settings()); inner.add_child(b4)
+
+
+## 기록: every line so far in this chapter, newest at the bottom; tap ▶ to hear one again
+func _log_sheet() -> void:
+	var inner := Kit.sheet(self, "기록 · what was said", 0.72)
+	var lines: Array = Game.S.get("log", [])
+	if lines.is_empty(): inner.add_child(Kit.label("Nothing yet.", 20, Kit.MUTE)); return
+	for e in lines:
+		if e.who == "narr":
+			inner.add_child(Kit.label(e.en, 18, Kit.MUTE, true)); continue
+		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 12); inner.add_child(row)
+		if e.who != "you" and e.who != "sign" and Game.ST.cast.get(e.who, {}).has("look"):
+			var f := TextureRect.new(); f.texture = Kit.face(e.who, e.get("ex", "neutral")); f.custom_minimum_size = Vector2(56, 56)
+			f.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; f.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(f)
+		var col := VBoxContainer.new(); col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; col.add_theme_constant_override("separation", 0); row.add_child(col)
+		col.add_child(Kit.label("You" if e.who == "you" else ("Written" if e.who == "sign" else Game.ST.cast.get(e.who, {}).get("n", e.who)), 15, Kit.MUTE))
+		var r := Kit.rich(22); r.text = Kit.ko(e.ko); r.meta_clicked.connect(func(w): _word(str(w))); col.add_child(r)
+		if e.get("en", "") != "": col.add_child(Kit.label(e.en, 16, Kit.MUTE, true))
+		var say := Kit.button("▶", false, 18); var k: String = e.ko; var who: String = e.who
+		say.pressed.connect(func(): voice.say(k, who)); row.add_child(say)
+	await get_tree().process_frame
+	var sc := inner.get_parent() as ScrollContainer
+	if sc: sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)
+
+
+## 설정: how it sounds and how big the Korean is
+func _settings() -> void:
+	var inner := Kit.sheet(self, "설정 · settings", 0.62)
+	var rows := [["auto", "Read lines aloud by themselves", [[1, "On"], [0, "Off"]]], ["voices", "Voices", [[1, "On"], [0, "Off"]]],
+		["slow", "Voice speed", [[0, "Normal"], [1, "Slow"]]], ["size", "Korean text size", [[0, "Small"], [1, "Medium"], [2, "Large"]]],
+		["glow", "Things glow when named", [[1, "On"], [0, "Off"]]], ["sound", "Sound effects", [[1, "On"], [0, "Off"]]], ["music", "Music", [[2, "On"], [1, "Low"], [0, "Off"]]],
+		["amb", "Background sounds", [[2, "On"], [1, "Low"], [0, "Off"]]]]
+	for r in rows:
+		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); inner.add_child(row)
+		var l := Kit.label(r[1], 20); l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(l)
+		for opt in r[2]:
+			var b := Kit.button(opt[1], Settings.get_(r[0]) == opt[0], 18); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.custom_minimum_size.x = 96
+			b.pressed.connect(func():
+				Settings.set_(r[0], opt[0]); voice.apply(); scape.update(Game.place()); Kit.close(inner); _settings(); _refresh())
+			row.add_child(b)
+	var t := Kit.button("▶  Test the voice", false, 18); t.pressed.connect(func(): voice.say("{안녕하세요}", "word")); inner.add_child(t)
 
 
 func _keyboard_test() -> void:
@@ -563,6 +637,7 @@ func _finished(id: String) -> void:
 
 ## ---------- sound and little messages
 func _play(n: String) -> void:
+	if Settings.get_("sound") == 0: return
 	var stream := load("res://sfx/%s.wav" % n) as AudioStream
 	if stream == null: return
 	var p := AudioStreamPlayer.new(); p.stream = stream; add_child(p); p.play(); p.finished.connect(p.queue_free)

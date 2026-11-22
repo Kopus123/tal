@@ -69,6 +69,7 @@ func _ready() -> void:
 	if saved != "":
 		var w = JSON.parse_string(saved)
 		if w is Dictionary: words = w
+	_check_patterns(); _pats_ready = true   # pages already open don't announce themselves again
 	S = _fresh()
 
 
@@ -89,7 +90,7 @@ func _fresh_world() -> Dictionary:
 
 
 func _fresh() -> Dictionary:
-	return {"world": _fresh_world(), "prog": {}, "done": {}, "ch": "", "loc": "", "node": "", "F": {}, "cs": {}, "visited": {}, "known": {}, "mx": {}, "tl": {}}
+	return {"world": _fresh_world(), "prog": {}, "done": {}, "ch": "", "loc": "", "node": "", "F": {}, "cs": {}, "visited": {}, "known": {}, "mx": {}, "tl": {}, "log": []}
 
 
 ## ---------- the play log: everything you do, with the time, to read after a playtest.
@@ -359,7 +360,15 @@ func go(id: String) -> void:
 	var nd: Dictionary = ST.nodes[id]
 	run_fx(nd.get("fx", []), id)
 	if nd.has("ko"): _met(nd.ko)
+	if nd.has("ko") or (nd.get("who", "") == "narr" and nd.has("en")): _log(nd.get("who", "narr"), nd.get("ko", ""), nd.get("en", ""), nd.get("ex", "neutral"))
 	save(); changed.emit()
+
+
+## what was said: kept so you can scroll back (the menu's 기록)
+func _log(who: String, ko_: String, en: String = "", ex: String = "neutral") -> void:
+	if not S.has("log"): S["log"] = []
+	S.log.append({"who": who, "ko": ko_, "en": en, "ex": ex})
+	if S.log.size() > 200: S.log = S.log.slice(S.log.size() - 200)
 
 
 ## Continue on a beat with no choices
@@ -377,6 +386,7 @@ func next() -> void:
 func choose(o: Dictionary) -> void:
 	if o.get("ko", "").contains("안녕"): S.F["said_hi_" + S.loc] = W.day
 	note("  chose: " + plain(o.get("en", o.get("ko", ""))))
+	if o.get("ko", "") != "": _log("you", o.ko)
 	sound.emit("tap"); run_fx(o.get("fx", []), S.node + ">" + o.go); go(o.go)
 
 
@@ -426,7 +436,7 @@ func answer_build(tiles: Array) -> void:
 	note("  built: " + " ".join(tiles.map(func(t): return plain(t))))
 	for a in b.ans:
 		if a[0].size() == tiles.size() and range(tiles.size()).all(func(i): return a[0][i] == tiles[i]):
-			go(a[1]); return
+			_log("you", ("" if b.get("join", false) else " ").join(tiles)); go(a[1]); return
 	go(b.get("miss", ""))
 
 
@@ -671,6 +681,22 @@ func word(w: String) -> Dictionary:
 	return words[w]
 
 
+## a pattern page opens once you've met enough of its words (the "when" ones, or else the forms on the right)
+func pattern_open(p: Dictionary) -> bool:
+	var ws: Array = p.when if not p.when.is_empty() else p.pairs.map(func(x): return x[1])
+	return ws.filter(func(w): return words.has(w) and not words[w].ctx.is_empty()).size() >= p.need
+
+
+var _pats_seen := {}
+func _check_patterns() -> void:
+	for p in world.get("patterns", []):
+		if _pats_seen.has(p.id): continue
+		if pattern_open(p):
+			_pats_seen[p.id] = 1
+			if _pats_ready: toast.emit("Pattern spotted: %s. It's in your notebook (Patterns)." % p.title)
+var _pats_ready := false
+
+
 func _met(text: String) -> void:
 	var line := plain(text)
 	for t in Story.tokens(text):
@@ -678,7 +704,7 @@ func _met(text: String) -> void:
 		var ctx: Array = r.ctx
 		ctx.erase(line); ctx.push_front(line)
 		if ctx.size() > 5: ctx.resize(5)
-	save_words()
+	save_words(); _check_patterns()
 
 
 static func plain(s: String) -> String: return Story.plain(s)

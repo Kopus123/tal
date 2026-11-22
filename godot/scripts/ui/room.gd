@@ -32,6 +32,8 @@ var shutter: Button
 var cam_x: Button
 var veil: Control                  ## the dark around the viewfinder, the film count
 var cam_mode := false
+var glow: Control                  ## soft rings on what someone just named
+var drift: CPUParticles2D          ## dust, leaves, motes in the air
 var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
 var _focused := false
 var _resizing := false
@@ -68,6 +70,10 @@ func _ready() -> void:
 	back_btn.add_theme_stylebox_override("pressed", _round(Color(0.1, 0.1, 0.12, 0.8)))
 	back_btn.pressed.connect(func(): Game.sound.emit("tap"); Game.enter(Game.place().back))
 	add_child(back_btn)
+	drift = CPUParticles2D.new(); drift.emitting = false; add_child(drift)
+	glow = Control.new(); glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.draw.connect(_draw_glow); add_child(glow)
+	var gt := create_tween().set_loops(); gt.tween_property(glow, "modulate:a", 0.35, 0.9).set_trans(Tween.TRANS_SINE); gt.tween_property(glow, "modulate:a", 1.0, 0.9).set_trans(Tween.TRANS_SINE)
 	veil = Control.new(); veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	veil.draw.connect(_draw_veil); veil.visible = false; add_child(veil)
 	move_child(frame, -1)
@@ -203,7 +209,51 @@ func refresh() -> void:
 	if not frame.visible: frame.remove_meta("placed")
 	if cam_mode: frame.modulate.a = 1.0 if _focused else 0.5
 	_place_figs()
-	marks.queue_redraw()
+	marks.queue_redraw(); glow.queue_redraw()
+	_drift(pl.get("ambient", "") if not exam else "")
+
+
+## ---------- what someone just named lights up in the picture (a soft golden ring)
+func _draw_glow() -> void:
+	if Settings.get_("glow") == 0 or cam_mode or cam.zoom != Vector2.ONE: return
+	var b: Dictionary = Game.beat()
+	if not b.has("ko"): return
+	var named: Array = Story.tokens(b.ko).map(func(t): return t[1])
+	for g in Game.place().get("glow", []):
+		if not g.w in named: continue
+		var c := Vector2(g.x, g.y) / 100.0 * size; var rx: float = g.r / 100.0 * size.x
+		var ry: float = (g.h / 100.0 * size.y) if g.h > 0 else rx
+		var pts := PackedVector2Array()
+		for i in 49: pts.append(c + Vector2(cos(TAU * i / 48.0) * rx, sin(TAU * i / 48.0) * ry))
+		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.95), 4.0, true)
+		glow.draw_polyline(pts, Color(1.0, 0.84, 0.4, 0.25), 12.0, true)
+
+
+## ---------- the air: dust in sunbeams, falling leaves, motes of light
+var _drift_kind := ""
+func _drift(kind: String) -> void:
+	if kind == _drift_kind and drift.emitting == (kind != ""): return
+	_drift_kind = kind; drift.emitting = false
+	if not kind in ["dust", "leaves", "motes"]: return
+	drift.position = Vector2(size.x / 2, 0); drift.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	drift.emission_rect_extents = Vector2(size.x / 2, 4); drift.direction = Vector2(0, 1); drift.spread = 25
+	match kind:
+		"leaves":
+			drift.amount = 14; drift.lifetime = 9.0; drift.gravity = Vector2(18, 26); drift.initial_velocity_min = 10; drift.initial_velocity_max = 30
+			drift.angular_velocity_min = -90; drift.angular_velocity_max = 90; drift.scale_amount_min = 5; drift.scale_amount_max = 9
+			drift.color = Color(0.86, 0.55, 0.22, 0.85)
+		"dust":
+			drift.position = Vector2(size.x / 2, size.y / 2); drift.emission_rect_extents = size / 2; drift.direction = Vector2(1, -0.2); drift.spread = 180
+			drift.amount = 22; drift.lifetime = 8.0; drift.gravity = Vector2(2, -1); drift.initial_velocity_min = 2; drift.initial_velocity_max = 8
+			drift.angular_velocity_min = 0; drift.angular_velocity_max = 0; drift.scale_amount_min = 2; drift.scale_amount_max = 3.5
+			drift.color = Color(1, 0.96, 0.85, 0.45)
+		"motes":
+			drift.position = Vector2(size.x / 2, size.y / 2); drift.emission_rect_extents = size / 2; drift.direction = Vector2(0, -1); drift.spread = 60
+			drift.amount = 18; drift.lifetime = 7.0; drift.gravity = Vector2(0, -4); drift.initial_velocity_min = 4; drift.initial_velocity_max = 10
+			drift.angular_velocity_min = 0; drift.angular_velocity_max = 0; drift.scale_amount_min = 2.5; drift.scale_amount_max = 4.5
+			drift.color = Color(1, 0.88, 0.55, 0.7)
+	drift.preprocess = drift.lifetime   # already in the air when you arrive
+	drift.emitting = true
 
 
 ## ---------- villagers standing in the picture (free days)

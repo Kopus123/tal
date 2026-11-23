@@ -28,7 +28,7 @@ static var _sepia: ShaderMaterial  ## old faded colour photo
 func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	resized.connect(_layout)
+	resized.connect(func(): if visible: refresh() else: _layout())   # the first time it opens it has no size yet: cards find their places now
 	_top = Control.new(); _top.mouse_filter = Control.MOUSE_FILTER_IGNORE; _top.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_top.draw.connect(_draw_top); add_child(_top)
 	_help = PanelContainer.new(); _help.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -103,7 +103,7 @@ func _help_text() -> void:
 
 ## ---------- the cards
 const SIZES := {"person": Vector2(124, 160), "missing": Vector2(168, 226), "place": Vector2(196, 150), "thing": Vector2(144, 176),
-	"time": Vector2(112, 100), "note": Vector2(136, 116), "say": Vector2(226, 142), "photo": Vector2(186, 164)}
+	"time": Vector2(112, 100), "note": Vector2(136, 116), "say": Vector2(226, 142), "photo": Vector2(186, 164), "heard": Vector2(138, 150)}
 
 func _kind(cd: Dictionary) -> String: return "missing" if cd.kind == "person" and cd.get("missing", false) else cd.kind
 
@@ -142,6 +142,9 @@ func _make(id: String) -> Control:
 		"note":
 			var qt: String = Game.plain(cd.ko)
 			_text(c, qt, Rect2(6, 14, 124, 98), 23 if qt.length() <= 10 else (19 if qt.length() <= 18 else 16), INK)
+		"heard":   # a sound: a tape with a number, no words
+			_photo(c, Kit.face(cd.who), Rect2(24, 18, 90, 90), null)
+			_text(c, "소리 %d" % cd.n, Rect2(4, 110, 130, 36), 23, Color("f3ead2"))
 		"photo":   # one you took: exactly what was in your frame, printed black and white, where and when underneath
 			_photo(c, photo_tex(cd), Rect2(8, 8, 170, 124), _mat_bw(), TextureRect.STRETCH_SCALE)
 			_text(c, Game.plain(cd.ko), Rect2(4, 133, 178, 28), 16, Color("3a3226"))
@@ -189,6 +192,7 @@ static func photo_tex(cd: Dictionary) -> Texture2D:
 static func _picture(cd: Dictionary) -> Texture2D:
 	match cd.kind:
 		"photo": return photo_tex(cd)
+		"heard": return Kit.face(cd.who)
 		"say", "person": return Kit.face(cd.who, cd.get("ex", "neutral"))
 		"thing":
 			if cd.icon == "photo" and ResourceLoader.exists("res://art/photo.png"): return load("res://art/photo.png")
@@ -239,6 +243,7 @@ func _draw_card(c: Control, id: String) -> void:
 			var x := 0.0; var pts := PackedVector2Array()   # torn bottom edge
 			while x <= r.size.x: pts.append(Vector2(x, r.size.y + (3.0 if int(x / 7) % 2 == 0 else -1.0))); x += 7.0
 			c.draw_polyline(pts, Color("fbfaf2"), 4.0)
+		"heard": c.draw_rect(r, Color("2d3340")); c.draw_rect(Rect2(8, 8, r.size.x - 16, r.size.y - 46), Color("cfc6ae"))
 		"missing": c.draw_rect(r, Color("f3f0e6"))
 		"place", "person", "thing", "photo": c.draw_rect(r, Color("f6f3ec"))
 		_: c.draw_rect(r, Color.WHITE)

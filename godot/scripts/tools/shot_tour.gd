@@ -28,6 +28,7 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 			main.room.stick.moved.emit(Vector2(0, -0.6)); await _wait(5.0)   # a soft walk (running would be heard); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.3); await shot("walked_forward")
 			var s3 = main.room.set3
 			if s3.has_method("climb"):
+				var was_board: Dictionary = Game.board().duplicate(true)
 				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); await _wait(3.0); await shot("at_the_wall")
 				Game.F["lit"] = 0; s3.set_torch(false)
 				s3.reset(); s3._glance_in = 99.0; s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); s3.climb(true); await _wait(1.8); await shot("climbed_up")
@@ -36,6 +37,7 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 				s3._glance_in = 99.0; s3._glancing = 0.0
 				for id in Game.board().photos: main.card_big(id)
 				await _wait(0.5); await shot("the_photo"); _close_big()
+				Game.F["board"] = was_board; main._refresh()   # as if the tour never took it: the route takes its own
 				s3._glance_in = 0.0; await _wait(1.0); await shot("one_looks_round")
 				await _wait(1.0); await shot("seen")
 				s3.turn_around(); await _wait(0.4); main.room.stick.moved.emit(Vector2(0, -1)); await _wait(2.5); await shot("running")

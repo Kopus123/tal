@@ -295,11 +295,17 @@ func s_link(a: String) -> void:
 	if r != "": fail("couldn't pin that string: " + r)
 
 ## photo X Y W H: take a photo with the frame there (percent of the picture)
+func s_hear(a: String) -> void:   # hear ID: you heard that line clearly, over a wall
+	idle()
+	var x: Dictionary = g.ST.statements.get(a.strip_edges(), {})
+	if x.is_empty(): fail("no line " + a); return
+	g.hear_line(g.ST.nodes[x.node].who, g.ST.nodes[x.node].ko)
+
 func s_photo(a: String) -> void:
 	idle()
 	var n := a.split(" ", false)
-	if n.size() != 4: fail("photo needs x y w h"); return
-	var r: String = g.take_photo(Rect2(float(n[0]), float(n[1]), float(n[2]), float(n[3])), g.place().get("art", ""))
+	if n.size() < 4: fail("photo needs x y w h"); return
+	var r: String = g.take_photo(Rect2(float(n[0]), float(n[1]), float(n[2]), float(n[3])), g.place().get("art", ""), null, n[4] if n.size() > 4 else "")
 	if r != "": fail("couldn't take the photo: " + r)
 
 func s_pin(a: String) -> void:

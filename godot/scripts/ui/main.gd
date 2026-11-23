@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.4.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.5.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -180,6 +180,7 @@ func _overheard(who: String, ko: String, clear: float) -> void:
 	# a line heard clearly goes into the log as heard, not written down: words reach your notebook when you act on it
 	if clear >= 0.85 and not _heard_lines.has(who + ko):
 		_heard_lines[who + ko] = 1; Game._log(who, ko, "", "neutral", true)
+	if clear >= 0.85: Game.hear_line(who, ko)
 	if _voice_icon and is_instance_valid(_voice_icon) and clear != 0.0:   # a pulse when someone speaks, as bright as you hear them
 		if clear > 0.0: _voice_icon.modulate.a = 0.25 + 0.75 * clear
 		var t := create_tween(); t.tween_property(_voice_icon, "scale", Vector2(1.25, 1.25), 0.12); t.tween_property(_voice_icon, "scale", Vector2.ONE, 0.35)
@@ -237,9 +238,10 @@ func _lab() -> void:
 			"person": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who) + ("\n실종 · missing" if cd.get("missing", false) else "")
 			"say": ko = Game.ST.cast.get(cd.who, {}).get("n", cd.who) + ":\n" + cd.ko
 			"photo": ko = "사진 · photo\n" + cd.ko
+			"heard": ko = "소리 %d · a sound you heard" % cd.n
 		var r := Kit.rich(28); r.text = Kit.ko(ko); r.meta_clicked.connect(func(w): _word(str(w))); body.add_child(r)
 		if cd.kind == "note" and cd.get("en", "") != "": body.add_child(Kit.label("(your note: " + cd.en + ")", 20, Kit.MUTE, true))
-		if cd.kind == "say":
+		if cd.kind in ["say", "heard"]:
 			var hb := Kit.button("▶ Hear it", false, 20); hb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN; hb.pressed.connect(func(): voice.say(cd.ko, cd.who)); body.add_child(hb)
 		var pinned: bool = Game.is_pinned(id)
 		if not pinned:

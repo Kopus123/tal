@@ -7,3 +7,17 @@ expect @so_alley
 pocket flashlight
 idle
 expect lit
+#@ Alley · the case, by ear and by photo
+hear h_who
+hear h_where
+hear h_when
+photo 20 40 50 50
+photo 20 40 50 50 s_meeting
+nosolve k1 ; h_who
+solve k1 ; h_where
+nosolve k2 ; h_when
+solve k2 ; h_who
+nosolve k3 ; ph_1
+solve k3 ; ph_2
+solve k4
+done stakeout

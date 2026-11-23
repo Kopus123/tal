@@ -1014,12 +1014,25 @@ func card(id: String) -> Dictionary:
 			if not e.is_empty(): c = {"id": id, "kind": "thing", "icon": e.icon, "label": e.label, "ko": e.ko, "start": false}
 		"st":
 			var n: Dictionary = ST.nodes.get(ST.statements.get(x, {}).get("node", ""), {})
+			if x.begins_with("h_") and not n.is_empty():   # only heard, over a wall: a sound, no words on it
+				c = {"id": id, "kind": "heard", "who": n.get("who", ""), "ex": "neutral", "ko": n.get("ko", ""), "n": int(S.F.get("hn_" + x, 0)), "start": false}
+				_vcards[id] = c; return c
 			if not n.is_empty(): c = {"id": id, "kind": "say", "who": n.get("who", ""), "ex": n.get("ex", "neutral"), "ko": n.get("ko", ""), "start": false}
 		"q":
 			var q: Dictionary = ST.questions.get(x, {})
 			if not q.is_empty(): c = {"id": id, "kind": "note", "color": "pink", "ko": q.ko, "en": q.en, "start": false}
 	if not c.is_empty(): _vcards[id] = c
 	return c
+
+
+## you heard a line clearly, over a wall: it goes on your board as a sound (the first time)
+func hear_line(who: String, ko: String) -> void:
+	for x in ST.statements:
+		if not x.begins_with("h_") or S.F.has("st_" + x): continue
+		var n: Dictionary = ST.nodes.get(ST.statements[x].node, {})
+		if n.get("who", "") == who and n.get("ko", "") == ko:
+			S.F["hn_" + x] = ST.statements.keys().filter(func(y): return S.F.has("hn_" + y)).size() + 1
+			S.F["st_" + x] = 1; S.F["so_heard"] = 1; note("  heard clearly: " + x); save(); changed.emit()
 
 
 ## the board card for something a deduction needs ("fakemask" -> "ev:fakemask", "s_bus" -> "st:s_bus")
@@ -1098,6 +1111,7 @@ func card_label(c: Dictionary) -> String:
 		"thing": return plain(c.label)
 		"person": return ST.cast.get(c.who, {}).get("n", c.who)
 		"place", "time", "note", "photo": return plain(c.ko)
+		"heard": return "소리 %d" % c.n
 	return c.id
 
 func is_linked(a: String, b_: String) -> bool:

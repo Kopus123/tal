@@ -143,6 +143,7 @@ func _snap() -> void:
 		im.convert(Image.FORMAT_RGB8); im.adjust_bcs(3.4, 0.85, 1.0)   # fast film, pushed for the night: shadows come up, lamps blow out
 		why = Game.take_photo(r, "", im, set3.photo_subject(Rect2(r.position / 100.0 * v, r.size / 100.0 * v)) if set3.has_method("photo_subject") else "")
 		if why == "" and set3.has_method("on_shutter"): set3.on_shutter()
+		if why == "" and set3.up: camera(false)   # you lower it at once: they may look
 	else: why = Game.take_photo(r, _art_key)
 	if why == "no film": Game.sound.emit("wrong"); Game.toast.emit("Out of film. The shop sells it."); return
 	var f := ColorRect.new(); f.color = Color.WHITE; f.mouse_filter = Control.MOUSE_FILTER_IGNORE; f.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(f)

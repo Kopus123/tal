@@ -54,12 +54,12 @@ d9 final if hidden&st_s_reason | Long ago, 할머니 {바꿨어요} the masks. T
 d1 | {이거}, {진짜} {탈}{이에요}? | The mask on the gate: is it the real one?
 dw | {밤}{에} {할머니}{는|은/는} {어디}{에} {있었어요}? | Where was 할머니 last night?
 d3 | {김밥} {두 개}. {누구}? | Two 김밥. Who was the second one for?
-d5 | {밤}{에} {다리}{에} {누구}{가|이/가} {있었어요}? | Who was on the bridge last night?
+d5 | {밤}{에} {다리}{에} {누가|누구} {있었어요}? | Who was on the bridge last night?
 dg | {그} {남자}{는|은/는} {할아버지}{예요|이에요}? | Was the man on the bridge 할아버지?
 do | {식당} {아저씨}{의} {전화}. {누구}? | The restaurant owner's phone call: who was it?
 dc | {그} {핸드폰}{은|은/는} {누구}{의} {핸드폰}{이에요}? | Whose phone sent the messages?
 d8 | {진짜} {탈}{은|은/는} {어디}{에} {있어요}? | Where is the real mask?
-d9 | {할머니}{는|은/는} {탈}{을|을/를} {바꿨어요}. {누구}{가|이/가} {찾아요}? | She swapped the masks. Who is looking for it?
+d9 | {할머니}{는|은/는} {탈}{을|을/를} {바꿨어요}. {누가|누구} {찾아요}? | She swapped the masks. Who is looking for it?
 
 === evidence
 gramboots | {장화} | boots | 할아버지's rubber boots: smooth soles, caked with mountain mud. |

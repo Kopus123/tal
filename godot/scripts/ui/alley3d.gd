@@ -21,6 +21,7 @@ func _ready() -> void:
 	for z in ARCHES: _arch(z)
 	_end_house()
 	_yard()
+	_make_gate()
 	for i in ARCHES.size(): _lantern(Vector3(0.0, 2.95, ARCHES[i] + 0.55), i > 0)   # hanging from each arch; the nearest one has gone out
 	_lantern(Vector3(0.9, 2.6, -L + 3.4))
 	_ivy()
@@ -155,64 +156,88 @@ func _seen() -> void:
 		t.tween_property(cam, "position", land, 0.35); _base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
 		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 0.35)
 		t.tween_callback(func(): _busy = false; up = false; climb_changed.emit(false, false))
-	_chase = true; _chase_wait = 1.6; _people[0].visible = false   # he goes round to the alley
+	_chase = true; _chase_wait = 1.3
+	for g in _people: g.visible = false   # they head for the gate
 	spotted.emit()
 
 
-## ---------- the chase: he comes into the alley from the far end with his light and runs at you. Get out of the alley
-## (back past the entrance) before he reaches you, and they're too spooked to stay: they go inside. Caught: start over.
-const CHASE_SPEED := 2.1     ## a bit faster than you run: you need your head start
+## ---------- the chase: the gate in the right wall creaks open and they come out after you, one then the other, each
+## with a flashlight. Get out of the alley (back past the entrance) before one reaches you, and they're too spooked to
+## stay: they go inside. Grabbed: start over.
+const GATE_Z := -17.5        ## the gate from the courtyard into the alley (a little past where they stand)
+const CHASERS := [[0.0, 2.25, 1.72], [1.1, 2.0, 1.6]]   ## each: [seconds after the gate opens, speed, height]
 var _chase := false
-var _chase_wait := 0.0       ## the moment before he comes round the corner
+var _chase_wait := 0.0       ## the moment before the gate opens
+var _chase_t := 0.0          ## since the gate opened
 var _spooked := false        ## you got away: they've gone in, the courtyard is empty and quiet
-var _pursuer: Node3D
-var _pstep: AudioStreamPlayer3D
-var _pstride := 0.0
+var _chasers: Array = []     ## [{n: Node3D, speed, step: AudioStreamPlayer3D, stride, t}]
+var _gate: Node3D            ## the gate's door, on its hinge
 
 func _shout(ko: String, db: float) -> void:
 	var s := Voice.stream_for(ko, "stranger")
 	if s == null: return
 	var v: AudioStreamPlayer3D = _voices[0]
-	if _pursuer: v.reparent(_pursuer, false); v.position = Vector3(0, 1.6, 0)
+	if not _chasers.is_empty(): v.reparent(_chasers[0].n, false); v.position = Vector3(0, 1.6, 0)
 	v.stream = s; v.volume_db = db; v.attenuation_filter_cutoff_hz = 6000; v.play()
+
+func _chaser(h: float, speed: float) -> void:   # someone stepping out of the gate, light first
+	var n := _figure(Vector3(W / 2 + 1.2, 0, GATE_Z), h, 90.0)
+	var beam := SpotLight3D.new(); beam.position = Vector3(0.15, 1.3, -0.2); beam.light_color = Color(1.0, 0.92, 0.75)
+	beam.light_energy = 7.0; beam.spot_range = 18; beam.spot_angle = 22; beam.shadow_enabled = true; beam.light_volumetric_fog_energy = 2.0
+	beam.rotation_degrees = Vector3(-8, 0, 0); n.add_child(beam)
+	var st := AudioStreamPlayer3D.new(); st.stream = load("res://sfx/step.wav"); st.unit_size = 5.0; st.position = Vector3(0, 0.2, 0); n.add_child(st)
+	_chasers.append({"n": n, "speed": speed, "step": st, "stride": 0.0, "t": 0.0})
 
 func _chase_tick(dt: float) -> void:
 	if not _chase: return
 	if _chase_wait > 0.0:
 		_chase_wait -= dt
-		if _chase_wait <= 0.0:   # round the corner, into the far end of the alley, light first
-			_pursuer = _figure(Vector3(0, 0, -L + 3.6), 1.72, 180.0)
-			var beam := SpotLight3D.new(); beam.position = Vector3(0.15, 1.3, -0.2); beam.light_color = Color(1.0, 0.92, 0.75)
-			beam.light_energy = 7.0; beam.spot_range = 18; beam.spot_angle = 22; beam.shadow_enabled = true; beam.light_volumetric_fog_energy = 2.0
-			beam.rotation_degrees = Vector3(-8, 0, 0); _pursuer.add_child(beam)
-			_pstep = AudioStreamPlayer3D.new(); _pstep.stream = load("res://sfx/step.wav"); _pstep.unit_size = 5.0; _pstep.position = Vector3(0, 0.2, 0); _pursuer.add_child(_pstep)
-			_shout("거기 서!", 0.0)
+		if _chase_wait <= 0.0:   # the gate bangs open
+			var cr := AudioStreamPlayer3D.new(); cr.stream = load("res://sfx/creak.wav"); cr.position = Vector3(W / 2, 1.2, GATE_Z); add_child(cr); cr.play()
+			create_tween().tween_property(_gate, "rotation_degrees:y", -105.0, 0.45).set_trans(Tween.TRANS_BACK)
 		return
-	if _pursuer == null: return
-	# he runs at you down the middle (that's how the archways let him through), turning to face you
-	var to := cam.position - _pursuer.position; to.y = 0
-	if to.length() < 1.0:
-		_end_chase(); grabbed.emit(); return
-	var step := to.normalized() * CHASE_SPEED * dt
-	var p := _pursuer.position + step
-	for z in ARCHES:
-		if absf(p.z - z) < 0.6: p.x = move_toward(p.x, 0.0, dt * 4.0)
-	p.x = clampf(p.x, -W / 2 + 0.4, W / 2 - 0.4)
-	_pursuer.position = p
-	_pursuer.rotation.y = atan2(-to.x, -to.z)
-	_pstride += dt * 9.0
-	if fmod(_pstride, PI) < dt * 9.0: _pstep.pitch_scale = randf_range(0.9, 1.05); _pstep.play()
+	_chase_t += dt
+	for k in CHASERS.size():   # out they come, one then the other
+		if _chasers.size() == k and _chase_t >= CHASERS[k][0] + 0.35:
+			_chaser(CHASERS[k][2], CHASERS[k][1])
+			if k == 0: _shout("거기 서!", 0.0)
+	for c in _chasers:
+		var n: Node3D = c.n; c.t += dt
+		# through the gate first, then straight at you down the middle (the archways only let you through there)
+		var target := cam.position
+		if n.position.x > W / 2 - 0.5: target = Vector3(W / 2 - 0.8, 0, GATE_Z)
+		var to := target - n.position; to.y = 0
+		var me := cam.position - n.position; me.y = 0
+		if me.length() < 1.0 and c.t > 0.7:   # a hand on your collar (never the instant they appear)
+			_end_chase(); grabbed.emit(); return
+		var p: Vector3 = n.position + to.normalized() * float(c.speed) * dt
+		for z in ARCHES:
+			if absf(p.z - z) < 0.6: p.x = move_toward(p.x, 0.0, dt * 4.0)
+		if n.position.x <= W / 2 - 0.5: p.x = clampf(p.x, -W / 2 + 0.4, W / 2 - 0.4)
+		n.position = p
+		n.rotation.y = atan2(-to.x, -to.z)
+		var before: float = c.stride
+		c.stride += dt * 9.5
+		if int(before / PI) != int(c.stride / PI): c.step.pitch_scale = randf_range(0.9, 1.05); c.step.play()
 	if cam.position.z > 1.0:   # out of the alley
 		_end_chase(); _spooked = true; _talk = []
 		for g in _people: g.visible = false   # they've gone inside
 		got_away.emit()
 
 func _end_chase() -> void:
-	_chase = false; _chase_wait = 0.0
-	if _pursuer:
-		var v: AudioStreamPlayer3D = _voices[0]
-		if v.get_parent() == _pursuer: v.reparent(self, false); v.position = Vector3(W / 2 + 5.3, 1.55, MEET_Z + 0.9)
-		_pursuer.queue_free(); _pursuer = null
+	_chase = false; _chase_wait = 0.0; _chase_t = 0.0
+	var v: AudioStreamPlayer3D = _voices[0]
+	if v.get_parent() != self: v.reparent(self, false); v.position = Vector3(W / 2 + 5.3, 1.55, MEET_Z + 0.9)
+	for c in _chasers: c.n.queue_free()
+	_chasers.clear()
+	if _gate: _gate.rotation_degrees.y = 0.0
+
+## turn right round (a button: you can't drag that far)
+func turn_around() -> void:
+	if up or _busy: return
+	var from := _base_rot; var to := _base_rot + Vector3(0, 180, 0)
+	create_tween().tween_method(func(v: Vector3): _base_rot = v; _apply_look(), from, to, 0.35).set_trans(Tween.TRANS_SINE)
+
 
 ## back to the entrance, down off the wall, as if it never happened
 func reset() -> void:
@@ -341,11 +366,26 @@ func _walls() -> void:
 	var roof := _mat("grey_roof_tiles", Vector3(0.9, 0.9, 0.9), 0.8)
 	for side in [-1, 1]:
 		var x: float = side * (W / 2 + 0.25)
-		_box(Vector3(0.5, H, L), Vector3(x, H / 2, -L / 2 + 2), brick)
+		if side < 0: _box(Vector3(0.5, H, L), Vector3(x, H / 2, -L / 2 + 2), brick)
+		else:   # the right wall, with a gap for the gate into the courtyard
+			var z0 := 2.0; var z1 := -L + 2.0; var g0 := GATE_Z + 0.7; var g1 := GATE_Z - 0.7
+			_box(Vector3(0.5, H, z0 - g0), Vector3(x, H / 2, (z0 + g0) / 2), brick)
+			_box(Vector3(0.5, H, g1 - z1), Vector3(x, H / 2, (g1 + z1) / 2), brick)
+			_box(Vector3(0.5, H - 2.3, 1.4), Vector3(x, 2.3 + (H - 2.3) / 2, GATE_Z), brick)   # above the gate
 		# the tiled cap along the top, overhanging into the alley (a Korean wall's 기와)
 		var cap := _box(Vector3(1.1, 0.22, L), Vector3(x - side * 0.15, H + 0.12, -L / 2 + 2), roof)
 		cap.rotation_degrees = Vector3(0, 0, side * 14)
 		_box(Vector3(0.7, 0.12, L), Vector3(x, H + 0.02, -L / 2 + 2), roof)
+
+
+## the gate: a plank door on a hinge at its alley-end edge, shut until they come for you
+func _make_gate() -> void:
+	_gate = Node3D.new(); _gate.position = Vector3(W / 2 + 0.02, 0, GATE_Z + 0.7); add_child(_gate)
+	var door := MeshInstance3D.new(); var b := BoxMesh.new(); b.size = Vector3(0.1, 2.3, 1.4); door.mesh = b
+	door.material_override = _mat("dark_planks", Vector3(0.8, 0.8, 0.8), 0.9); door.position = Vector3(0, 1.15, -0.7); _gate.add_child(door)
+	var ring := MeshInstance3D.new(); var t := TorusMesh.new(); t.inner_radius = 0.035; t.outer_radius = 0.06; ring.mesh = t
+	var iron := StandardMaterial3D.new(); iron.albedo_color = Color(0.1, 0.1, 0.1); iron.metallic = 0.8; iron.roughness = 0.4
+	ring.material_override = iron; ring.rotation_degrees = Vector3(0, 0, 90); ring.position = Vector3(-0.07, 1.1, -1.1); _gate.add_child(ring)
 
 
 ## a brick archway across the alley: a block with a round-topped opening cut out

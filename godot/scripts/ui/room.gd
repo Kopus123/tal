@@ -46,6 +46,7 @@ var _set_name := ""
 var _look := Vector2.ZERO
 var stick: Control                 ## walking, in a 3D place
 var climb_btn: Button              ## up the wall / back down
+var turn_btn: Button               ## turn right round
 var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
 var _focused := false
 var _resizing := false
@@ -255,6 +256,7 @@ func _scene3d(name: String) -> void:
 	_set_name = name
 	if vp3: vp3.queue_free(); vp3 = null; set3 = null
 	if climb_btn: climb_btn.visible = false
+	if turn_btn: turn_btn.visible = false
 	if stick:
 		stick.visible = false
 		for c in stick.moved.get_connections(): stick.moved.disconnect(c.callable)
@@ -272,6 +274,9 @@ func _scene3d(name: String) -> void:
 		climb_btn = Kit.button("Climb up", true, 22); climb_btn.custom_minimum_size = Vector2(190, 64); add_child(climb_btn)
 		climb_btn.pressed.connect(func(): if set3: Game.sound.emit("tap"); set3.climb(not set3.up))
 	climb_btn.visible = false
+	if turn_btn == null:
+		turn_btn = _icon_btn("↺", func(): if set3: Game.sound.emit("tap"); set3.turn_around())
+	turn_btn.visible = set3.has_method("turn_around")
 	if set3.has_signal("climb_changed"): set3.climb_changed.connect(_on_climb)
 	if set3.has_signal("overheard"):
 		set3.overheard.connect(func(w, k, c): overheard.emit(w, k, c))
@@ -289,6 +294,7 @@ func _scene3d(name: String) -> void:
 func _place_stick() -> void:
 	if stick: stick.position = Vector2(18, size.y - stick.size.y - 18)
 	if climb_btn: climb_btn.position = Vector2(size.x - 210, size.y - 186)
+	if turn_btn and stick: turn_btn.position = Vector2(stick.position.x + stick.size.x + 8, size.y - 112)
 
 
 ## by the right wall you can climb it; up there, the stick hides and the button takes you back down
@@ -296,6 +302,7 @@ func _on_climb(can: bool, is_up: bool) -> void:
 	climb_btn.visible = can or is_up
 	climb_btn.text = "Climb down" if is_up else "Climb up"
 	stick.visible = not is_up
+	if turn_btn: turn_btn.visible = not is_up
 	if is_up: stick.moved.emit(Vector2.ZERO)
 	_place_stick()
 

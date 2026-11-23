@@ -33,10 +33,10 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 				s3.reset(); s3._glance_in = 99.0; s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); s3.climb(true); await _wait(1.8); await shot("climbed_up")
 				await _wait(9.0); await shot("overheard_close")
 				s3._glance_in = 0.0; await _wait(1.0); await shot("one_looks_round")
-				await _wait(1.5); await shot("seen_he_comes")
-				await _wait(2.5); s3._look = Vector2.ZERO; s3._apply_look(); await shot("chase_his_light")
-				main.room.stick.moved.emit(Vector2(0, 1)); await _wait(0.5)   # back away down the alley, watching him come
-				await _wait(9.0); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.8); await shot("got_away")
+				await _wait(1.0); await shot("seen")
+				s3.turn_around(); await _wait(0.4); main.room.stick.moved.emit(Vector2(0, -1)); await _wait(2.5); await shot("running")
+				s3.turn_around(); await _wait(0.5); await shot("looking_back"); s3.turn_around(); await _wait(0.4)
+				await _wait(8.0); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.8); await shot("got_away")
 				Game.next(); Game.next(); Game.next(); await _wait(0.6); Game.F["lit"] = 1; s3.set_torch(true)
 		if cmd == "photo":   # show the viewfinder where that photo was taken
 			var n := arg.split(" ", false); var rm: Control = main.room

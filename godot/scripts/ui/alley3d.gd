@@ -20,6 +20,7 @@ func _ready() -> void:
 	_floor(); _walls()
 	for z in ARCHES: _arch(z)
 	_end_house()
+	_yard()
 	for i in ARCHES.size(): _lantern(Vector3(0.0, 2.95, ARCHES[i] + 0.55), i > 0)   # hanging from each arch; the nearest one has gone out
 	_lantern(Vector3(0.9, 2.6, -L + 3.4))
 	_ivy()
@@ -31,6 +32,40 @@ func _ready() -> void:
 	torch.spot_attenuation = 0.8; torch.shadow_enabled = true; torch.light_volumetric_fog_energy = 1.4; torch.visible = false; cam.add_child(torch)
 
 
+## ---------- climbing the right wall: up against it (not in an archway), you can pull yourself up and look over the top
+signal climb_changed(can: bool, up: bool)   ## whether you're at the wall / up on it (the screen shows the button)
+const MEET_Z := -14.0   ## where along the alley the two people are standing, on the other side of the right wall
+var up := false
+var _can := false
+var _busy := false
+var _down_at := Vector3.ZERO
+
+func can_climb() -> bool:
+	if up or _busy: return false
+	if cam.position.x < W / 2 - 0.55: return false
+	for z in ARCHES:
+		if absf(cam.position.z - z) < 0.9: return false
+	return true
+
+func climb(on: bool) -> void:
+	if _busy or on == up: return
+	_busy = true; _move = Vector2.ZERO
+	var t := create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if on:
+		_down_at = cam.position
+		var top := Vector3(W / 2 + 0.4, H + 0.68, cam.position.z)   # head and shoulders over the top, leaning out
+		t.tween_property(cam, "position", Vector3(cam.position.x, H * 0.55, cam.position.z), 0.6)   # hands on the wall, pulling up
+		t.chain().tween_property(cam, "position", top, 0.55)
+		_base_rot = Vector3(-15, -75, 0); _look = Vector2.ZERO
+		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 1.0)
+	else:
+		t.tween_property(cam, "position", Vector3(_down_at.x, H * 0.5, _down_at.z), 0.5)
+		t.chain().tween_property(cam, "position", _down_at, 0.4)
+		_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
+		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 0.8)
+	t.chain().tween_callback(func(): _busy = false; up = on; climb_changed.emit(can_climb(), up))
+
+
 ## ---------- walking: the stick pushes you the way you're facing; walls and the arches' pillars stop you
 const SPEED := 1.6          ## metres a second, stick all the way
 const EYE := 1.55
@@ -40,6 +75,9 @@ var _stride := 0.0
 func set_move(v: Vector2) -> void: _move = v
 
 func _walk(dt: float) -> void:
+	if up or _busy: return
+	var c := can_climb()
+	if c != _can: _can = c; climb_changed.emit(c, up)
 	if _move.length() < 0.08: cam.position.y = lerpf(cam.position.y, EYE, dt * 6.0); return
 	var yaw := cam.rotation.y
 	var fwd := Vector3(-sin(yaw), 0, -cos(yaw)); var right := Vector3(cos(yaw), 0, -sin(yaw))
@@ -154,6 +192,59 @@ func _arch(z: float) -> void:
 	top.rotation_degrees = Vector3(90, 0, 0); top.position = Vector3(0, 2.2, 0); c.add_child(top)
 	var cap := _box(Vector3(W + 1.4, 0.2, 1.0), Vector3(0, H + 0.7, z), _mat("grey_roof_tiles", Vector3(0.9, 0.9, 0.9), 0.8))
 	cap.name = "archcap"
+
+
+## on the other side of the right wall: someone's courtyard. A hanok with its paper windows lit, a lamp by the step,
+## a persimmon tree, and two people talking by the lamp at one spot along the wall (MEET_Z)
+func _yard() -> void:
+	var x0 := W / 2 + 0.5
+	var dirt := _mat("large_grey_tiles", Vector3(0.35, 0.35, 0.35), 0.9)
+	dirt.albedo_color = Color(0.45, 0.42, 0.38)
+	_box(Vector3(18, 0.2, L), Vector3(x0 + 9, -0.1, -L / 2 + 2), dirt)
+	# the house, across the yard, facing the wall
+	var hx := x0 + 10.5
+	var wood := _mat("dark_planks", Vector3(0.7, 0.7, 0.7), 0.9)
+	_box(Vector3(5.0, 3.2, 14), Vector3(hx + 2.5, 1.9, MEET_Z), wood)
+	_box(Vector3(6.4, 0.5, 15.4), Vector3(hx + 2.4, 0.25, MEET_Z), _mat("large_grey_tiles", Vector3(0.6, 0.6, 0.6)))   # the stone base
+	var roof := _mat("grey_roof_tiles", Vector3(0.8, 0.8, 0.8), 0.8)
+	for s in [-1, 1]:
+		var r := _box(Vector3(4.6, 0.25, 16.4), Vector3(hx + 2.5 + s * 1.9, 4.25, MEET_Z), roof)
+		r.rotation_degrees = Vector3(0, 0, -s * 24)
+	var paper := StandardMaterial3D.new(); paper.emission_enabled = true; paper.emission = Color(1.0, 0.72, 0.42); paper.emission_energy_multiplier = 1.6
+	paper.albedo_color = Color(1.0, 0.82, 0.6)
+	for k in 4:   # lit paper doors along the front
+		_box(Vector3(0.06, 2.0, 2.2), Vector3(hx - 0.02, 1.6, MEET_Z - 4.5 + k * 3.0), paper)
+	var glow := OmniLight3D.new(); glow.position = Vector3(hx - 1.2, 1.8, MEET_Z); glow.light_color = Color(1.0, 0.68, 0.4)
+	glow.light_energy = 1.6; glow.omni_range = 9; glow.shadow_enabled = true; glow.light_volumetric_fog_energy = 1.2; add_child(glow)
+	# a lamp on a post by the step, where they're standing
+	var lamp_at := Vector3(x0 + 5.6, 0, MEET_Z + 1.6)
+	var post := StandardMaterial3D.new(); post.albedo_color = Color(0.08, 0.07, 0.06)
+	_box(Vector3(0.1, 2.2, 0.1), lamp_at + Vector3(0, 1.1, 0), post)
+	var lampm := StandardMaterial3D.new(); lampm.emission_enabled = true; lampm.emission = Color(1.0, 0.62, 0.3); lampm.emission_energy_multiplier = 2.0
+	var lb := _box(Vector3(0.3, 0.4, 0.3), lamp_at + Vector3(0, 2.35, 0), lampm); lb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var ll := OmniLight3D.new(); ll.position = lamp_at + Vector3(0, 2.3, 0); ll.light_color = Color(1.0, 0.62, 0.32); ll.light_energy = 1.4
+	ll.omni_range = 6; ll.shadow_enabled = true; add_child(ll); _lanterns.append(ll)
+	# a persimmon tree
+	var bark := StandardMaterial3D.new(); bark.albedo_color = Color(0.12, 0.09, 0.07)
+	var trunk := MeshInstance3D.new(); var tm := CylinderMesh.new(); tm.top_radius = 0.12; tm.bottom_radius = 0.2; tm.height = 3.0; trunk.mesh = tm
+	trunk.material_override = bark; trunk.position = Vector3(x0 + 3.0, 1.5, MEET_Z - 6); add_child(trunk)
+	var leaves := StandardMaterial3D.new(); leaves.albedo_color = Color(0.12, 0.2, 0.1); leaves.roughness = 0.9
+	for k in 5:
+		var b := MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 1.1; sm.height = 1.8; b.mesh = sm; b.material_override = leaves
+		b.position = Vector3(x0 + 3.0 + cos(k * 1.3) * 0.9, 3.4 + (k % 2) * 0.5, MEET_Z - 6 + sin(k * 1.3) * 0.9); add_child(b)
+	# the two of them, by the lamp
+	_figure(Vector3(x0 + 4.8, 0, MEET_Z + 0.9), 1.72, 90.0)
+	_figure(Vector3(x0 + 5.5, 0, MEET_Z + 0.2), 1.6, -60.0)
+
+
+## a person, as a dark shape: body, shoulders, head (detail comes later)
+func _figure(at: Vector3, h: float, face: float) -> void:
+	var cloth := StandardMaterial3D.new(); cloth.albedo_color = Color(0.06, 0.06, 0.08); cloth.roughness = 0.9
+	var g := Node3D.new(); g.position = at; g.rotation_degrees.y = face; add_child(g)
+	var body := MeshInstance3D.new(); var cm := CapsuleMesh.new(); cm.radius = 0.24; cm.height = h * 0.78; body.mesh = cm
+	body.material_override = cloth; body.position = Vector3(0, h * 0.42, 0); g.add_child(body)
+	var head := MeshInstance3D.new(); var hm := SphereMesh.new(); hm.radius = 0.12; hm.height = 0.26; head.mesh = hm
+	head.material_override = cloth; head.position = Vector3(0, h - 0.11, 0); g.add_child(head)
 
 
 ## the end of the alley: a wooden door in a lit doorway, warm light spilling out onto the wet stone

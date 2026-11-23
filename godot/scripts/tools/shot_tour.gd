@@ -26,6 +26,11 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 			main.room.set3.aim(0, 0); main.room.set3.drag(Vector2(-10, 0)); main.room.set3.drag(Vector2(0.0, 0.0))
 			main.room.set3._look = Vector2.ZERO; main.room.set3._apply_look()
 			main.room.stick.moved.emit(Vector2(0, -1)); await _wait(4.0); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.3); await shot("walked_forward")
+			var s3 = main.room.set3
+			if s3.has_method("climb"):
+				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); await _wait(0.4); await shot("at_the_wall")
+				s3.climb(true); await _wait(1.8); await shot("climbed_up")
+				s3.climb(false); await _wait(1.3)
 		if cmd == "photo":   # show the viewfinder where that photo was taken
 			var n := arg.split(" ", false); var rm: Control = main.room
 			rm.camera(true); await _wait(0.1)

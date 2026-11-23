@@ -31,7 +31,30 @@ func _ready() -> void:
 	torch.spot_attenuation = 0.8; torch.shadow_enabled = true; torch.light_volumetric_fog_energy = 1.4; torch.visible = false; cam.add_child(torch)
 
 
+## ---------- walking: the stick pushes you the way you're facing; walls and the arches' pillars stop you
+const SPEED := 1.6          ## metres a second, stick all the way
+const EYE := 1.55
+var _move := Vector2.ZERO
+var _stride := 0.0
+
+func set_move(v: Vector2) -> void: _move = v
+
+func _walk(dt: float) -> void:
+	if _move.length() < 0.08: cam.position.y = lerpf(cam.position.y, EYE, dt * 6.0); return
+	var yaw := cam.rotation.y
+	var fwd := Vector3(-sin(yaw), 0, -cos(yaw)); var right := Vector3(cos(yaw), 0, -sin(yaw))
+	var p := cam.position + (fwd * -_move.y + right * _move.x) * SPEED * dt
+	var half := W / 2 - 0.35
+	for z in ARCHES:   # through an archway you have to fit through the opening
+		if absf(p.z - z) < 0.55: half = minf(half, (W - 0.9) / 2 - 0.3)
+	p.x = clampf(p.x, -half, half); p.z = clampf(p.z, -L + 3.0, 1.6)
+	_stride += _move.length() * dt * 9.0
+	p.y = EYE + sin(_stride) * 0.03 * minf(1.0, _move.length())   # a little bob as you walk
+	cam.position = p
+
+
 func _process(dt: float) -> void:   # the lantern flames breathe a little; a light held near the edge turns your head
+	_walk(dt)
 	if torch.visible and _held:
 		var push := Vector2.ZERO
 		for k in 2:

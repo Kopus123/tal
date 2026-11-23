@@ -23,6 +23,9 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		await shot("%s_%s" % [cmd, arg.left(18)])
 		if cmd == "pocket" and main.room.set3 and Game.F.get("lit", 0):   # a 3D place: hold the light at the right edge
 			main.room.set3.hold(true); main.room.set3.aim(0.95, 0.1); await _wait(1.4); await shot("light_at_edge"); main.room.set3.hold(false)
+			main.room.set3.aim(0, 0); main.room.set3.drag(Vector2(-10, 0)); main.room.set3.drag(Vector2(0.0, 0.0))
+			main.room.set3._look = Vector2.ZERO; main.room.set3._apply_look()
+			main.room.stick.moved.emit(Vector2(0, -1)); await _wait(4.0); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.3); await shot("walked_forward")
 		if cmd == "photo":   # show the viewfinder where that photo was taken
 			var n := arg.split(" ", false); var rm: Control = main.room
 			rm.camera(true); await _wait(0.1)

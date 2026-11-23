@@ -40,6 +40,7 @@ var vp3: SubViewport
 var set3: Node3D
 var _set_name := ""
 var _look := Vector2.ZERO
+var stick: Control                 ## walking, in a 3D place
 var _still := 0.0                  ## how long the frame has sat still (it focuses after a moment)
 var _focused := false
 var _resizing := false
@@ -89,7 +90,8 @@ func _ready() -> void:
 	shutter.add_theme_stylebox_override("pressed", _ring(Color(0.8, 0.8, 0.8, 1)))
 	resized.connect(func():
 		back_btn.position = Vector2(10, size.y - 94); _place_cam_btns(); _place_figs()
-		if vp3: vp3.size = Vector2i(maxi(64, int(size.x)), maxi(64, int(size.y))))
+		if vp3: vp3.size = Vector2i(maxi(64, int(size.x)), maxi(64, int(size.y)))
+		_place_stick())
 	set_process(false)
 	Game.lean.connect(_on_lean)
 
@@ -247,6 +249,9 @@ func _scene3d(name: String) -> void:
 		return
 	_set_name = name
 	if vp3: vp3.queue_free(); vp3 = null; set3 = null
+	if stick:
+		stick.visible = false
+		for c in stick.moved.get_connections(): stick.moved.disconnect(c.callable)
 	if name == "":
 		view.texture = vp.get_texture(); return
 	vp3 = SubViewport.new(); vp3.own_world_3d = true; vp3.size = Vector2i(maxi(64, int(size.x)), maxi(64, int(size.y)))
@@ -254,6 +259,22 @@ func _scene3d(name: String) -> void:
 	set3 = load("res://scripts/ui/%s3d.gd" % name).new(); vp3.add_child(set3)
 	view.texture = vp3.get_texture(); _look = Vector2.ZERO
 	set3.set_torch(bool(Game.F.get("lit", 0)))
+	if stick == null:
+		stick = load("res://scripts/ui/joystick.gd").new(); add_child(stick)
+	stick.moved.connect(set3.set_move); stick.visible = true; _place_stick()
+
+
+func _place_stick() -> void:
+	if stick: stick.position = Vector2(18, size.y - stick.size.y - 18)
+
+
+## a second finger on the picture (the first is on the stick): it looks around / points the light, like the first would
+func _input(e: InputEvent) -> void:
+	if set3 == null or not (e is InputEventScreenDrag) or e.index == 0: return
+	if not get_global_rect().has_point(e.position): return
+	var p: Vector2 = e.position - global_position
+	_aim(p)
+	if not bool(Game.F.get("lit", 0)): set3.drag(-e.relative / size * 2.0)
 
 
 ## ---------- the place's own lights: each warms the drawing around it; lanterns breathe a little, like flames

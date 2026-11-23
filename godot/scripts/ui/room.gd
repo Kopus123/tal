@@ -269,12 +269,17 @@ func _place_stick() -> void:
 
 
 ## a second finger on the picture (the first is on the stick): it looks around / points the light, like the first would
+var _second := -1   ## the touch looking around while another one walks
 func _input(e: InputEvent) -> void:
-	if set3 == null or not (e is InputEventScreenDrag) or e.index == 0: return
-	if not get_global_rect().has_point(e.position): return
-	var p: Vector2 = e.position - global_position
-	_aim(p)
-	if not bool(Game.F.get("lit", 0)): set3.drag(-e.relative / size * 2.0)
+	if set3 == null: return
+	if e is InputEventScreenTouch and e.index > 0:
+		if e.pressed and _second == -1 and get_global_rect().has_point(e.position):
+			_second = e.index; set3.hold(true); _aim(e.position - global_position)
+		elif not e.pressed and e.index == _second:
+			_second = -1; set3.hold(false)
+	elif e is InputEventScreenDrag and e.index == _second:
+		_aim(e.position - global_position)
+		if not bool(Game.F.get("lit", 0)): set3.drag(-e.relative / size * 2.0)
 
 
 ## ---------- the place's own lights: each warms the drawing around it; lanterns breathe a little, like flames

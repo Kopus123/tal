@@ -60,7 +60,7 @@ func _process(dt: float) -> void:   # the lantern flames breathe a little; a lig
 		for k in 2:
 			var a: float = _aim[k]
 			if absf(a) > EDGE: push[k] = signf(a) * (absf(a) - EDGE) / (1.0 - EDGE)
-		if push != Vector2.ZERO: _look = (_look + push * dt * 1.1).clamp(Vector2(-1, -1), Vector2(1, 1)); _apply_look()
+		if push != Vector2.ZERO: _look = (_look + push * dt * Vector2(1.1, 1.6)).clamp(Vector2(-1, -1), Vector2(1, 1)); _apply_look()   # up/down a bit quicker (less room there)
 	var t := Time.get_ticks_msec() / 1000.0
 	for i in _lanterns.size():
 		var l: OmniLight3D = _lanterns[i]
@@ -77,11 +77,12 @@ func drag(d: Vector2) -> void:   ## move the view by a drag (in -1..1 units)
 	_look = (_look + d).clamp(Vector2(-1, -1), Vector2(1, 1)); _apply_look()
 
 func _apply_look() -> void:
-	cam.rotation_degrees = _base_rot + Vector3(-_look.y * 8.0, -_look.x * 20.0, 0)
+	cam.rotation_degrees = _base_rot + Vector3(-_look.y * 11.0, -_look.x * 20.0, 0)
 
 func hold(on: bool) -> void: _held = on
 
 func aim(nx: float, ny: float) -> void:
+	nx = clampf(nx, -1.0, 1.0); ny = clampf(ny, -1.0, 1.0)   # a finger past the picture's edge counts as at the edge
 	_aim = Vector2(nx, ny)
 	torch.rotation_degrees = Vector3(-ny * 20.0, -nx * 28.0, 0)
 

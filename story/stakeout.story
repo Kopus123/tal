@@ -43,8 +43,19 @@ stranger[audio]: {네}. {다리}{에서}. {혼자} {와}.
 === scene so_alarm
 stranger_b[audio]: 쉿... {누구}{예요|이에요}?
 
-# they saw you up on the wall: you drop and run, and start again at the entrance
-=== scene so_seen
+# they saw you: one of them comes round into the alley after you (never played as a scene: voices in the alley)
+=== scene so_chase
 stranger[audio]: {누구}{예요|이에요}?!
-~ A face turns toward the top of the wall, and finds yours. You let go, drop into the alley, and run until you're back at the entrance.
-~ (Stay quiet in the alley, keep your light off up there, and get down when they look around.)
+stranger[audio]: 거기 서!
+
+# he caught you before you got out of the alley: start again at the entrance
+=== scene so_grabbed
+~ A hand closes on your collar. The flashlight is right in your eyes.
+stranger[audio]: {누구}{예요|이에요}?
+~ You twist free and run, and don't stop until you're back at the entrance. (Next time: get out faster, or don't get seen.)
+
+# you got out of the alley: they've gone inside, and the rest of what they were going to say is gone
+=== scene so_got_away
+~ You burst out of the alley and keep going. Nobody follows you past the corner.
+~ Behind you, the courtyard has gone quiet. Whoever they were, they've gone inside. Whatever else they were going to say, you won't hear it tonight.
+! set so_spooked

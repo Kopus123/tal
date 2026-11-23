@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.2.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.3.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -68,7 +68,9 @@ func _build() -> void:
 	room = load("res://scripts/ui/room.gd").new(); arc.add_child(room)
 	room.wants.connect(func(w): _open("jobs" if w == "board" else w))
 	room.overheard.connect(_overheard)
-	room.spotted.connect(func(): _play("wrong"); Game.go("so_seen"))
+	room.spotted.connect(func(): _play("wrong"); _chased = true; _refresh())
+	room.grabbed.connect(func(): _chased = false; Game.go("so_grabbed"))
+	room.got_away.connect(func(): _chased = false; Game.go("so_got_away"))
 	card = _card(); room.add_child(card)
 	cork = load("res://scripts/ui/cork.gd").new(); cork.visible = false; arc.add_child(cork)
 	cork.selected.connect(func(id): card_sel = id; _refresh())
@@ -166,6 +168,7 @@ func _cont(t: String) -> void:
 
 ## nothing happening: where you are, and (free days) who's here, the clock
 ## voices from somewhere you can't see (a 3D place): the last few lines, as much of each as you caught
+var _chased := false             ## a 3D place: they've seen you and one of them is coming
 var _heard_clear := 0.0           ## how clearly you heard the last line (0 nothing, -1 muffled through the wall, up to 1)
 var _heard_ever := false          ## you've heard them at all (only then does "too far away" make sense)
 var _heard_lines := {}            ## lines already put in the log (each once)
@@ -192,8 +195,11 @@ func _voice_state() -> String:
 
 func _looking() -> void:
 	_text(Kit.esc(Game.desc()))
+	if room.set3 and _chased:
+		_text("[color=#b3241c][b]They've seen you.[/b][/color] Get out of the alley, the way you came in. Now.", 24)
+		return
 	var vs := _voice_state()
-	if room.set3 and vs != "none":
+	if room.set3 and vs != "none" and not Game.F.has("so_spooked"):
 		var txt: String = {"wall": "🔉  muffled voices, somewhere beyond the wall", "voices": "🔊  voices", "far": "🔈  (too far away to hear)"}[vs]
 		_voice_icon = Kit.label(txt, 26 if vs == "voices" else 19, Kit.PAPER_INK if vs != "far" else Kit.MUTE, true)
 		_voice_icon.modulate.a = 0.25 + 0.75 * _heard_clear if vs == "voices" else 1.0; _voice_icon.pivot_offset = Vector2(20, 16); body.add_child(_voice_icon)

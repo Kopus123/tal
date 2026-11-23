@@ -35,7 +35,9 @@ func _ready() -> void:
 ## ---------- climbing the right wall: up against it (not in an archway), you can pull yourself up and look over the top
 signal climb_changed(can: bool, up: bool)
 signal overheard(who: String, ko: String, clear: float)   ## a line from the courtyard, and how much of it you caught (0..1)
-signal spotted   ## they saw you up on the wall   ## whether you're at the wall / up on it (the screen shows the button)
+signal spotted   ## they saw you: the chase is on
+signal grabbed   ## he caught you in the alley
+signal got_away  ## you got out of the alley ahead of him   ## whether you're at the wall / up on it (the screen shows the button)
 const MEET_Z := -14.0   ## where along the alley the two people are standing, on the other side of the right wall
 var up := false
 var _can := false
@@ -43,7 +45,7 @@ var _busy := false
 var _down_at := Vector3.ZERO
 
 func can_climb() -> bool:
-	if up or _busy: return false
+	if up or _busy or _chase or _spooked: return false
 	if cam.position.x < W / 2 - 0.55: return false
 	for z in ARCHES:
 		if absf(cam.position.z - z) < 0.9: return false
@@ -142,12 +144,81 @@ func _heard_you() -> void:
 	if s: _voices[1].stream = s; _voices[1].volume_db = -10.0; _voices[1].attenuation_filter_cutoff_hz = 1200; _voices[1].play()
 
 func _seen() -> void:
+	if _chase or _spooked: return
 	_lit_up = 0.0; _alarm = 0.0; _glancing = 0.0
 	for g in _people: _turn(g, true, 0.3)
+	_shout("{누구}{예요|이에요}?!", -2.0)
+	# you drop off the wall into the alley
+	if up or _busy:
+		_busy = true; var t := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		var land := Vector3(W / 2 - 0.45, EYE, cam.position.z)
+		t.tween_property(cam, "position", land, 0.35); _base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
+		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 0.35)
+		t.tween_callback(func(): _busy = false; up = false; climb_changed.emit(false, false))
+	_chase = true; _chase_wait = 1.6; _people[0].visible = false   # he goes round to the alley
 	spotted.emit()
+
+
+## ---------- the chase: he comes into the alley from the far end with his light and runs at you. Get out of the alley
+## (back past the entrance) before he reaches you, and they're too spooked to stay: they go inside. Caught: start over.
+const CHASE_SPEED := 2.1     ## a bit faster than you run: you need your head start
+var _chase := false
+var _chase_wait := 0.0       ## the moment before he comes round the corner
+var _spooked := false        ## you got away: they've gone in, the courtyard is empty and quiet
+var _pursuer: Node3D
+var _pstep: AudioStreamPlayer3D
+var _pstride := 0.0
+
+func _shout(ko: String, db: float) -> void:
+	var s := Voice.stream_for(ko, "stranger")
+	if s == null: return
+	var v: AudioStreamPlayer3D = _voices[0]
+	if _pursuer: v.reparent(_pursuer, false); v.position = Vector3(0, 1.6, 0)
+	v.stream = s; v.volume_db = db; v.attenuation_filter_cutoff_hz = 6000; v.play()
+
+func _chase_tick(dt: float) -> void:
+	if not _chase: return
+	if _chase_wait > 0.0:
+		_chase_wait -= dt
+		if _chase_wait <= 0.0:   # round the corner, into the far end of the alley, light first
+			_pursuer = _figure(Vector3(0, 0, -L + 3.6), 1.72, 180.0)
+			var beam := SpotLight3D.new(); beam.position = Vector3(0.15, 1.3, -0.2); beam.light_color = Color(1.0, 0.92, 0.75)
+			beam.light_energy = 7.0; beam.spot_range = 18; beam.spot_angle = 22; beam.shadow_enabled = true; beam.light_volumetric_fog_energy = 2.0
+			beam.rotation_degrees = Vector3(-8, 0, 0); _pursuer.add_child(beam)
+			_pstep = AudioStreamPlayer3D.new(); _pstep.stream = load("res://sfx/step.wav"); _pstep.unit_size = 5.0; _pstep.position = Vector3(0, 0.2, 0); _pursuer.add_child(_pstep)
+			_shout("거기 서!", 0.0)
+		return
+	if _pursuer == null: return
+	# he runs at you down the middle (that's how the archways let him through), turning to face you
+	var to := cam.position - _pursuer.position; to.y = 0
+	if to.length() < 1.0:
+		_end_chase(); grabbed.emit(); return
+	var step := to.normalized() * CHASE_SPEED * dt
+	var p := _pursuer.position + step
+	for z in ARCHES:
+		if absf(p.z - z) < 0.6: p.x = move_toward(p.x, 0.0, dt * 4.0)
+	p.x = clampf(p.x, -W / 2 + 0.4, W / 2 - 0.4)
+	_pursuer.position = p
+	_pursuer.rotation.y = atan2(-to.x, -to.z)
+	_pstride += dt * 9.0
+	if fmod(_pstride, PI) < dt * 9.0: _pstep.pitch_scale = randf_range(0.9, 1.05); _pstep.play()
+	if cam.position.z > 1.0:   # out of the alley
+		_end_chase(); _spooked = true; _talk = []
+		for g in _people: g.visible = false   # they've gone inside
+		got_away.emit()
+
+func _end_chase() -> void:
+	_chase = false; _chase_wait = 0.0
+	if _pursuer:
+		var v: AudioStreamPlayer3D = _voices[0]
+		if v.get_parent() == _pursuer: v.reparent(self, false); v.position = Vector3(W / 2 + 5.3, 1.55, MEET_Z + 0.9)
+		_pursuer.queue_free(); _pursuer = null
 
 ## back to the entrance, down off the wall, as if it never happened
 func reset() -> void:
+	_end_chase()
+	if not _spooked:
+		for g in _people: g.visible = true
 	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _lit_up = 0.0
 	_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
 	cam.position = Vector3(0, EYE, 1.2); cam.rotation_degrees = _base_rot
@@ -174,7 +245,7 @@ func _walk(dt: float) -> void:
 	var half := W / 2 - 0.35
 	for z in ARCHES:   # through an archway you have to fit through the opening
 		if absf(p.z - z) < 0.55: half = minf(half, (W - 0.9) / 2 - 0.3)
-	p.x = clampf(p.x, -half, half); p.z = clampf(p.z, -L + 3.0, 1.6)
+	p.x = clampf(p.x, -half, half); p.z = clampf(p.z, -L + 3.0, 2.4 if _chase else 1.6)
 	var before := _stride
 	_stride += _move.length() * dt * 9.0
 	if int(before / PI) != int(_stride / PI):   # a foot comes down
@@ -187,7 +258,8 @@ func _walk(dt: float) -> void:
 
 
 func _process(dt: float) -> void:   # the lantern flames breathe a little; a light held near the edge turns your head
-	_walk(dt); _talk_tick(dt); _notice_tick(dt)
+	_walk(dt); _talk_tick(dt); _chase_tick(dt)
+	if not _chase and not _spooked: _notice_tick(dt)
 	if torch.visible and _held:
 		var push := Vector2.ZERO
 		for k in 2:

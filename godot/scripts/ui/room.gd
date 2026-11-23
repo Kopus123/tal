@@ -5,7 +5,9 @@ extends Control
 
 signal wants(what: String)   ## a spot that opens something on the screen (the notice board, the phone)
 signal overheard(who: String, ko: String, clear: float)   ## a 3D place: voices you catch
-signal spotted                                            ## a 3D place: they saw you
+signal spotted                                            ## a 3D place: they saw you (the chase is on)
+signal grabbed
+signal got_away
 
 const ART_W := 1600.0
 const ART_H := 1200.0
@@ -273,7 +275,10 @@ func _scene3d(name: String) -> void:
 	if set3.has_signal("climb_changed"): set3.climb_changed.connect(_on_climb)
 	if set3.has_signal("overheard"):
 		set3.overheard.connect(func(w, k, c): overheard.emit(w, k, c))
-		if set3.has_signal("spotted"): set3.spotted.connect(func(): set3.reset(); spotted.emit())
+		if set3.has_signal("spotted"):
+			set3.spotted.connect(func(): spotted.emit())
+			set3.grabbed.connect(func(): set3.reset(); grabbed.emit())
+			set3.got_away.connect(func(): got_away.emit())
 		var sc: String = Game.place().get("overhear", "")
 		var lines: Array = []
 		for id in Game.ST.nodes:

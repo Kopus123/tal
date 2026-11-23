@@ -80,7 +80,7 @@ func set_talk(lines: Array) -> void: _talk = lines
 func clarity() -> float:
 	var d := absf(cam.position.z - MEET_Z)
 	if not up: return 0.15 if d < 4.0 else 0.0
-	return clampf(1.0 - (d - 2.5) / 7.0, 0.0, 1.0)
+	return clampf(1.0 - (d - 4.0) / 7.0, 0.0, 1.0)   # within about 4 m of them, every word
 
 func _talk_tick(dt: float) -> void:
 	if _talk.is_empty(): return

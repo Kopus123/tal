@@ -38,8 +38,8 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 				for id in Game.board().photos: main.card_big(id)
 				await _wait(0.5); await shot("the_photo"); _close_big()
 				Game.F["board"] = was_board; main._refresh()   # as if the tour never took it: the route takes its own
-				s3._glance_in = 0.0; await _wait(1.0); await shot("one_looks_round")
-				await _wait(1.0); await shot("seen")
+				s3._voices[0].stop(); s3._voices[1].stop(); s3._glance_in = 0.0; await _wait(1.2); await shot("one_looks_round")
+				await _wait(3.6); await shot("seen")
 				s3.turn_around(); await _wait(0.4); main.room.stick.moved.emit(Vector2(0, -1)); await _wait(2.5); await shot("running")
 				s3.turn_around(); await _wait(0.5); await shot("looking_back"); s3.turn_around(); await _wait(0.4)
 				await _wait(8.0); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.8); await shot("got_away")

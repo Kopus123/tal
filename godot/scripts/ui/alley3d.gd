@@ -68,7 +68,10 @@ func climb(on: bool) -> void:
 		t.chain().tween_property(cam, "position", _down_at, 0.4)
 		_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
 		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 0.8)
-	t.chain().tween_callback(func(): _busy = false; up = on; climb_changed.emit(can_climb(), up))
+	t.chain().tween_callback(func():
+		_busy = false; up = on
+		if on: _got_up()
+		climb_changed.emit(can_climb(), up))
 
 
 ## ---------- the courtyard conversation: a line every few seconds, then a pause, then it starts again.
@@ -98,8 +101,16 @@ func _talk_tick(dt: float) -> void:
 	if s: v.stream = s; v.play()
 	overheard.emit(l.who, l.ko, clarity())
 	_line += 1
-	if _line >= _talk.size(): _line = 0; _next = 7.0   # a pause before they go over it again
+	if _line >= _talk.size(): _line = 0; _next = 5.0   # a pause before they go over it again
 	else: _next = (s.get_length() if s else 2.0) + 0.9
+
+
+## their voices have a bus of their own that evens them out and lifts them, so a phone's speaker carries every syllable
+func _yard_bus() -> String:
+	if AudioServer.get_bus_index("Yard") < 0:
+		AudioServer.add_bus(); var i := AudioServer.bus_count - 1; AudioServer.set_bus_name(i, "Yard")
+		var l := AudioEffectHardLimiter.new(); l.pre_gain_db = 9.0; l.ceiling_db = -1.0; l.release = 0.15; AudioServer.add_bus_effect(i, l)
+	return "Yard"
 
 
 ## ---------- photos: what's in the frame (a secret the board keeps), and the click of the shutter
@@ -128,40 +139,59 @@ func _turn(g: Node3D, to_wall: bool, t := 0.8) -> void:
 	var yaw: float = 90.0 if to_wall else g.get_meta("idle")
 	create_tween().tween_property(g, "rotation_degrees:y", yaw, t).set_trans(Tween.TRANS_SINE)
 
+signal wary(what: String)      ## "" / "look" (one's turning round) / "listen" (they heard you) / "light" (they'll see your light)
+const LOOK_GRACE := 3.4        ## from the moment one starts to turn round until you're seen, if you're still up there
+const FIRST_LOOK := 20.0       ## getting up there buys you at least this long: enough for the whole conversation
+var _exposed := 0.0            ## how long you've been up there with someone watching the wall
+var _wary := ""
+
+func _set_wary(w: String) -> void:
+	if w != _wary: _wary = w; wary.emit(w)
+
+func _talking() -> bool: return _voices[0].playing or _voices[1].playing
+
 func _notice_tick(dt: float) -> void:
 	if _people.is_empty(): return
 	var near := absf(cam.position.z - MEET_Z) < 14.0
 	# your light, up on the wall, at night: they see it
 	_lit_up = _lit_up + dt if up and torch.visible and near else 0.0
-	if _lit_up > 0.8: _seen(); return
-	if _alarm > 0.0:
-		_alarm -= dt
-		if _alarm <= 0.0:
-			for g in _people: _turn(g, false)
-		elif up and near and _alarm < 5.0: _seen(); return   # they're watching the wall
+	if _lit_up > 2.5: _seen(); return
+	if _alarm > 0.0 or _glancing > 0.0:   # someone's watching the wall: get down in time and they never know
+		_exposed = _exposed + dt if up and not _busy and near else 0.0   # already on your way down: safe
+		if _exposed > LOOK_GRACE: _seen(); return
+		_set_wary("look" if _glancing > 0.0 else "listen")
+		if _alarm > 0.0:
+			_alarm -= dt
+			if _alarm <= 0.0:
+				_exposed = 0.0; _next = 1.2; _set_wary("")
+				for g in _people: _turn(g, false)
+		else:
+			_glancing -= dt
+			if _glancing <= 0.0:
+				_exposed = 0.0; _next = 1.2; _set_wary(""); _turn(_people[0], false); _glance_in = randf_range(16.0, 26.0)
 		return
-	if _glancing > 0.0:
-		_glancing -= dt
-		if up and near and _glancing < 2.0: _seen(); return   # turned round and looking (about 1.4 s after they start to turn): still up there = seen
-		if _glancing <= 0.0: _turn(_people[0], false); _glance_in = randf_range(8.0, 15.0)
-		return
+	_set_wary("light" if _lit_up > 0.2 else "")
 	_glance_in -= dt
-	if _glance_in <= 0.0:   # one of them looks around (slowly enough that you can get down)
-		_glancing = 3.4; _turn(_people[0], true, 1.0); _next = maxf(_next, 3.6)
+	if _glance_in <= 0.0 and not _talking():   # between two lines, one of them slowly turns round to look
+		_glancing = 5.0; _exposed = 0.0; _turn(_people[0], true, 2.2)
 
-## running near them: footsteps they can hear
+## you're up: they're mid-conversation, and nobody looks round for a while
+func _got_up() -> void:
+	_glance_in = maxf(_glance_in, FIRST_LOOK); _next = minf(_next, 1.2)
+
+## running near them: footsteps they can hear. They go quiet and listen for a bit
 func _heard_you() -> void:
-	if _alarm > 0.0 or absf(cam.position.z - MEET_Z) > 10.0: return
-	_alarm = 8.0; _next = 8.5
-	for g in _people: _turn(g, true, 0.6)
+	if _alarm > 0.0 or _glancing > 0.0 or absf(cam.position.z - MEET_Z) > 7.0: return
+	_alarm = 5.0; _exposed = 0.0
+	for g in _people: _turn(g, true, 1.2)
 	var s := Voice.stream_for("쉿... {누구}{예요|이에요}?", "stranger_b")
-	if s: _voices[1].stream = s; _voices[1].volume_db = -10.0; _voices[1].attenuation_filter_cutoff_hz = 1200; _voices[1].play()
+	if s: _voices[0].stop(); _voices[1].stream = s; _voices[1].volume_db = 2.0; _voices[1].attenuation_filter_cutoff_hz = 1500; _voices[1].play()
 
 func _seen() -> void:
 	if _chase or _spooked: return
-	_lit_up = 0.0; _alarm = 0.0; _glancing = 0.0
+	_lit_up = 0.0; _alarm = 0.0; _glancing = 0.0; _exposed = 0.0; _set_wary("")
 	for g in _people: _turn(g, true, 0.3)
-	_shout("{누구}{예요|이에요}?!", -2.0)
+	_shout("{누구}{예요|이에요}?!", -8.0)
 	# you drop off the wall into the alley
 	if up or _busy:
 		_busy = true; var t := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -198,7 +228,7 @@ func _chaser(h: float, speed: float) -> void:   # someone stepping out of the ga
 	var beam := SpotLight3D.new(); beam.position = Vector3(0.15, 1.3, -0.2); beam.light_color = Color(1.0, 0.92, 0.75)
 	beam.light_energy = 7.0; beam.spot_range = 18; beam.spot_angle = 22; beam.shadow_enabled = true; beam.light_volumetric_fog_energy = 2.0
 	beam.rotation_degrees = Vector3(-8, 0, 0); n.add_child(beam)
-	var st := AudioStreamPlayer3D.new(); st.stream = load("res://sfx/step.wav"); st.unit_size = 5.0; st.position = Vector3(0, 0.2, 0); n.add_child(st)
+	var st := AudioStreamPlayer3D.new(); st.stream = load("res://sfx/step.wav"); st.unit_size = 3.0; st.volume_db = -10.0; st.max_db = -10.0; st.position = Vector3(0, 0.2, 0); n.add_child(st)
 	_chasers.append({"n": n, "speed": speed, "step": st, "stride": 0.0, "t": 0.0})
 
 func _chase_tick(dt: float) -> void:
@@ -213,7 +243,7 @@ func _chase_tick(dt: float) -> void:
 	for k in CHASERS.size():   # out they come, one then the other
 		if _chasers.size() == k and _chase_t >= CHASERS[k][0] + 0.35:
 			_chaser(CHASERS[k][2], CHASERS[k][1])
-			if k == 0: _shout("거기 서!", 0.0)
+			if k == 0: _shout("거기 서!", -6.0)
 	for c in _chasers:
 		var n: Node3D = c.n; c.t += dt
 		# through the gate first, then straight at you down the middle (the archways only let you through there)
@@ -257,7 +287,7 @@ func reset() -> void:
 	_end_chase()
 	if not _spooked:
 		for g in _people: g.visible = true
-	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _lit_up = 0.0
+	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _lit_up = 0.0; _exposed = 0.0; _set_wary("")
 	_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
 	cam.position = Vector3(0, EYE, 1.2); cam.rotation_degrees = _base_rot
 	for g in _people: _turn(g, false, 0.1)
@@ -287,9 +317,9 @@ func _walk(dt: float) -> void:
 	var before := _stride
 	_stride += _move.length() * dt * 9.0
 	if int(before / PI) != int(_stride / PI):   # a foot comes down
-		var running := _move.length() > 0.75
+		var running := _move.length() > 0.9
 		if _steps == null: _steps = AudioStreamPlayer.new(); _steps.stream = load("res://sfx/step.wav"); add_child(_steps)
-		_steps.volume_db = -6.0 if running else -26.0; _steps.pitch_scale = randf_range(0.9, 1.1); _steps.play()
+		_steps.volume_db = -20.0 if running else -32.0; _steps.pitch_scale = randf_range(0.9, 1.1); _steps.play()
 		if running: _heard_you()
 	p.y = EYE + sin(_stride) * 0.03 * minf(1.0, _move.length())   # a little bob as you walk
 	cam.position = p
@@ -458,7 +488,7 @@ func _yard() -> void:
 	# their voices come from where they stand
 	for k in 2:
 		var v := AudioStreamPlayer3D.new(); v.position = Vector3(x0 + 4.8 + k * 0.7, 1.55, MEET_Z + 0.9 - k * 0.7)
-		v.unit_size = 4.0; v.max_db = 6.0; v.attenuation_filter_cutoff_hz = 4500; v.attenuation_filter_db = -30
+		v.unit_size = 4.0; v.max_db = 6.0; v.bus = _yard_bus(); v.attenuation_filter_cutoff_hz = 4500; v.attenuation_filter_db = -30
 		add_child(v); _voices.append(v)
 
 

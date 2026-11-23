@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.5.1"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.5.2"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -68,6 +68,7 @@ func _build() -> void:
 	room = load("res://scripts/ui/room.gd").new(); arc.add_child(room)
 	room.wants.connect(func(w): _open("jobs" if w == "board" else w))
 	room.overheard.connect(_overheard)
+	room.wary.connect(func(w): _wary = w; _refresh())
 	room.spotted.connect(func(): _play("wrong"); _chased = true; _refresh())
 	room.grabbed.connect(func(): _chased = false; Game.go("so_grabbed"))
 	room.got_away.connect(func(): _chased = false; Game.go("so_got_away"))
@@ -169,6 +170,7 @@ func _cont(t: String) -> void:
 ## nothing happening: where you are, and (free days) who's here, the clock
 ## voices from somewhere you can't see (a 3D place): the last few lines, as much of each as you caught
 var _chased := false             ## a 3D place: they've seen you and one of them is coming
+var _wary := ""                  ## a 3D place: "look" / "listen" / "light" (they're getting suspicious)
 var _heard_clear := 0.0           ## how clearly you heard the last line (0 nothing, -1 muffled through the wall, up to 1)
 var _heard_ever := false          ## you've heard them at all (only then does "too far away" make sense)
 var _heard_lines := {}            ## lines already put in the log (each once)
@@ -198,6 +200,12 @@ func _looking() -> void:
 	_text(Kit.esc(Game.desc()))
 	if room.set3 and _chased:
 		_text("[color=#b3241c][b]They've seen you.[/b][/color] Get out of the alley, the way you came in. Now.", 24)
+		return
+	if room.set3 and _wary != "":
+		var up: bool = room.set3.up
+		_text("[color=#b3241c][b]" + {"look": "One of them's turning round. Get down!" if up else "One of them's looking at the wall. Stay down.",
+			"listen": "They heard something. Get down!" if up else "They've gone quiet. They're listening: don't climb yet.",
+			"light": "Your light! Turn it off!"}[_wary] + "[/b][/color]", 26)
 		return
 	var vs := _voice_state()
 	if room.set3 and vs != "none" and not Game.F.has("so_spooked"):

@@ -79,7 +79,7 @@ func set_talk(lines: Array) -> void: _talk = lines
 
 func clarity() -> float:
 	var d := absf(cam.position.z - MEET_Z)
-	if not up: return 0.15 if d < 4.0 else 0.0
+	if not up: return -1.0 if d < 8.0 else 0.0   # down in the alley near them: muffled through the wall (-1)
 	return clampf(1.0 - (d - 4.0) / 7.0, 0.0, 1.0)   # within about 4 m of them, every word
 
 func _talk_tick(dt: float) -> void:

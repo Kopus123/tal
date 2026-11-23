@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.11"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "4.12"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -165,25 +165,37 @@ func _cont(t: String) -> void:
 
 ## nothing happening: where you are, and (free days) who's here, the clock
 ## voices from somewhere you can't see (a 3D place): the last few lines, as much of each as you caught
-var _heard_clear := -1.0          ## how clearly you heard the last line (-1: nothing yet)
+var _heard_clear := 0.0           ## how clearly you heard the last line (0 nothing, -1 muffled through the wall, up to 1)
+var _heard_ever := false          ## you've heard them at all (only then does "too far away" make sense)
 var _heard_lines := {}            ## lines already put in the log (each once)
 var _voice_icon: Label
 func _overheard(who: String, ko: String, clear: float) -> void:
-	var was := _heard_clear; _heard_clear = clear
-	if was < 0.0 or (was > 0.0) != (clear > 0.0): _refresh()
+	var was := _voice_state(); _heard_clear = clear
+	if clear > 0.0: _heard_ever = true
+	if _voice_state() != was: _refresh()
 	# a line heard clearly goes into the log as heard, not written down: words reach your notebook when you act on it
 	if clear >= 0.85 and not _heard_lines.has(who + ko):
 		_heard_lines[who + ko] = 1; Game._log(who, ko, "", "neutral", true)
-	if _voice_icon and is_instance_valid(_voice_icon) and clear > 0.0:   # a pulse when someone speaks, as bright as you hear them
-		_voice_icon.modulate.a = 0.25 + 0.75 * clear
+	if _voice_icon and is_instance_valid(_voice_icon) and clear != 0.0:   # a pulse when someone speaks, as bright as you hear them
+		if clear > 0.0: _voice_icon.modulate.a = 0.25 + 0.75 * clear
 		var t := create_tween(); t.tween_property(_voice_icon, "scale", Vector2(1.25, 1.25), 0.12); t.tween_property(_voice_icon, "scale", Vector2.ONE, 0.35)
+
+
+## what the paper says about voices: nothing until there's something to hear; muffled through the wall; the voices
+## themselves (pulsing as clearly as you hear them); "too far away" only once you've heard them and wandered off
+func _voice_state() -> String:
+	if _heard_clear < 0.0: return "wall"
+	if _heard_clear > 0.0: return "voices"
+	return "far" if _heard_ever else "none"
 
 
 func _looking() -> void:
 	_text(Kit.esc(Game.desc()))
-	if room.set3 and _heard_clear >= 0.0:   # voices somewhere: no words, just that someone's talking, and how well you hear it
-		_voice_icon = Kit.label("🔊  voices" if _heard_clear > 0.0 else "🔈  (too far away to hear)", 26 if _heard_clear > 0.0 else 18, Kit.PAPER_INK if _heard_clear > 0.0 else Kit.MUTE)
-		_voice_icon.modulate.a = 0.25 + 0.75 * _heard_clear if _heard_clear > 0.0 else 1.0; _voice_icon.pivot_offset = Vector2(20, 16); body.add_child(_voice_icon)
+	var vs := _voice_state()
+	if room.set3 and vs != "none":
+		var txt: String = {"wall": "🔉  muffled voices, somewhere beyond the wall", "voices": "🔊  voices", "far": "🔈  (too far away to hear)"}[vs]
+		_voice_icon = Kit.label(txt, 26 if vs == "voices" else 19, Kit.PAPER_INK if vs != "far" else Kit.MUTE, true)
+		_voice_icon.modulate.a = 0.25 + 0.75 * _heard_clear if vs == "voices" else 1.0; _voice_icon.pivot_offset = Vector2(20, 16); body.add_child(_voice_icon)
 		if _heard_lines.size() > 0: body.add_child(Kit.label("Lines you heard clearly are in 💬 What was said (menu).", 16, Kit.MUTE, true))
 	if Game.ST.free and not Game.W.frozen:
 		for p in Game.people_here():

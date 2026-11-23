@@ -30,6 +30,16 @@ func apply() -> void:
 	AudioServer.set_bus_effect_enabled(AudioServer.get_bus_index("Voice"), 0, slow)
 
 
+## a recorded line as a sound to play anywhere (in a 3D place, from where the person is standing)
+static var _idx: Dictionary = {}
+static func stream_for(text: String, who: String) -> AudioStream:
+	if _idx.is_empty():
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://voice/index.json"))
+		if d is Dictionary: _idx = d
+	var f: String = _idx.get(who + "|" + norm(text), "")
+	return load("res://voice/" + f) as AudioStream if f != "" else null
+
+
 ## the same clean-up the web version used when it recorded them
 static func norm(s: String) -> String:
 	var t := Story.plain(s)

@@ -33,7 +33,8 @@ func _ready() -> void:
 
 
 ## ---------- climbing the right wall: up against it (not in an archway), you can pull yourself up and look over the top
-signal climb_changed(can: bool, up: bool)   ## whether you're at the wall / up on it (the screen shows the button)
+signal climb_changed(can: bool, up: bool)
+signal overheard(who: String, ko: String, clear: float)   ## a line from the courtyard, and how much of it you caught (0..1)   ## whether you're at the wall / up on it (the screen shows the button)
 const MEET_Z := -14.0   ## where along the alley the two people are standing, on the other side of the right wall
 var up := false
 var _can := false
@@ -66,6 +67,37 @@ func climb(on: bool) -> void:
 	t.chain().tween_callback(func(): _busy = false; up = on; climb_changed.emit(can_climb(), up))
 
 
+## ---------- the courtyard conversation: a line every few seconds, then a pause, then it starts again.
+## Up on the wall near them you hear it clearly; further along, quieter and muffled; from down in the alley, the wall
+## swallows most of it. What you catch shows on the paper (the rest as …).
+var _voices: Array = []
+var _talk: Array = []      ## [{who, ko}]
+var _line := 0
+var _next := 3.0
+
+func set_talk(lines: Array) -> void: _talk = lines
+
+func clarity() -> float:
+	var d := absf(cam.position.z - MEET_Z)
+	if not up: return 0.15 if d < 4.0 else 0.0
+	return clampf(1.0 - (d - 2.5) / 7.0, 0.0, 1.0)
+
+func _talk_tick(dt: float) -> void:
+	if _talk.is_empty(): return
+	_next -= dt
+	if _next > 0: return
+	var l: Dictionary = _talk[_line]
+	var v: AudioStreamPlayer3D = _voices[0 if l.who == "stranger" else 1]
+	var s := Voice.stream_for(l.ko, l.who)
+	v.volume_db = 0.0 if up else -16.0
+	v.attenuation_filter_cutoff_hz = 4500 if up else 700   # through a brick wall, it's all low murmur
+	if s: v.stream = s; v.play()
+	overheard.emit(l.who, l.ko, clarity())
+	_line += 1
+	if _line >= _talk.size(): _line = 0; _next = 7.0   # a pause before they go over it again
+	else: _next = (s.get_length() if s else 2.0) + 0.9
+
+
 ## ---------- walking: the stick pushes you the way you're facing; walls and the arches' pillars stop you
 const SPEED := 1.6          ## metres a second, stick all the way
 const EYE := 1.55
@@ -92,7 +124,7 @@ func _walk(dt: float) -> void:
 
 
 func _process(dt: float) -> void:   # the lantern flames breathe a little; a light held near the edge turns your head
-	_walk(dt)
+	_walk(dt); _talk_tick(dt)
 	if torch.visible and _held:
 		var push := Vector2.ZERO
 		for k in 2:
@@ -235,6 +267,11 @@ func _yard() -> void:
 	# the two of them, by the lamp
 	_figure(Vector3(x0 + 4.8, 0, MEET_Z + 0.9), 1.72, 90.0)
 	_figure(Vector3(x0 + 5.5, 0, MEET_Z + 0.2), 1.6, -60.0)
+	# their voices come from where they stand
+	for k in 2:
+		var v := AudioStreamPlayer3D.new(); v.position = Vector3(x0 + 4.8 + k * 0.7, 1.55, MEET_Z + 0.9 - k * 0.7)
+		v.unit_size = 4.0; v.max_db = 2.0; v.attenuation_filter_cutoff_hz = 4500; v.attenuation_filter_db = -30
+		add_child(v); _voices.append(v)
 
 
 ## a person, as a dark shape: body, shoulders, head (detail comes later)

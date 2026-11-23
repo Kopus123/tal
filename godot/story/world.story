@@ -173,6 +173,7 @@ ajeossi    | 식당 아저씨   | #8a5a34  | InJoon -6%   -18Hz | hair=short hc=
 staff      | 박물관 직원   | #6a6f7d  | SunHi  -3%   -12Hz | hair=long hc=#1f1a18 top=#2d3f66 wear=blazer extra=glasses
 ajumma     | 시장 아주머니 | #b5653d  | SunHi  +4%   -6Hz  | hair=bun hc=#3a2a20 top=#d9822b wear=apron extra=wrinkles skin=#e0b98f
 stranger   | ???           | #2a2a2a  | InJoon -10%  -14Hz
+stranger_b | ???           | #2a2a2a  | SunHi  -8%   -22Hz
 hiker      | 등산객        | #5a7a4a  | InJoon -2%   -4Hz  | hair=short hc=#3a2a20 top=#c9452f wear=plain extra=stubble,glasses
 junho      | 준호          | #4f6ea8  | InJoon +6%   +12Hz
 jiho       | 지호          | #d9a43d  | InJoon +12%  +40Hz | hair=short hc=#1f1a18 top=#e2c044 wear=plain size=.72

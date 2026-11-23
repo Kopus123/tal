@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.9"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
+const BUILD := "4.10"   ## MAJOR.FIXES: the major number goes up for a big new part of the game (1 shed, 2 whole game, 3 case board); the decimal for each fix update
 
 var room: Control
 var paper: PanelContainer
@@ -67,6 +67,7 @@ func _build() -> void:
 	row.add_child(arc)
 	room = load("res://scripts/ui/room.gd").new(); arc.add_child(room)
 	room.wants.connect(func(w): _open("jobs" if w == "board" else w))
+	room.overheard.connect(_overheard)
 	card = _card(); room.add_child(card)
 	cork = load("res://scripts/ui/cork.gd").new(); cork.visible = false; arc.add_child(cork)
 	cork.selected.connect(func(id): card_sel = id; _refresh())
@@ -163,8 +164,36 @@ func _cont(t: String) -> void:
 
 
 ## nothing happening: where you are, and (free days) who's here, the clock
+## voices from somewhere you can't see (a 3D place): the last few lines, as much of each as you caught
+var _heard: Array = []
+func _overheard(who: String, ko: String, clear: float) -> void:
+	if clear <= 0.0: _heard.append({"t": "(voices, too far away to make out)"})
+	else:
+		var ms: Array = Story.R("\\{[^}]+\\}").search_all(ko); var keep := int(ceil(ms.size() * clear))
+		var shown := ko
+		if clear < 1.0:   # the words you missed become … (which ones depends on the line, so it's the same each time)
+			var idx: Array = range(ms.size()); var rng := RandomNumberGenerator.new(); rng.seed = hash(ko)
+			for i in range(idx.size() - 1, 0, -1):
+				var j := rng.randi_range(0, i); var t = idx[i]; idx[i] = idx[j]; idx[j] = t
+			var drop: Array = idx.slice(keep)
+			shown = ""; var at := 0
+			for i in ms.size():
+				shown += ko.substr(at, ms[i].get_start() - at) + ("…" if i in drop else ms[i].get_string())
+				at = ms[i].get_end()
+			shown += ko.substr(at)
+		else: Game._met(ko)
+		_heard.append({"t": shown, "who": who})
+	if _heard.size() > 5: _heard.pop_front()
+	_refresh()
+
+
 func _looking() -> void:
 	_text(Kit.esc(Game.desc()))
+	if room.set3 and not _heard.is_empty():
+		_text("[color=#8a7d66]OVERHEARD[/color]", 15)
+		for h in _heard:
+			if h.has("who"): _text(Kit.ko(h.t), 24)
+			else: _text("[color=#8a7d66]" + Kit.esc(h.t) + "[/color]", 18)
 	if Game.ST.free and not Game.W.frozen:
 		for p in Game.people_here():
 			_act("Talk to " + Game.ST.cast.get(p.id, {}).get("n", p.id), func(): Game.talk_to(p.id))

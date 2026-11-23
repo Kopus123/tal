@@ -30,6 +30,9 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 			if s3.has_method("climb"):
 				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); await _wait(0.4); await shot("at_the_wall")
 				s3.climb(true); await _wait(1.8); await shot("climbed_up")
+				await _wait(9.0); await shot("overheard_close")
+				s3.climb(false); await _wait(2.0)
+				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, -8.0); s3.climb(true); await _wait(1.8); await _wait(16.0); await shot("overheard_further_away")
 				s3.climb(false); await _wait(1.3)
 		if cmd == "photo":   # show the viewfinder where that photo was taken
 			var n := arg.split(" ", false); var rm: Control = main.room

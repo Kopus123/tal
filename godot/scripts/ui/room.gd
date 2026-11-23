@@ -4,6 +4,7 @@ extends Control
 ## The drawing is lit inside its own little world (a SubViewport) so the light doesn't touch the paper on the right.
 
 signal wants(what: String)   ## a spot that opens something on the screen (the notice board, the phone)
+signal overheard(who: String, ko: String, clear: float)   ## a 3D place: voices you catch
 
 const ART_W := 1600.0
 const ART_H := 1200.0
@@ -269,6 +270,13 @@ func _scene3d(name: String) -> void:
 		climb_btn.pressed.connect(func(): if set3: Game.sound.emit("tap"); set3.climb(not set3.up))
 	climb_btn.visible = false
 	if set3.has_signal("climb_changed"): set3.climb_changed.connect(_on_climb)
+	if set3.has_signal("overheard"):
+		set3.overheard.connect(func(w, k, c): overheard.emit(w, k, c))
+		var sc: String = Game.place().get("overhear", "")
+		var lines: Array = []
+		for id in Game.ST.nodes:
+			if (id == sc or id.begins_with(sc + ".")) and Game.ST.nodes[id].has("ko"): lines.append({"who": Game.ST.nodes[id].who, "ko": Game.ST.nodes[id].ko})
+		set3.set_talk(lines)
 
 
 func _place_stick() -> void:

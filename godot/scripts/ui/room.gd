@@ -334,15 +334,17 @@ func _gui_input(e: InputEvent) -> void:
 		else:
 			_aim(e.position)
 			if set3 and not bool(Game.F.get("lit", 0)):   # no light to point: dragging looks around
-				_look = (_look - e.relative / size * 2.0).clamp(Vector2(-1, -1), Vector2(1, 1)); set3.look(_look.x, _look.y)
+				set3.drag(-e.relative / size * 2.0)
 		if e.position.distance_to(_press_at) > DRAG_PX: _dragged = true
 	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
 			_press_at = e.position; _dragged = false
 			_resizing = cam_mode and e.position.distance_to(frame.position + frame.size) < 56
 			if not frame.visible: _aim(e.position)
+			if set3: set3.hold(true)
 		else:
 			_resizing = false
+			if set3: set3.hold(false)
 			if not _dragged and not cam_mode: _tap(e.position)
 
 

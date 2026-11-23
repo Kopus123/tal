@@ -21,6 +21,8 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		if n >= MAX or cmd in ["expect", "fx", "saved", "encounters", "noboard", "nospot", "done", "shown"]: return
 		await _wait(0.45)
 		await shot("%s_%s" % [cmd, arg.left(18)])
+		if cmd == "pocket" and main.room.set3 and Game.F.get("lit", 0):   # a 3D place: hold the light at the right edge
+			main.room.set3.hold(true); main.room.set3.aim(0.95, 0.1); await _wait(1.4); await shot("light_at_edge"); main.room.set3.hold(false)
 		if cmd == "photo":   # show the viewfinder where that photo was taken
 			var n := arg.split(" ", false); var rm: Control = main.room
 			rm.camera(true); await _wait(0.1)

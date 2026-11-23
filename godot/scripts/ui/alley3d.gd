@@ -31,18 +31,35 @@ func _ready() -> void:
 	torch.spot_attenuation = 0.8; torch.shadow_enabled = true; torch.light_volumetric_fog_energy = 1.4; torch.visible = false; cam.add_child(torch)
 
 
-func _process(dt: float) -> void:   # the lantern flames breathe a little
+func _process(dt: float) -> void:   # the lantern flames breathe a little; a light held near the edge turns your head
+	if torch.visible and _held:
+		var push := Vector2.ZERO
+		for k in 2:
+			var a: float = _aim[k]
+			if absf(a) > EDGE: push[k] = signf(a) * (absf(a) - EDGE) / (1.0 - EDGE)
+		if push != Vector2.ZERO: _look = (_look + push * dt * 1.1).clamp(Vector2(-1, -1), Vector2(1, 1)); _apply_look()
 	var t := Time.get_ticks_msec() / 1000.0
 	for i in _lanterns.size():
 		var l: OmniLight3D = _lanterns[i]
 		l.light_energy = 0.75 + 0.09 * sin(t * 7.0 + i * 1.7) + 0.05 * sin(t * 13.0 + i)
 
 
-## look around a little (drag), and point the flashlight
-func look(nx: float, ny: float) -> void:   ## -1..1 across and down the picture
-	cam.rotation_degrees = _base_rot + Vector3(-ny * 6.0, -nx * 12.0, 0)
+## look around (drag with no light), and point the flashlight; hold the light near an edge and the view turns that way
+const EDGE := 0.6           ## how far toward the edge (of -1..1) before the view starts to turn
+var _look := Vector2.ZERO   ## where you're looking, -1..1 each way
+var _aim := Vector2.ZERO    ## where the light points on the screen, -1..1
+var _held := false          ## a finger is on the picture
+
+func drag(d: Vector2) -> void:   ## move the view by a drag (in -1..1 units)
+	_look = (_look + d).clamp(Vector2(-1, -1), Vector2(1, 1)); _apply_look()
+
+func _apply_look() -> void:
+	cam.rotation_degrees = _base_rot + Vector3(-_look.y * 8.0, -_look.x * 20.0, 0)
+
+func hold(on: bool) -> void: _held = on
 
 func aim(nx: float, ny: float) -> void:
+	_aim = Vector2(nx, ny)
 	torch.rotation_degrees = Vector3(-ny * 20.0, -nx * 28.0, 0)
 
 func set_torch(on: bool) -> void: torch.visible = on

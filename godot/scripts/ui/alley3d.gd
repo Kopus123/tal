@@ -93,8 +93,8 @@ func _talk_tick(dt: float) -> void:
 	var l: Dictionary = _talk[_line]
 	var v: AudioStreamPlayer3D = _voices[0 if l.who == "stranger" else 1]
 	var s := Voice.stream_for(l.ko, l.who)
-	v.volume_db = 0.0 if up else -16.0
-	v.attenuation_filter_cutoff_hz = 4500 if up else 700   # through a brick wall, it's all low murmur
+	v.volume_db = lerpf(-4.0, 7.0, clarity()) if up else -4.0   # near them, as loud as anyone talking to you
+	v.attenuation_filter_cutoff_hz = lerpf(1200, 7000, clarity()) if up else 700.0   # through a brick wall, it's all low murmur
 	if s: v.stream = s; v.play()
 	overheard.emit(l.who, l.ko, clarity())
 	_line += 1
@@ -458,7 +458,7 @@ func _yard() -> void:
 	# their voices come from where they stand
 	for k in 2:
 		var v := AudioStreamPlayer3D.new(); v.position = Vector3(x0 + 4.8 + k * 0.7, 1.55, MEET_Z + 0.9 - k * 0.7)
-		v.unit_size = 4.0; v.max_db = 2.0; v.attenuation_filter_cutoff_hz = 4500; v.attenuation_filter_db = -30
+		v.unit_size = 4.0; v.max_db = 6.0; v.attenuation_filter_cutoff_hz = 4500; v.attenuation_filter_db = -30
 		add_child(v); _voices.append(v)
 
 

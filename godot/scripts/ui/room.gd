@@ -277,7 +277,7 @@ func _scene3d(name: String) -> void:
 	if name == "":
 		view.texture = vp.get_texture(); return
 	vp3 = SubViewport.new(); vp3.own_world_3d = true; vp3.size = Vector2i(maxi(64, int(size.x)), maxi(64, int(size.y)))
-	vp3.render_target_update_mode = SubViewport.UPDATE_ALWAYS; vp3.msaa_3d = Viewport.MSAA_2X; add_child(vp3)
+	vp3.render_target_update_mode = SubViewport.UPDATE_ALWAYS; vp3.msaa_3d = Viewport.MSAA_2X; vp3.audio_listener_enable_3d = true; add_child(vp3)   # without the listener, every sound in the 3D place is silent
 	set3 = load("res://scripts/ui/%s3d.gd" % name).new(); vp3.add_child(set3)
 	view.texture = vp3.get_texture(); _look = Vector2.ZERO
 	set3.set_torch(bool(Game.F.get("lit", 0)))

@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.1.2"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.2.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -68,6 +68,7 @@ func _build() -> void:
 	room = load("res://scripts/ui/room.gd").new(); arc.add_child(room)
 	room.wants.connect(func(w): _open("jobs" if w == "board" else w))
 	room.overheard.connect(_overheard)
+	room.spotted.connect(func(): _play("wrong"); Game.go("so_seen"))
 	card = _card(); room.add_child(card)
 	cork = load("res://scripts/ui/cork.gd").new(); cork.visible = false; arc.add_child(cork)
 	cork.selected.connect(func(id): card_sel = id; _refresh())

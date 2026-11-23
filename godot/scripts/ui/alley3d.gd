@@ -34,7 +34,8 @@ func _ready() -> void:
 
 ## ---------- climbing the right wall: up against it (not in an archway), you can pull yourself up and look over the top
 signal climb_changed(can: bool, up: bool)
-signal overheard(who: String, ko: String, clear: float)   ## a line from the courtyard, and how much of it you caught (0..1)   ## whether you're at the wall / up on it (the screen shows the button)
+signal overheard(who: String, ko: String, clear: float)   ## a line from the courtyard, and how much of it you caught (0..1)
+signal spotted   ## they saw you up on the wall   ## whether you're at the wall / up on it (the screen shows the button)
 const MEET_Z := -14.0   ## where along the alley the two people are standing, on the other side of the right wall
 var up := false
 var _can := false
@@ -83,7 +84,7 @@ func clarity() -> float:
 	return clampf(1.0 - (d - 4.0) / 7.0, 0.0, 1.0)   # within about 4 m of them, every word
 
 func _talk_tick(dt: float) -> void:
-	if _talk.is_empty(): return
+	if _talk.is_empty() or _alarm > 0.0 or _glancing > 0.0: return
 	_next -= dt
 	if _next > 0: return
 	var l: Dictionary = _talk[_line]
@@ -96,6 +97,62 @@ func _talk_tick(dt: float) -> void:
 	_line += 1
 	if _line >= _talk.size(): _line = 0; _next = 7.0   # a pause before they go over it again
 	else: _next = (s.get_length() if s else 2.0) + 0.9
+
+
+## ---------- they notice you: running nearby makes them stop and listen; now and then one of them looks at the wall;
+## up on the wall with your light on, or still up there when they look, you're seen
+var _people: Array = []
+var _glance_in := 10.0        ## until one of them next looks around
+var _glancing := 0.0          ## how much longer they're looking at the wall
+var _alarm := 0.0             ## how much longer they stay quiet after hearing you
+var _lit_up := 0.0            ## how long you've been up there with your light on
+var _steps: AudioStreamPlayer
+
+func _turn(g: Node3D, to_wall: bool, t := 0.8) -> void:
+	var yaw: float = 90.0 if to_wall else g.get_meta("idle")
+	create_tween().tween_property(g, "rotation_degrees:y", yaw, t).set_trans(Tween.TRANS_SINE)
+
+func _notice_tick(dt: float) -> void:
+	if _people.is_empty(): return
+	var near := absf(cam.position.z - MEET_Z) < 14.0
+	# your light, up on the wall, at night: they see it
+	_lit_up = _lit_up + dt if up and torch.visible and near else 0.0
+	if _lit_up > 0.8: _seen(); return
+	if _alarm > 0.0:
+		_alarm -= dt
+		if _alarm <= 0.0:
+			for g in _people: _turn(g, false)
+		elif up and near and _alarm < 5.0: _seen(); return   # they're watching the wall
+		return
+	if _glancing > 0.0:
+		_glancing -= dt
+		if up and near and _glancing < 2.0: _seen(); return   # turned round and looking (about 1.4 s after they start to turn): still up there = seen
+		if _glancing <= 0.0: _turn(_people[0], false); _glance_in = randf_range(8.0, 15.0)
+		return
+	_glance_in -= dt
+	if _glance_in <= 0.0:   # one of them looks around (slowly enough that you can get down)
+		_glancing = 3.4; _turn(_people[0], true, 1.0); _next = maxf(_next, 3.6)
+
+## running near them: footsteps they can hear
+func _heard_you() -> void:
+	if _alarm > 0.0 or absf(cam.position.z - MEET_Z) > 10.0: return
+	_alarm = 8.0; _next = 8.5
+	for g in _people: _turn(g, true, 0.6)
+	var s := Voice.stream_for("쉿... {누구}{예요|이에요}?", "stranger_b")
+	if s: _voices[1].stream = s; _voices[1].volume_db = -10.0; _voices[1].attenuation_filter_cutoff_hz = 1200; _voices[1].play()
+
+func _seen() -> void:
+	_lit_up = 0.0; _alarm = 0.0; _glancing = 0.0
+	for g in _people: _turn(g, true, 0.3)
+	spotted.emit()
+
+## back to the entrance, down off the wall, as if it never happened
+func reset() -> void:
+	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _lit_up = 0.0
+	_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
+	cam.position = Vector3(0, EYE, 1.2); cam.rotation_degrees = _base_rot
+	for g in _people: _turn(g, false, 0.1)
+	_can = false; climb_changed.emit(false, false)
 
 
 ## ---------- walking: the stick pushes you the way you're facing; walls and the arches' pillars stop you
@@ -118,13 +175,19 @@ func _walk(dt: float) -> void:
 	for z in ARCHES:   # through an archway you have to fit through the opening
 		if absf(p.z - z) < 0.55: half = minf(half, (W - 0.9) / 2 - 0.3)
 	p.x = clampf(p.x, -half, half); p.z = clampf(p.z, -L + 3.0, 1.6)
+	var before := _stride
 	_stride += _move.length() * dt * 9.0
+	if int(before / PI) != int(_stride / PI):   # a foot comes down
+		var running := _move.length() > 0.75
+		if _steps == null: _steps = AudioStreamPlayer.new(); _steps.stream = load("res://sfx/step.wav"); add_child(_steps)
+		_steps.volume_db = -6.0 if running else -26.0; _steps.pitch_scale = randf_range(0.9, 1.1); _steps.play()
+		if running: _heard_you()
 	p.y = EYE + sin(_stride) * 0.03 * minf(1.0, _move.length())   # a little bob as you walk
 	cam.position = p
 
 
 func _process(dt: float) -> void:   # the lantern flames breathe a little; a light held near the edge turns your head
-	_walk(dt); _talk_tick(dt)
+	_walk(dt); _talk_tick(dt); _notice_tick(dt)
 	if torch.visible and _held:
 		var push := Vector2.ZERO
 		for k in 2:
@@ -265,8 +328,8 @@ func _yard() -> void:
 		var b := MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 1.1; sm.height = 1.8; b.mesh = sm; b.material_override = leaves
 		b.position = Vector3(x0 + 3.0 + cos(k * 1.3) * 0.9, 3.4 + (k % 2) * 0.5, MEET_Z - 6 + sin(k * 1.3) * 0.9); add_child(b)
 	# the two of them, by the lamp
-	_figure(Vector3(x0 + 4.8, 0, MEET_Z + 0.9), 1.72, 90.0)
-	_figure(Vector3(x0 + 5.5, 0, MEET_Z + 0.2), 1.6, -60.0)
+	_people.append(_figure(Vector3(x0 + 4.8, 0, MEET_Z + 0.9), 1.72, -45.0))   # facing each other
+	_people.append(_figure(Vector3(x0 + 5.5, 0, MEET_Z + 0.2), 1.6, 135.0))
 	# their voices come from where they stand
 	for k in 2:
 		var v := AudioStreamPlayer3D.new(); v.position = Vector3(x0 + 4.8 + k * 0.7, 1.55, MEET_Z + 0.9 - k * 0.7)
@@ -275,13 +338,18 @@ func _yard() -> void:
 
 
 ## a person, as a dark shape: body, shoulders, head (detail comes later)
-func _figure(at: Vector3, h: float, face: float) -> void:
+func _figure(at: Vector3, h: float, face: float) -> Node3D:
 	var cloth := StandardMaterial3D.new(); cloth.albedo_color = Color(0.06, 0.06, 0.08); cloth.roughness = 0.9
 	var g := Node3D.new(); g.position = at; g.rotation_degrees.y = face; add_child(g)
 	var body := MeshInstance3D.new(); var cm := CapsuleMesh.new(); cm.radius = 0.24; cm.height = h * 0.78; body.mesh = cm
 	body.material_override = cloth; body.position = Vector3(0, h * 0.42, 0); g.add_child(body)
 	var head := MeshInstance3D.new(); var hm := SphereMesh.new(); hm.radius = 0.12; hm.height = 0.26; head.mesh = hm
 	head.material_override = cloth; head.position = Vector3(0, h - 0.11, 0); g.add_child(head)
+	var skin := StandardMaterial3D.new(); skin.albedo_color = Color(0.55, 0.42, 0.34); skin.roughness = 0.8
+	var face_ := MeshInstance3D.new(); var fm := SphereMesh.new(); fm.radius = 0.085; fm.height = 0.15; face_.mesh = fm
+	face_.material_override = skin; face_.position = Vector3(0, h - 0.11, -0.065); g.add_child(face_)   # the front of the head: the face
+	g.set_meta("idle", face)
+	return g
 
 
 ## the end of the alley: a wooden door in a lit doorway, warm light spilling out onto the wet stone

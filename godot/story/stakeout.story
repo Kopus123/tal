@@ -38,3 +38,13 @@ stranger_b[audio]: {몰라요}.
 stranger[audio]: {할머니}{가|이/가} {알아요}.
 stranger_b[audio]: {오늘} {밤}{에}?
 stranger[audio]: {네}. {다리}{에서}. {혼자} {와}.
+
+# they heard running in the alley (never played as a scene: a voice from the courtyard)
+=== scene so_alarm
+stranger_b[audio]: 쉿... {누구}{예요|이에요}?
+
+# they saw you up on the wall: you drop and run, and start again at the entrance
+=== scene so_seen
+stranger[audio]: {누구}{예요|이에요}?!
+~ A face turns toward the top of the wall, and finds yours. You let go, drop into the alley, and run until you're back at the entrance.
+~ (Stay quiet in the alley, keep your light off up there, and get down when they look around.)

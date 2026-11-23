@@ -25,16 +25,16 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 			main.room.set3.hold(true); main.room.set3.aim(0.95, 0.1); await _wait(1.4); await shot("light_at_edge"); main.room.set3.hold(false)
 			main.room.set3.aim(0, 0); main.room.set3.drag(Vector2(-10, 0)); main.room.set3.drag(Vector2(0.0, 0.0))
 			main.room.set3._look = Vector2.ZERO; main.room.set3._apply_look()
-			main.room.stick.moved.emit(Vector2(0, -1)); await _wait(4.0); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.3); await shot("walked_forward")
+			main.room.stick.moved.emit(Vector2(0, -0.6)); await _wait(5.0)   # a soft walk (running would be heard); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.3); await shot("walked_forward")
 			var s3 = main.room.set3
 			if s3.has_method("climb"):
-				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); await _wait(9.0); await shot("at_the_wall")
-				s3.climb(true); await _wait(1.8); await shot("climbed_up")
+				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); await _wait(3.0); await shot("at_the_wall")
+				Game.F["lit"] = 0; s3.set_torch(false)
+				s3.reset(); s3._glance_in = 99.0; s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); s3.climb(true); await _wait(1.8); await shot("climbed_up")
 				await _wait(9.0); await shot("overheard_close")
-				main._log_sheet(); await _wait(0.4); await shot("log_heard"); _close_sheets()
-				s3.climb(false); await _wait(2.0)
-				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, -8.0); s3.climb(true); await _wait(1.8); await _wait(16.0); await shot("overheard_further_away")
-				s3.climb(false); await _wait(1.3)
+				s3._glance_in = 0.0; await _wait(1.0); await shot("one_looks_round")
+				await _wait(1.5); await shot("seen")
+				Game.next(); Game.next(); Game.next(); await _wait(0.6); Game.F["lit"] = 1; s3.set_torch(true)
 		if cmd == "photo":   # show the viewfinder where that photo was taken
 			var n := arg.split(" ", false); var rm: Control = main.room
 			rm.camera(true); await _wait(0.1)

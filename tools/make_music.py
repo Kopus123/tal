@@ -135,12 +135,24 @@ def market(L=30.0):
 
 
 def night(L=30.0):
-    n = secs(L + 2); buf = lowpass(noise(n), 300) * 0.2 * slow(n, 0.15, 0.5)
-    for at in np.arange(0, L, 0.9):
-        if rng.random() < 0.8:
-            for j in range(3): put(buf, tone(4600, 0.035, 0.12, attack=0.003, release=0.02), at + j * 0.06)   # crickets
+    """a still night: a soft breeze, and a few crickets at different distances, each at its own pitch and pace,
+    chirping out of step. A chirp is a quick run of rasping pulses (a wing scraping a wing), not a clean tone."""
+    n = secs(L + 2); buf = lowpass(noise(n), 260) * 0.10 * slow(n, 0.12, 0.6)
+    for f0, gap, vol, far in [(4300, 0.82, 0.30, 0), (4750, 1.05, 0.20, 1), (3900, 0.67, 0.12, 1), (5100, 1.31, 0.08, 1)]:
+        at = rng.uniform(0, gap)
+        while at < L:
+            pulses = int(rng.integers(3, 5)); f = f0 * rng.uniform(0.985, 1.015)
+            chirp = np.zeros(secs(0.03 * pulses + 0.05))
+            for k in range(pulses):
+                m = secs(0.014); t = np.arange(m) / RATE
+                tone = np.sin(2 * np.pi * f * t + 3 * np.sin(2 * np.pi * 180 * t))          # a little warble
+                rasp = bandpass(noise(m), f * 0.8, f * 1.25)                                   # the scrape
+                env = np.sin(np.pi * np.arange(m) / m) ** 2
+                i0 = secs(0.028 * k); chirp[i0:i0 + m] += (0.7 * tone + 0.5 * rasp) * env
+            if far: chirp = lowpass(chirp, 3000) * 0.8
+            put(buf, chirp * vol * rng.uniform(0.75, 1.0), at)
+            at += gap * rng.uniform(0.85, 1.2) + (rng.uniform(0.6, 2.5) if rng.random() < 0.15 else 0)   # now and then it pauses
     return buf
-
 
 def river(L=30.0):
     n = secs(L + 2); buf = bandpass(noise(n), 200, 1800) * (0.6 + 0.4 * slow(n, 1.5, 0.6))

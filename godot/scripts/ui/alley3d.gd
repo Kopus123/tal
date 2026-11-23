@@ -20,14 +20,14 @@ func _ready() -> void:
 	_floor(); _walls()
 	for z in ARCHES: _arch(z)
 	_end_house()
-	for z in ARCHES: _lantern(Vector3(0.0, 2.95, z + 0.55))   # hanging from the crown of each arch
+	for i in ARCHES.size(): _lantern(Vector3(0.0, 2.95, ARCHES[i] + 0.55), i > 0)   # hanging from each arch; the nearest one has gone out
 	_lantern(Vector3(0.9, 2.6, -L + 3.4))
 	_ivy()
 	_puddles()
 	var probe := ReflectionProbe.new(); probe.size = Vector3(W + 2, H + 2, L); probe.position = Vector3(0, H / 2, -L / 2 + 2)
 	probe.box_projection = true; probe.update_mode = ReflectionProbe.UPDATE_ONCE; probe.intensity = 1.0; add_child(probe)   # what the wet stone reflects
 	cam = Camera3D.new(); cam.position = Vector3(0, 1.55, 1.2); cam.rotation_degrees = _base_rot; cam.fov = 62; add_child(cam); cam.current = true
-	torch = SpotLight3D.new(); torch.light_color = Color(1.0, 0.94, 0.82); torch.light_energy = 6.0; torch.spot_range = 22; torch.spot_angle = 18
+	torch = SpotLight3D.new(); torch.light_color = Color(1.0, 0.94, 0.82); torch.light_energy = 9.0; torch.spot_range = 26; torch.spot_angle = 20
 	torch.spot_attenuation = 0.8; torch.shadow_enabled = true; torch.light_volumetric_fog_energy = 1.4; torch.visible = false; cam.add_child(torch)
 
 
@@ -35,7 +35,7 @@ func _process(dt: float) -> void:   # the lantern flames breathe a little
 	var t := Time.get_ticks_msec() / 1000.0
 	for i in _lanterns.size():
 		var l: OmniLight3D = _lanterns[i]
-		l.light_energy = 1.25 + 0.14 * sin(t * 7.0 + i * 1.7) + 0.08 * sin(t * 13.0 + i)
+		l.light_energy = 0.75 + 0.09 * sin(t * 7.0 + i * 1.7) + 0.05 * sin(t * 13.0 + i)
 
 
 ## look around a little (drag), and point the flashlight
@@ -72,15 +72,15 @@ func _environment() -> void:
 	sm.sky_top_color = Color(0.015, 0.02, 0.05); sm.sky_horizon_color = Color(0.06, 0.08, 0.14); sm.ground_bottom_color = Color(0.01, 0.01, 0.02)
 	sm.ground_horizon_color = Color(0.05, 0.06, 0.1); sm.sun_angle_max = 2.0; sky.sky_material = sm
 	env.background_mode = Environment.BG_SKY; env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(0.13, 0.17, 0.3); env.ambient_light_energy = 0.22
-	env.tonemap_mode = Environment.TONE_MAPPER_AGX; env.tonemap_exposure = 0.95
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(0.13, 0.17, 0.3); env.ambient_light_energy = 0.05
+	env.tonemap_mode = Environment.TONE_MAPPER_AGX; env.tonemap_exposure = 0.85
 	env.glow_enabled = true; env.glow_intensity = 0.9; env.glow_bloom = 0.08; env.glow_hdr_threshold = 0.9
 	env.ssr_enabled = true; env.ssr_max_steps = 48; env.ssr_fade_in = 0.1
 	env.ssao_enabled = true; env.ssao_intensity = 1.6
 	env.volumetric_fog_enabled = true; env.volumetric_fog_density = 0.06; env.volumetric_fog_albedo = Color(0.5, 0.58, 0.78)
-	env.volumetric_fog_emission = Color(0.018, 0.024, 0.05); env.volumetric_fog_anisotropy = 0.3; env.volumetric_fog_length = 40
+	env.volumetric_fog_emission = Color(0.003, 0.004, 0.009); env.volumetric_fog_anisotropy = 0.3; env.volumetric_fog_length = 40
 	var we := WorldEnvironment.new(); we.environment = env; add_child(we)
-	var moon := DirectionalLight3D.new(); moon.light_color = Color(0.5, 0.62, 1.0); moon.light_energy = 0.55
+	var moon := DirectionalLight3D.new(); moon.light_color = Color(0.5, 0.62, 1.0); moon.light_energy = 0.16
 	moon.rotation_degrees = Vector3(-38, 35, 0); moon.shadow_enabled = true; moon.light_volumetric_fog_energy = 0.6; add_child(moon)
 
 
@@ -125,13 +125,14 @@ func _end_house() -> void:
 	glow.albedo_color = Color(1.0, 0.75, 0.45)
 	_box(Vector3(0.75, 2.1, 0.05), Vector3(0.3, 1.05, z + 0.26), glow)                       # the lit room beyond
 	var spill := OmniLight3D.new(); spill.position = Vector3(0.3, 1.3, z + 1.2); spill.light_color = Color(1.0, 0.68, 0.36)
-	spill.light_energy = 3.5; spill.omni_range = 7; spill.shadow_enabled = true; spill.light_volumetric_fog_energy = 2.0; add_child(spill)
+	spill.light_energy = 2.2; spill.omni_range = 5; spill.shadow_enabled = true; spill.light_volumetric_fog_energy = 2.0; add_child(spill)
 
 
 ## a paper lantern on a short wire: a glowing body, and the light it throws (with shadows)
-func _lantern(p: Vector3) -> void:
+func _lantern(p: Vector3, lit := true) -> void:
 	var paper := StandardMaterial3D.new(); paper.albedo_color = Color(0.95, 0.35, 0.2); paper.emission_enabled = true
-	paper.emission = Color(1.0, 0.5, 0.25); paper.emission_energy_multiplier = 1.3; paper.roughness = 0.8
+	paper.emission = Color(1.0, 0.5, 0.25); paper.emission_energy_multiplier = 1.0 if lit else 0.0
+	if not lit: paper.albedo_color = Color(0.35, 0.14, 0.1); paper.roughness = 0.8
 	var body := MeshInstance3D.new(); var cap := CapsuleMesh.new(); cap.radius = 0.2; cap.height = 0.55; body.mesh = cap
 	body.material_override = paper; body.position = p; body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(body)   # its own light is inside it
 	var dark := StandardMaterial3D.new(); dark.albedo_color = Color(0.05, 0.04, 0.04)
@@ -139,8 +140,9 @@ func _lantern(p: Vector3) -> void:
 		var ring := MeshInstance3D.new(); var cy := CylinderMesh.new(); cy.top_radius = 0.12; cy.bottom_radius = 0.12; cy.height = 0.05; ring.mesh = cy
 		ring.material_override = dark; ring.position = p + Vector3(0, dy, 0); ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(ring)
 	_box(Vector3(0.015, H + 0.3 - p.y, 0.015), Vector3(p.x, (H + 0.3 + p.y) / 2 + 0.3, p.z), dark)   # the wire up to the wall cap
-	var l := OmniLight3D.new(); l.position = p + Vector3(0, -0.1, 0); l.light_color = Color(1.0, 0.6, 0.33); l.light_energy = 1.25
-	l.omni_range = 5.5; l.omni_attenuation = 1.3; l.shadow_enabled = true; l.light_volumetric_fog_energy = 1.6; add_child(l)
+	if not lit: return
+	var l := OmniLight3D.new(); l.position = p + Vector3(0, -0.1, 0); l.light_color = Color(1.0, 0.6, 0.33); l.light_energy = 0.75
+	l.omni_range = 4.2; l.omni_attenuation = 1.3; l.shadow_enabled = true; l.light_volumetric_fog_energy = 1.6; add_child(l)
 	_lanterns.append(l)
 
 

@@ -1071,7 +1071,7 @@ func _linked_as(a: String, b_: String) -> bool:
 
 ## the camera: a photo of whatever's in the frame (r = the frame, in percent of the picture). Every photo looks the
 ## same on the board (where and when it was taken); whether something that matters was in it stays the game's secret.
-func take_photo(r: Rect2, art: String) -> String:
+func take_photo(r: Rect2, art: String, shot: Image = null, subject := "") -> String:   ## shot: the picture itself, from a 3D place
 	var b := board()
 	if b.film <= 0: return "no film"
 	b.film -= 1; b.shots += 1
@@ -1079,11 +1079,16 @@ func take_photo(r: Rect2, art: String) -> String:
 	for s in place().get("subjects", []):
 		if r.grow(-s.r * 0.5).has_point(Vector2(s.x, s.y)) and (best.is_empty() or s.r > best.r): best = s
 	var id := "ph_%d" % b.shots
+	var file := ""
+	if shot != null:   # a 3D place: keep the picture (the drawing it would be cut from doesn't exist)
+		DirAccess.make_dir_recursive_absolute("user://photos")
+		file = "user://photos/%s_%s_%d.jpg" % [S.ch, id, int(Time.get_unix_time_from_system())]
+		if shot.save_jpg(file, 0.85) != OK: file = ""
 	var where: String = place().get("name", loc)
 	b.photos[id] = {"id": id, "kind": "photo", "art": art, "rect": [r.position.x, r.position.y, r.size.x, r.size.y],
-		"ko": "%s · %d일 %s" % [where, W.day, SLOT_KO.get(slot_name(), "")], "is": best.get("is", ""), "start": false}
+		"ko": "%s · %d일 %s" % [where, W.day, SLOT_KO.get(slot_name(), "")], "is": subject if subject != "" else best.get("is", ""), "start": false, "file": file}
 	b.cards[id] = {"x": 0.5, "y": 0.5, "new": true, "auto": true, "pinned": false, "boxed": true}   # into the box
-	note("  photo %s at %s [%d,%d %dx%d]%s" % [id, loc, r.position.x, r.position.y, r.size.x, r.size.y, (" of " + best.is) if not best.is_empty() else " (nothing in particular)"])
+	note("  photo %s at %s [%d,%d %dx%d]%s" % [id, loc, r.position.x, r.position.y, r.size.x, r.size.y, (" of " + b.photos[id].is) if b.photos[id].is != "" else " (nothing in particular)"])
 	sound.emit("click"); save(); changed.emit(); return ""
 
 

@@ -31,7 +31,11 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 				s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); await _wait(3.0); await shot("at_the_wall")
 				Game.F["lit"] = 0; s3.set_torch(false)
 				s3.reset(); s3._glance_in = 99.0; s3.cam.position = Vector3(s3.W / 2 - 0.4, 1.55, s3.MEET_Z + 3.0); s3.climb(true); await _wait(1.8); await shot("climbed_up")
-				await _wait(9.0); await shot("overheard_close")
+				await _wait(4.0); main.room.camera(true); main.room._frame_size(0.5, true); main.room.frame.position = main.room.size * Vector2(0.22, 0.48); await _wait(0.6); await shot("framing_them")
+				main.room._snap(); await _wait(0.2); main.room.camera(false); await _wait(0.1)
+				s3._glance_in = 99.0; s3._glancing = 0.0
+				for id in Game.board().photos: main.card_big(id)
+				await _wait(0.5); await shot("the_photo"); _close_big()
 				s3._glance_in = 0.0; await _wait(1.0); await shot("one_looks_round")
 				await _wait(1.0); await shot("seen")
 				s3.turn_around(); await _wait(0.4); main.room.stick.moved.emit(Vector2(0, -1)); await _wait(2.5); await shot("running")

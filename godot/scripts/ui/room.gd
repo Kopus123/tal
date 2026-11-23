@@ -135,7 +135,15 @@ func _snap() -> void:
 	if Time.get_ticks_msec() - _last_snap < 700: return   # the film has to wind on
 	_last_snap = Time.get_ticks_msec()
 	var r := Rect2(frame.position / size * 100.0, frame.size / size * 100.0)
-	var why: String = Game.take_photo(r, _art_key)
+	var why := ""
+	if set3:   # what the 3D scene shows inside your frame
+		var im: Image = vp3.get_texture().get_image(); var v := Vector2(vp3.size)
+		var px := Rect2i(Vector2i(r.position / 100.0 * v), Vector2i(r.size / 100.0 * v)).intersection(Rect2i(Vector2i.ZERO, vp3.size))
+		im = im.get_region(px); im.resize(480, maxi(1, int(480.0 * px.size.y / maxi(1, px.size.x))), Image.INTERPOLATE_LANCZOS)
+		im.convert(Image.FORMAT_RGB8); im.adjust_bcs(3.4, 0.85, 1.0)   # fast film, pushed for the night: shadows come up, lamps blow out
+		why = Game.take_photo(r, "", im, set3.photo_subject(Rect2(r.position / 100.0 * v, r.size / 100.0 * v)) if set3.has_method("photo_subject") else "")
+		if why == "" and set3.has_method("on_shutter"): set3.on_shutter()
+	else: why = Game.take_photo(r, _art_key)
 	if why == "no film": Game.sound.emit("wrong"); Game.toast.emit("Out of film. The shop sells it."); return
 	var f := ColorRect.new(); f.color = Color.WHITE; f.mouse_filter = Control.MOUSE_FILTER_IGNORE; f.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(f)
 	var tw := create_tween(); tw.tween_property(f, "modulate:a", 0.0, 0.45); tw.tween_callback(f.queue_free)
@@ -216,6 +224,11 @@ func refresh() -> void:
 	var can_shoot: bool = not Game.ST.is_empty() and Game.node == "" and not exam and pl.get("mode", "") != "board"
 	if not can_shoot: cam_mode = false
 	cam_btn.visible = can_shoot and not cam_mode; shutter.visible = cam_mode; cam_x.visible = cam_mode; veil.visible = cam_mode
+	if set3 and stick:   # framing a shot: the walking controls step aside
+		stick.visible = not cam_mode and not set3.up
+		if turn_btn: turn_btn.visible = not cam_mode and not set3.up
+		if climb_btn: climb_btn.visible = not cam_mode and (set3.up or set3.can_climb())
+		if cam_mode: stick.moved.emit(Vector2.ZERO)
 	back_btn.visible = pl.has("back") and Game.node == "" and not cam_mode
 	marks.visible = not cam_mode and cam.zoom == Vector2.ONE
 	if cam_mode: set_process(true); veil.queue_redraw(); _place_cam_btns()

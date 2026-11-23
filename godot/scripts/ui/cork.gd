@@ -168,7 +168,14 @@ func _text(c: Control, t: String, r: Rect2, sz: int, col: Color) -> Label:
 
 
 ## a photo you took: the part of the place's drawing that was in your frame
+static var _shots: Dictionary = {}   ## pictures already loaded from the phone
 static func photo_tex(cd: Dictionary) -> Texture2D:
+	var file: String = cd.get("file", "")
+	if file != "":   # taken in a 3D place: the picture itself
+		if not _shots.has(file):
+			var im := Image.load_from_file(file)
+			_shots[file] = ImageTexture.create_from_image(im) if im != null and not im.is_empty() else null
+		return _shots[file]
 	var path := "res://art/%s.png" % cd.get("art", "")
 	if not ResourceLoader.exists(path): return null
 	var t: Texture2D = load(path)

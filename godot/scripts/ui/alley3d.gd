@@ -102,6 +102,19 @@ func _talk_tick(dt: float) -> void:
 	else: _next = (s.get_length() if s else 2.0) + 0.9
 
 
+## ---------- photos: what's in the frame (a secret the board keeps), and the click of the shutter
+func photo_subject(frame: Rect2) -> String:
+	if not up or _chase or _spooked: return ""
+	for g in _people:
+		var head: Vector3 = g.position + Vector3(0, 1.5, 0)
+		if not g.visible or cam.is_position_behind(head) or not frame.has_point(cam.unproject_position(head)): return ""
+	return "s_meeting" if absf(cam.position.z - MEET_Z) < 9.0 else ""   # both of them, near enough to make out
+
+func on_shutter() -> void:   # a click in the quiet: one of them looks round
+	if _people.is_empty() or _chase or _spooked or _alarm > 0.0 or _glancing > 0.0: return
+	if up and absf(cam.position.z - MEET_Z) < 14.0: _glance_in = minf(_glance_in, 0.5)
+
+
 ## ---------- they notice you: running nearby makes them stop and listen; now and then one of them looks at the wall;
 ## up on the wall with your light on, or still up there when they look, you're seen
 var _people: Array = []

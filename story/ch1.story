@@ -25,11 +25,9 @@ if !metGramps: The woman at the market told you where to find him. Try the path 
 if metGramps&!caughtGramps: He says he doesn't know. Open your statements: who told you they saw him with 할머니?
 if misheard&!toldMountain: Go back to the river and ask him again. Listen closely this time.
 if !toldMountain: He won't talk. Maybe something you could show him would change his mind.
-if !solved_d7: Put what 할아버지 told you together on the case board before you set off.
-if !metHalmeoni: You worked out where she is. Up the mountain path, and keep climbing.
+if !metHalmeoni: 할아버지 told you where she is. Up the mountain path, and keep climbing.
 if !hidden: Someone with a light is coming. Don't let them see you, and don't let them find her.
-if !allSolved: Open the case board (the board button at the top) and answer the questions you can see.
-if !solved_d8: What did 할머니 say about the mask in the museum?
+if !solved_d9: The pink questions on your case board are yours to work out, whenever you like. Or leave it here for now.
 Chapter 1 is done. At the temple, "Leave it here for now" takes you back to the village. Look back through your notebook while you wait for Chapter 2.
 
 === deduce
@@ -139,11 +137,10 @@ name 산길
 sub The mountain path
 art san
 ambient leaves
-desc if solved_d7: The path keeps climbing past the trail marker, into the pines. She's up there.
-desc if toldMountain: The path keeps climbing into the pines. But where exactly is she? Work it out on the case board first.
+desc if toldMountain: The path keeps climbing past the trail marker, into the pines. She's up there.
 desc A quiet path up the mountain. It climbs on past the trail marker, but you have no reason to follow it yet.
 spot "Trail marker" 58 64 -> c1_marker
-spot "Keep climbing" 50 30 => place jeol if solved_d7
+spot "Keep climbing" 50 30 => place jeol if toldMountain
 spot "Go back down" 50 88 => place golmok
 glow 산 50 30 22
 glow 절 50 22 14
@@ -269,9 +266,13 @@ art temple
 ambient motes
 travel no
 first c1_j1
-desc The dark temple. Somewhere close, a man is breathing.
-spot "할머니" 58 66 -> c1_jend
-spot "Leave it here for now" 50 90 -> c1_jleave if solved_d9
+desc if hidden: The dark temple. Somewhere close, a man is breathing.
+desc A tiny temple between the pines, one lantern lit. An old woman is sitting on the step.
+spot "할머니" 58 66 -> c1_jend if hidden
+spot "할머니" 58 66 -> c1_jmenu if metHalmeoni&!hidden
+spot "할머니" 58 66 -> c1_jagain if !metHalmeoni
+spot "Leave it here for now" 50 90 -> c1_jleave if hidden
+spot "Go back down" 50 90 => place sanqil if !hidden
 glow 할머니 58 66 10
 glow 탈 58 70 7
 glow 절 50 38 22
@@ -1143,6 +1144,11 @@ halmeoni[surprised]: {누구}... {누구}{예요|이에요}?
 show: letter -> c1_j2
 miss -> c1_jwrong
 
+=== scene c1_jagain
+halmeoni[worried]: {누구}{예요|이에요}...?
+(She's still holding the bundle tight, waiting to see who you are.)
+-> c1_j1.4
+
 === scene c1_jwrong
 halmeoni[worried]: {가짜}...?!
 (She shrinks back against the temple door, holding the bundle tighter.)
@@ -1245,12 +1251,12 @@ stranger[audio]: ...{할머니}?
 stranger[audio]: {진짜} {탈}... {줘}.
 ~ It isn't nine o'clock, and this isn't the bridge. He never meant to wait there. He followed you.
 ~ 할머니's hand finds yours in the dark and squeezes. Neither of you breathes.
-! set hidden; toast One question left on your case board.
+! set hidden
 
 === scene c1_jleave
 ~ This is where Chapter 1 stops. What happens next on the mountain is for Chapter 2.
 ~ Until then, the days are yours. Time passes in the village now: wait for the evening, sleep until morning, walk around, reread your notebook.
-! time go; time sleep; chapter village
+! finish chapter; time go; time sleep; chapter village
 
 === scene c1_jend
 halmeoni[worried]: {숨어요}...

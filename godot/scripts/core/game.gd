@@ -147,6 +147,7 @@ func _use(id: String) -> void:
 		"cards": c.get("cards", {}), "unlocks": c.get("unlocks", []), "questions": c.get("questions", {})}
 	ST.meta.merge(c.meta, true); ST.cast.merge(c.cast, true); ST.evidence.merge(c.evidence, true)
 	if free: ST.nodes.merge(PNODES)
+	ST["ends"] = ST.nodes.values().any(func(n): return n.get("fx", []).any(func(x): return x.k == "finish"))
 
 
 func _stash() -> void:
@@ -329,6 +330,7 @@ func _effect(k: String, a: String) -> void:
 			elif a.begins_with("+"):
 				for i in int(a.substr(1)): pass_time()
 		"chapter": S.F["goChapter"] = a.strip_edges()
+		"finish": S.F["goFinish"] = 1   # the chapter is over once this scene has been read
 		"job": _job_effect(a)
 		"away": W.g["away_" + a.strip_edges()] = W.day * 4 + W.slot
 		"card":
@@ -382,6 +384,16 @@ func next() -> void:
 	var b := beat()
 	if b.has("rewind"): rewound.emit(); go(b.rewind)
 	elif b.has("next"): go(b.next)
+	elif S.F.has("goFinish"):
+		S.F.erase("goFinish")
+		for q in ST.cases:   # a last deduction with nothing to prove: the story just said it
+			if q.final and q.needs.is_empty(): S.cs[q.id] = 1; S.F["solved_" + q.id] = 1
+		if S.F.has("goChapter"):
+			var first: bool = not S.done.has(S.ch); S.done[S.ch] = 1
+			var c: String = S.F.goChapter; S.F.erase("goChapter")
+			if first: finished.emit(S.ch)
+			start_chapter(c, false)
+		else: finale()
 	elif S.F.has("goChapter"):
 		var c: String = S.F.goChapter; S.F.erase("goChapter"); start_chapter(c, false)
 	else:
@@ -1060,7 +1072,7 @@ func _case_tick(finals := false) -> void:   ## finals: a last deduction with not
 	for q in ST.cases:
 		if S.cs.has(q.id) or not cond(q.c): continue
 		var ok := false
-		if q.needs.is_empty(): ok = not q.final or (finals and S.node == "")
+		if q.needs.is_empty(): ok = not q.final or (finals and S.node == "" and not ST.ends)   # (a chapter whose story says "finish chapter" ends there, not here)
 		else: ok = q.needs.all(func(n): return n.alts.any(func(a): return _linked_as("q:" + q.id, _vid(a))))
 		if not ok: continue
 		S.cs[q.id] = 1; S.F["solved_" + q.id] = 1; note("  (the board settled: %s)" % q.id); save(); added = true

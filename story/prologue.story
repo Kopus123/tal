@@ -18,9 +18,8 @@ if !talked&@golmok&heardDir: He said which way to go. Tap the couple if you want
 if !talked&@golmok: Ask the couple where the bus stop is.
 if !talked: The restaurant owner sees everyone who walks past. Try talking to him.
 if !museumDone: She left on a bus. Her phone said where she was going. Listen for that stop.
-if !allSolved: Open the case board (the board button at the top) and work out what you can.
 if !ending: You've learned what you can at the museum. Take the bus home.
-if !solved_p4: Open your case board (사건, at the top) and look at everything you have.
+if !solved_p4: There is nothing more to find out tonight. Go inside.
 The prologue is done. Look back through your notebook while you wait for Chapter 1.
 
 
@@ -178,12 +177,12 @@ name 박물관
 sub The museum
 art museum
 ambient dust
-desc if museumDone&allSolved: Your case notes are done. Time to go back to the village.
-desc if museumDone: Cool, quiet, masks behind glass. Your case board is waiting.
+desc if museumDone: Cool, quiet, masks behind glass. She never got here. The bus back to the village stops outside.
 desc Cool, quiet, full of masks behind glass.
 spot "The big glass case" 24 42 -> mc1
 spot "Front desk" 66 62 -> museumDone ? mur : mu3
-spot "Take the bus home" 88 88 -> allSolved ? e1 : ewait if museumDone
+spot "Take the bus home" 88 88 -> e1 if museumDone
+spot "Take the bus back" 88 88 -> mback if !museumDone
 glow 탈 24 42 16
 
 === place gate
@@ -198,6 +197,7 @@ ambient motes
 desc The front gate, lit by lanterns. The mask hangs there, grinning.
 spot "The note" 70 72 -> enote
 spot "수진" 22 66 -> esj
+spot "Go inside for the night" 50 90 -> esleep
 glow 탈 50 58 9
 glow 엄마 22 80 9
 
@@ -662,7 +662,7 @@ staff[surprised]: 김순자 {선생님}{이요|요}? {아니요}... {안} {왔�
 staff[worried]: {이상해요}...
 (She dials a number and holds the phone to her ear. In your pocket, 할머니's phone starts to buzz. She stares at your pocket, then at you, and slowly lowers her phone.)
 ! set museumDone
-~ There's nothing more to learn here. Time to put the morning together on your case board.
+~ There's nothing more to learn here. The bus back to the village stops right outside.
 
 === scene mur
 staff[worried]: {선생님}{이|이/가} {안} {왔어요}... {이상해요}.
@@ -672,8 +672,9 @@ staff[worried]: {선생님}{이|이/가} {안} {왔어요}... {이상해요}.
 ~ In the biggest case: a mask about three hundred and fifty years old. Long eyebrows, a huge grin. It looks exactly like the one 할머니 showed you last night.
 sign: {탈} · 1650
 
-=== scene ewait
-~ Something doesn't add up yet. Open the case board (the board button at the top) and answer the questions there first.
+=== scene mback
+~ You take the next bus back to the village. You can always come back.
+! place jeong
 
 # ------------------------------------------------------------ evening
 === scene e1
@@ -687,7 +688,11 @@ sign: {찾지 마세요}.
 ! give note
 sujin[sad]: {엄마}...
 (She presses the note to her chest. She isn't talking to you.)
-~ One question left on your case board.
+~ 엄마. So that's who she is to 수진. And she doesn't want to be found.
+
+=== scene esleep
+~ You take the mask down from the gate and walk 수진 back inside. Neither of you says anything. Tomorrow, then.
+! finish chapter
 
 === scene enote
 sign: {찾지 마세요}.

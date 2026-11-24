@@ -52,7 +52,10 @@ solve p3 안 | 왔어요 ; s_notcame + s_bus
 spot Take the bus home
 idle
 expect ending
-solve p4 엄마 | 찾지 마세요
+spot The note
+idle
+spot Go inside for the night
+idle
 done prologue
 
 # --- the next day (ch1.story continues the same chapter)

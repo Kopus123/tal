@@ -108,6 +108,7 @@ static var filling := false      ## the list is still coming in
 static func _tile(main: Control, k: String) -> Button:
 	var st := _st(k); var col := Color("#" + Kit.STATUS_COLORS[st])
 	var b := Button.new(); b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.custom_minimum_size = Vector2(0, 86)
+	b.set_meta("word", k)
 	if not _looks.has(st):
 		var sb := Kit.box(10, Kit.PAPER_LIGHT, Kit.LINE, 1, 10); sb.border_width_left = 8; sb.border_color = col
 		var sp := sb.duplicate(); sp.bg_color = Kit.PAPER_LIGHT.darkened(0.08); _looks[st] = [sb, sp]

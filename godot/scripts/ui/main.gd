@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.5.6"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.5.7"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -69,6 +69,9 @@ func _ready() -> void:
 		tour.run(self, args[i + 1] if i + 1 < args.size() else "user://shots", args[i + 2] if i + 2 < args.size() else "shed", args[i + 3] if i + 3 < args.size() else "")
 		return
 	_title()
+	if "--agent" in args:   # an AI plays (scripts/tools/agent_play.gd, tools/gd_agent.py)
+		tour = load("res://scripts/tools/agent_play.gd").new(Game)
+		tour.go(self, args[args.find("--agent") + 1])
 	if "--play" in args:   # the playtester (scripts/tools/playtester.gd): starts from the title, like anyone
 		AudioServer.set_bus_mute(0, true)
 		var i := args.find("--play")

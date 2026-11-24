@@ -381,6 +381,7 @@ func _expected() -> void:
 		if find_btn("Leave the board", main) == null and find_btn("Close the board", main) == null and find_btn("Back to the board", main) == null: bug("missing", "no way off the board")
 		return
 	if b.is_empty():
+		_check_trap()
 		if main.room.cam_mode:
 			if not main.room.shutter.is_visible_in_tree() or not main.room.cam_x.is_visible_in_tree(): bug("missing", "the camera has no shutter or no ✕")
 			return
@@ -433,6 +434,57 @@ func _expected() -> void:
 	var have: Array = buttons(main).map(func(x): return x.text)
 	for n in need:
 		if not have.any(func(h): return h.contains(n)): bug("missing", "%s: \"%s\" isn't there" % [page_name(), n])
+
+
+## ---------- traps: from wherever you are, with nothing solved, there has to be a way out and a way on
+## every scene and place you could get to from here right now, just by walking and talking
+func _reach() -> Dictionary:
+	var places := {g.S.loc: 1}; var todo := [g.S.loc]; var nodes := {}; var ends := false
+	while not todo.is_empty():
+		var pl: Dictionary = g.ST.places.get(todo.pop_back(), {})
+		var go := []
+		if pl.has("back"): go.append(pl.back)
+		if pl.get("travel", "") != "no":
+			for k in g.S.known: go.append(k)
+		for s in pl.get("spots", []):
+			if not g.cond(s.c): continue
+			var m := Story.R("^place\\s+(\\S+)").search(s.t)
+			if m: go.append(m.get_string(1))
+			elif s.kind == "->": ends = _follow(g.target(s.t), nodes, go) or ends
+		for key in ["first", "always"]:
+			if pl.has(key) and not g.S.visited.has(pl.get("id", "")): ends = _follow(pl[key], nodes, go) or ends
+		for p in go:
+			if g.ST.places.has(p) and not places.has(p) and not g.is_closed(p): places[p] = 1; todo.append(p)
+	return {"places": places, "nodes": nodes, "ends": ends}
+
+
+func _follow(id: String, nodes: Dictionary, go: Array) -> bool:
+	var ends := false; var todo := [id]
+	while not todo.is_empty():
+		var n: String = g.target(todo.pop_back())
+		if nodes.has(n) or not g.ST.nodes.has(n): continue
+		nodes[n] = 1
+		var nd: Dictionary = g.ST.nodes[n]
+		for f in nd.get("fx", []):
+			if f.k == "place": go.append(f.a.strip_edges())
+			if f.k in ["chapter", "finish"]: ends = true
+		for k in ["next", "rewind", "miss"]:
+			if nd.has(k): todo.append(nd[k])
+		for c in nd.get("ch", []): todo.append(c.go)
+		for a in nd.get("ans", []): todo.append(a[1])
+		for a in nd.get("shows", []): todo.append(a[1])
+		for a in nd.get("pairs", []): todo.append(a[1])
+	return ends
+
+
+const OPTIONAL := ["k1", "k3", "k7"]   ## hello and goodbye at the restaurant: nice, but nothing depends on them
+func _check_trap(left := "") -> void:
+	if g.S.node != "" or g.ST.is_empty() or g.ST.places.get(g.S.loc, {}).get("mode", "") == "board": return
+	var r := _reach()
+	if r.places.size() < 2 and not r.ends: bug("stuck", "trapped in %s: no way out%s" % [g.S.loc, " after walking away from " + left if left != "" else ""])
+	elif left != "" and not r.nodes.has(left):
+		var sc := left.get_slice(".", 0)
+		if not r.nodes.has(sc) and not sc in OPTIONAL: bug("stuck", "walking away from %s loses it for good" % left)
 
 
 ## ---------- a finger
@@ -573,8 +625,11 @@ func _branch(key: String, f: Callable) -> void:
 	print("@ ..%s" % key)
 	_tried[key] = 1; _depth += 1
 	var k := _keep()
+	var at: String = g.S.node
 	await f.call()
+	if key.ends_with(">leave"): _check_trap(at)
 	await _run_on()
+	_check_trap()
 	await _try_all()
 	await _back_to(k)
 	_depth -= 1

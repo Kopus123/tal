@@ -91,7 +91,12 @@ func _ready() -> void:
 	veil = Control.new(); veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	veil.draw.connect(_draw_veil); veil.visible = false; add_child(veil)
 	move_child(frame, -1)
-	cam_btn = _icon_btn("📷", func(): camera(true)); shutter = _icon_btn("", _snap); cam_x = _icon_btn("✕", func(): camera(false))
+	cam_btn = _icon_btn("", func(): camera(true)); shutter = _icon_btn("", _snap); cam_x = _icon_btn("✕", func(): camera(false))
+	cam_btn.draw.connect(func():   # drawn, so it doesn't depend on the phone's emoji
+		var c := cam_btn.size / 2 + Vector2(0, 2); var w := Color(1, 1, 1, 0.92); var dk := Color(0.06, 0.07, 0.09)
+		var b := StyleBoxFlat.new(); b.bg_color = w; b.set_corner_radius_all(6)
+		cam_btn.draw_style_box(b, Rect2(c - Vector2(9, 19), Vector2(18, 12))); cam_btn.draw_style_box(b, Rect2(c - Vector2(22, 13), Vector2(44, 29)))
+		cam_btn.draw_circle(c + Vector2(0, 1), 10.0, dk, true, -1.0, true); cam_btn.draw_circle(c + Vector2(0, 1), 6.0, w, true, -1.0, true); cam_btn.draw_circle(c + Vector2(16, -8), 2.0, dk, true, -1.0, true))
 	shutter.custom_minimum_size = Vector2(104, 104)
 	for st in ["normal", "hover", "focus"]: shutter.add_theme_stylebox_override(st, _ring(Color(1, 1, 1, 0.92)))
 	shutter.add_theme_stylebox_override("pressed", _ring(Color(0.8, 0.8, 0.8, 1)))
@@ -224,6 +229,7 @@ func refresh() -> void:
 	else: moon.enabled = false
 	# the camera: yours to raise when you're standing somewhere (not mid-conversation, not at the board)
 	var can_shoot: bool = not Game.ST.is_empty() and Game.node == "" and not exam and pl.get("mode", "") != "board"
+	if set3 and pl.has("scene") and Game.node != "": can_shoot = b.get("type", "say") in ["say", ""] and not exam   # in 3D you can walk while a line waits on the paper, so you can shoot too
 	if not can_shoot: cam_mode = false
 	cam_btn.visible = can_shoot and not cam_mode; shutter.visible = cam_mode; cam_x.visible = cam_mode; veil.visible = cam_mode
 	if set3 and stick:   # framing a shot: the walking controls step aside
@@ -319,8 +325,10 @@ func _place_stick() -> void:
 	if turn_btn and stick: turn_btn.position = Vector2(stick.position.x + stick.size.x + 8, size.y - 112)
 
 
+var _was_up := false
 ## by the right wall you can climb it; up there, the stick hides and the button takes you back down
 func _on_climb(can: bool, is_up: bool) -> void:
+	if is_up != _was_up: _was_up = is_up; Game.changed.emit.call_deferred()   # what the paper says depends on it
 	climb_btn.visible = can or is_up
 	climb_btn.text = "Climb down" if is_up else "Climb up"
 	stick.visible = not is_up

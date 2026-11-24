@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.5.4"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.5.5"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -204,13 +204,10 @@ func _looking() -> void:
 	if room.set3 and Game.F.has("so_spooked") and Game.S.ch == "stakeout":
 		_act("↺  Try the night again", func(): start_over(Game.S.ch), true)
 	if room.set3 and _wary != "":
-		var up: bool = room.set3.up
-		_text("[color=#b3241c][b]" + {"look": "One of them's turning round. Get down!" if up else "One of them's looking at the wall. Stay down.",
-			"listen": "They heard something. Get down!" if up else "They've gone quiet. They're listening: don't climb yet.",
-			"light": "Your light! Turn it off!"}[_wary] + "[/b][/color]", 26)
+		_text("[color=#b3241c][b]One of them's turning round. Get down![/b][/color]", 26)   # goes away once you can see it well enough for yourself
 		return
 	var vs := _voice_state()
-	if room.set3 and vs != "none" and not Game.F.has("so_spooked"):
+	if room.set3 and vs == "voices" and room.set3.up and not Game.F.has("so_spooked"):   # only up there, never before: until then, it's for your ears
 		var txt: String = {"wall": "🔉  muffled voices, somewhere beyond the wall", "voices": "🔊  voices", "far": "🔈  (too far away to hear)"}[vs]
 		_voice_icon = Kit.label(txt, 26 if vs == "voices" else 19, Kit.PAPER_INK if vs != "far" else Kit.MUTE, true)
 		_voice_icon.modulate.a = 0.25 + 0.75 * _heard_clear if vs == "voices" else 1.0; _voice_icon.pivot_offset = Vector2(20, 16); body.add_child(_voice_icon)

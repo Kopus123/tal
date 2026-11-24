@@ -88,7 +88,7 @@ func clarity() -> float:
 
 func _talk_tick(dt: float) -> void:
 	for pl in _voices: pl.bus = _yard_bus() if up or _chase else _wall_bus()   # through a brick wall, only a mumble
-	if _talk.is_empty() or _alarm > 0.0 or _glancing > 0.0: return
+	if _talk.is_empty() or _alarm > 0.0: return
 	_next -= dt
 	if _next > 0: return
 	var l: Dictionary = _talk[_line]
@@ -111,12 +111,11 @@ func _yard_bus() -> String:
 	return "Yard"
 
 
-## through the wall: everything that makes words out is gone, and what's left booms about a bit
+## through the wall: everything that makes words out is gone
 func _wall_bus() -> String:
 	if AudioServer.get_bus_index("Wall") < 0:
 		AudioServer.add_bus(); var i := AudioServer.bus_count - 1; AudioServer.set_bus_name(i, "Wall")
-		var f := AudioEffectLowPassFilter.new(); f.cutoff_hz = 480.0; f.resonance = 0.5; f.db = AudioEffectFilter.FILTER_24DB; AudioServer.add_bus_effect(i, f)
-		var rv := AudioEffectReverb.new(); rv.room_size = 0.45; rv.damping = 0.8; rv.wet = 0.35; rv.dry = 0.7; AudioServer.add_bus_effect(i, rv)
+		var f := AudioEffectLowPassFilter.new(); f.cutoff_hz = 480.0; f.resonance = 0.15; f.db = AudioEffectFilter.FILTER_24DB; AudioServer.add_bus_effect(i, f)
 		var l := AudioEffectHardLimiter.new(); l.pre_gain_db = 11.0; l.ceiling_db = -3.0; AudioServer.add_bus_effect(i, l)
 	return "Wall"
 
@@ -130,147 +129,177 @@ func photo_subject(frame: Rect2) -> String:
 	return "s_meeting" if absf(cam.position.z - MEET_Z) < 9.0 else ""   # both of them, near enough to make out
 
 func on_shutter() -> void:   # a click in the quiet: one of them looks round
-	if _people.is_empty() or _chase or _spooked or _alarm > 0.0 or _glancing > 0.0: return
-	if up and absf(cam.position.z - MEET_Z) < 14.0: _glance_in = minf(_glance_in, 0.5)
+	if _people.is_empty() or _chase or _spooked: return
+	if up and _near(): _sus[randi() % _people.size()] += 0.75
 
 
-## ---------- they notice you: running nearby makes them stop and listen; now and then one of them looks at the wall;
-## up on the wall with your light on, or still up there when they look, you're seen
+## ---------- they get suspicious. Each of them has a meter that fills by itself, at a pace that keeps changing (so they
+## look round often, but never like clockwork). A noise adds to it; your light on them fills it in under a second. Full:
+## that one turns their head to the wall for a moment, and the meter starts again. If you're up there, in sight, while
+## a head is turned, it's only a moment before they notice you; and once they have, they come after you.
+signal wary(what: String)      ## "look": a head is turning your way while you're up there; "" = not any more
+const PACE := [0.02, 0.11]     ## how much of the meter fills a second, left alone (a new pace every second or three)
+const LIT := 1.5               ## ... with your light on them: full in about 0.7 s
+const TURN := [1.1, 0.35]      ## seconds to turn a head round: an idle look, startled by a light
+const SEE := [1.3, 0.3]        ## how long you can be in sight of a turned head: dark, with your light on
+const FIRST_CLIMB := 2.0       ## the first time you get up there, nobody looks round for a couple of seconds unless you give them reason
 var _people: Array = []
-var _glance_in := 10.0        ## until one of them next looks around
-var _glancing := 0.0          ## how much longer they're looking at the wall
-var _alarm := 0.0             ## how much longer they stay quiet after hearing you
-var _lit_up := 0.0            ## how long you've been up there with your light on
-var _steps: AudioStreamPlayer
-
-func _turn(g: Node3D, to_wall: bool, t := 0.8) -> void:
-	var yaw: float = 90.0 if to_wall else g.get_meta("idle")
-	create_tween().tween_property(g, "rotation_degrees:y", yaw, t).set_trans(Tween.TRANS_SINE)
-
-signal wary(what: String)      ## "" / "look" (one's turning round) / "listen" (they heard you) / "light" (they'll see your light)
-const LOOK_GRACE := 3.4        ## from the moment one starts to turn round until you're seen, if you're still up there
-const FIRST_LOOK := 10.0       ## the first time you get up there, at least this long before one looks round (most of the conversation, not all)
-const NEXT_LOOK := 2.0         ## every time after that: hopping down and up again doesn't buy you more
+var _sus := [0.0, 0.0]         ## the meters, 0..1
+var _pace := [0.06, 0.06]
+var _pace_for := [0.0, 0.0]
+var _looking := [0.0, 0.0]     ## how much longer each one's head stays turned
+var _turned := [0.0, 0.0]      ## how far round it is, 0..1
+var _turn_s := [1.1, 1.1]      ## how fast it's turning this time
+var _seen_for := 0.0           ## how long you've been in sight of a turned head
+var _calm := 0.0               ## the first climb's head start
 var _been_up := false
-var _exposed := 0.0            ## how long you've been up there with someone watching the wall
+var _alarm := 0.0              ## how much longer they stay quiet after hearing you
+var _steps: AudioStreamPlayer
 var _wary := ""
+
+func _near() -> bool: return absf(cam.position.z - MEET_Z) < 14.0
 
 func _set_wary(w: String) -> void:
 	if w != _wary: _wary = w; wary.emit(w)
 
-func _talking() -> bool: return _voices[0].playing or _voices[1].playing
+## your light is on that one: up on the wall, pointed at them
+func _lit(g: Node3D) -> bool:
+	if not (up and torch.visible): return false
+	var to: Vector3 = g.global_position + Vector3(0, 1.1, 0) - torch.global_position
+	return to.length() < torch.spot_range and (-torch.global_basis.z).angle_to(to) < deg_to_rad(torch.spot_angle + 3.0)
 
 func _notice_tick(dt: float) -> void:
 	if _people.is_empty(): return
-	var near := absf(cam.position.z - MEET_Z) < 14.0
-	# your light, up on the wall, at night: they see it
-	_lit_up = _lit_up + dt if up and torch.visible and near else 0.0
-	if _lit_up > 2.5: _seen(); return
-	if _alarm > 0.0 or _glancing > 0.0:   # someone's watching the wall: get down in time and they never know
-		_exposed = _exposed + dt if up and not _busy and near else 0.0   # already on your way down: safe
-		if _exposed > LOOK_GRACE: _seen(); return
-		_set_wary("look" if _glancing > 0.0 else "listen")
-		if _alarm > 0.0:
-			_alarm -= dt
-			if _alarm <= 0.0:
-				_exposed = 0.0; _next = 1.2; _set_wary("")
-				for g in _people: _turn(g, false)
+	_alarm = maxf(0.0, _alarm - dt); _calm = maxf(0.0, _calm - dt)
+	var in_sight := false; var lit_any := false; var turning := false
+	for k in _people.size():
+		var g: Node3D = _people[k]; var lit := _lit(g); lit_any = lit_any or lit
+		_pace_for[k] -= dt
+		if _pace_for[k] <= 0.0: _pace_for[k] = randf_range(0.8, 3.0); _pace[k] = randf_range(PACE[0], PACE[1])
+		if _looking[k] > 0.0:
+			_looking[k] -= dt
+			if lit: _looking[k] = maxf(_looking[k], 0.8); _turn_s[k] = TURN[1]   # no looking away from a light in your eyes
+			_turned[k] = minf(1.0, _turned[k] + dt / _turn_s[k])
+			turning = true
+			if up and not _busy and _near() and _turned[k] > 0.75: in_sight = true
 		else:
-			_glancing -= dt
-			if _glancing <= 0.0:
-				_exposed = 0.0; _next = 1.2; _set_wary(""); _turn(_people[0], false); _glance_in = randf_range(8.0, 14.0)
-		return
-	_set_wary("light" if _lit_up > 0.2 else "")
-	_glance_in -= dt
-	if _glance_in <= 0.0 and not _talking():   # between two lines, one of them slowly turns round to look
-		_glancing = 5.0; _exposed = 0.0; _turn(_people[0], true, 2.2)
+			_turned[k] = maxf(0.0, _turned[k] - dt / 0.9)
+			var fill: float = _pace[k]
+			if lit: fill = LIT
+			elif up and torch.visible and _near(): fill *= 3.0   # a light moving about up there, not on them
+			elif _calm > 0.0: fill = 0.0
+			_sus[k] += fill * dt
+			if _sus[k] >= 1.0:
+				_sus[k] = randf_range(0.0, 0.25); _looking[k] = randf_range(2.2, 4.0); _turn_s[k] = TURN[1] if lit else TURN[0] * randf_range(0.8, 1.25)
+		_pose(g, _turned[k])
+	_seen_for = _seen_for + dt if in_sight else maxf(0.0, _seen_for - dt * 2.0)
+	if _seen_for > (SEE[1] if lit_any or (up and torch.visible) else SEE[0]): _seen(); return
+	_set_wary("look" if turning and up and _near() else "")
 
-## you're up: they're mid-conversation, and nobody looks round for a while
+## a head (and then the shoulders, a little) coming round from whoever they're talking to, to the top of the wall
+func _pose(g: Node3D, k: float) -> void:
+	var e := k * k * (3.0 - 2.0 * k); var idle: float = g.get_meta("idle")
+	var to := rad_to_deg(atan2(-(cam.position.x - g.position.x), -(cam.position.z - g.position.z))) if up else 90.0
+	var off := wrapf(to - idle, -180.0, 180.0)
+	g.rotation_degrees.y = idle + off * 0.45 * e
+	var h: Node3D = g.get_meta("head"); h.rotation_degrees = Vector3(18.0 * e if up else 0.0, off * 0.55 * e, 0)
+
+## you're up there: the first time, they're deep in conversation
 func _got_up() -> void:
-	_glance_in = maxf(_glance_in, NEXT_LOOK if _been_up else FIRST_LOOK); _been_up = true; _next = minf(_next, 1.2)
+	_next = minf(_next, 1.2)
+	if not _been_up: _been_up = true; _calm = FIRST_CLIMB; _sus = [randf_range(0.1, 0.4), randf_range(0.1, 0.4)]
+	for k in 2: _sus[k] = minf(_sus[k], 0.6)
 
-## running near them: footsteps they can hear. They go quiet and listen for a bit
+## running near them: every footfall adds up, and then they go quiet and turn round
 func _heard_you() -> void:
-	if _alarm > 0.0 or _glancing > 0.0 or absf(cam.position.z - MEET_Z) > 7.0: return
-	_alarm = 5.0; _exposed = 0.0
-	for g in _people: _turn(g, true, 1.2)
+	if absf(cam.position.z - MEET_Z) > 7.0 or _alarm > 0.0: return
+	for k in _people.size(): _sus[k] += randf_range(0.2, 0.4)
+	if _sus.max() < 1.0: return
+	_alarm = 4.0; _next = 1.2; _calm = 0.0
+	for k in _people.size(): _sus[k] = 0.0; _looking[k] = 4.0; _turn_s[k] = 0.8
 	var s := Voice.stream_for("쉿... {누구}{예요|이에요}?", "stranger_b")
 	if s: _voices[0].stop(); _voices[1].stream = s; _voices[1].volume_db = 2.0; _voices[1].attenuation_filter_cutoff_hz = 1500; _voices[1].play()
 
+## they've noticed you: a shout, and they run for the gate. You hang there a heartbeat, then drop
 func _seen() -> void:
 	if _chase or _spooked: return
-	_lit_up = 0.0; _alarm = 0.0; _glancing = 0.0; _exposed = 0.0; _set_wary("")
-	for g in _people: _turn(g, true, 0.3)
+	_set_wary(""); _seen_for = 0.0; _alarm = 0.0
+	_chase = true; _chase_t = 0.0; _gate_open = false
+	_chasers = []
+	for k in _people.size(): _chaser(_people[k], CHASERS[k])
 	_shout("{누구}{예요|이에요}?!", -8.0)
-	# you drop off the wall into the alley
 	if up or _busy:
 		_busy = true; var t := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		var land := Vector3(W / 2 - 0.45, EYE, cam.position.z)
-		t.tween_property(cam, "position", land, 0.35); _face(0.0, -3.0, 0.35)
+		t.tween_interval(HANG)
+		t.tween_callback(func(): _face(0.0, -3.0, 0.35))
+		t.tween_property(cam, "position", land, 0.35)
 		t.tween_callback(func(): _busy = false; up = false; climb_changed.emit(false, false))
-	_chase = true; _chase_wait = 1.3
-	for g in _people: g.visible = false   # they head for the gate
 	spotted.emit()
 
 
-## ---------- the chase: the gate in the right wall creaks open and they come out after you, one then the other, each
-## with a flashlight. Get out of the alley (back past the entrance) before one reaches you, and they're too spooked to
-## stay: they go inside. Grabbed: start over.
+## ---------- the chase: they run across the courtyard to the gate in the right wall, it bangs open, and they come out
+## after you, one then the other, each with a flashlight. Get out of the alley (back past the entrance) before one
+## reaches you, and they're too spooked to stay: they go inside. Grabbed: start over.
 const GATE_Z := -17.5        ## the gate from the courtyard into the alley (a little past where they stand)
-const CHASERS := [[0.0, 4.9, 1.72], [0.7, 4.6, 1.6]]   ## each: [seconds after the gate opens, speed, height]
+const HANG := 0.55           ## you're frozen up there this long before you let go
+const CHASERS := [[0.5, 4.8], [1.0, 4.6]]   ## each: [seconds before they start running, speed]
 var _chase := false
-var _chase_wait := 0.0       ## the moment before the gate opens
-var _chase_t := 0.0          ## since the gate opened
+var _chase_t := 0.0          ## since they noticed you
 var _spooked := false        ## you got away: they've gone in, the courtyard is empty and quiet
-var _chasers: Array = []     ## [{n: Node3D, speed, step: AudioStreamPlayer3D, stride, t}]
+var _chasers: Array = []     ## [{n: Node3D, speed, wait, step: AudioStreamPlayer3D, beam, stride, leg}]
 var _gate: Node3D            ## the gate's door, on its hinge
+var _gate_open := false
 
 func _shout(ko: String, db: float) -> void:
 	var s := Voice.stream_for(ko, "stranger")
 	if s == null: return
-	var v: AudioStreamPlayer3D = _voices[0]
-	if not _chasers.is_empty(): v.reparent(_chasers[0].n, false); v.position = Vector3(0, 1.6, 0)
+	var v: AudioStreamPlayer3D = _voices[0]; v.stop()
+	if not _chasers.is_empty() and v.get_parent() == self: v.reparent(_chasers[0].n, false); v.position = Vector3(0, 1.6, 0)
 	v.stream = s; v.volume_db = db; v.attenuation_filter_cutoff_hz = 6000; v.play()
 
-func _chaser(h: float, speed: float) -> void:   # someone stepping out of the gate, light first
-	var n := _figure(Vector3(W / 2 + 1.2, 0, GATE_Z), h, 90.0)
+func _chaser(n: Node3D, how: Array) -> void:   # one of the two, light out, about to run
 	var beam := SpotLight3D.new(); beam.position = Vector3(0.15, 1.3, -0.2); beam.light_color = Color(1.0, 0.92, 0.75)
 	beam.light_energy = 7.0; beam.spot_range = 18; beam.spot_angle = 22; beam.shadow_enabled = true; beam.light_volumetric_fog_energy = 2.0
-	beam.rotation_degrees = Vector3(-8, 0, 0); n.add_child(beam)
+	beam.rotation_degrees = Vector3(-8, 0, 0); beam.visible = false; n.add_child(beam)
 	var st := AudioStreamPlayer3D.new(); st.stream = load("res://sfx/step.wav"); st.unit_size = 3.0; st.volume_db = -10.0; st.max_db = -10.0; st.position = Vector3(0, 0.2, 0); n.add_child(st)
-	_chasers.append({"n": n, "speed": speed, "step": st, "stride": 0.0, "t": 0.0})
+	_chasers.append({"n": n, "wait": how[0], "speed": how[1], "step": st, "beam": beam, "stride": 0.0, "leg": 0, "t": 0.0})
 
 func _chase_tick(dt: float) -> void:
 	if not _chase: return
-	if _chase_wait > 0.0:
-		_chase_wait -= dt
-		if _chase_wait <= 0.0:   # the gate bangs open
-			var cr := AudioStreamPlayer3D.new(); cr.stream = load("res://sfx/gate.wav"); cr.unit_size = 5.0; cr.position = Vector3(W / 2, 1.2, GATE_Z); add_child(cr); cr.play()
-			create_tween().tween_property(_gate, "rotation_degrees:y", -105.0, 0.45).set_trans(Tween.TRANS_BACK)
-		return
 	_chase_t += dt
-	for k in CHASERS.size():   # out they come, one then the other
-		if _chasers.size() == k and _chase_t >= CHASERS[k][0] + 0.35:
-			_chaser(CHASERS[k][2], CHASERS[k][1])
-			if k == 0: _shout("거기 서!", -6.0)
 	for c in _chasers:
-		var n: Node3D = c.n; c.t += dt
-		# through the gate first, then straight at you down the middle (the archways only let you through there)
-		var target := cam.position
-		if n.position.x > W / 2 - 0.5: target = Vector3(W / 2 - 0.8, 0, GATE_Z)
-		var to := target - n.position; to.y = 0
+		var n: Node3D = c.n
 		var me := cam.position - n.position; me.y = 0
-		if me.length() < 1.0 and c.t > 0.7:   # a hand on your collar (never the instant they appear)
+		if _chase_t < c.wait:   # staring at you
+			n.rotation.y = lerp_angle(n.rotation.y, atan2(-me.x, -me.z), 1.0 - exp(-dt * 12.0)); continue
+		c.beam.visible = true
+		var h: Node3D = n.get_meta("head"); h.rotation = h.rotation.lerp(Vector3.ZERO, 1.0 - exp(-dt * 8.0))
+		# to the gate, through it, then straight at you
+		var inside := Vector3(W / 2 + 1.3, 0, GATE_Z); var outside := Vector3(W / 2 - 0.8, 0, GATE_Z)
+		var flat := Vector3(n.position.x, 0, n.position.z)
+		if c.leg == 0 and flat.distance_to(inside) < 0.3: c.leg = 1; c.t = 0.0
+		if c.leg == 1 and n.position.x < W / 2 - 0.5:
+			c.leg = 2; c.t = 0.0
+			if c == _chasers[0]: _shout("거기 서!", -6.0)
+		if not _gate_open and flat.distance_to(inside) < 1.6:   # the first one there throws it open
+			_gate_open = true
+			var cr := AudioStreamPlayer3D.new(); cr.stream = load("res://sfx/gate.wav"); cr.unit_size = 5.0; cr.position = Vector3(W / 2, 1.2, GATE_Z); add_child(cr); cr.play()
+			cr.finished.connect(cr.queue_free)
+			create_tween().tween_property(_gate, "rotation_degrees:y", -105.0, 0.4).set_trans(Tween.TRANS_BACK)
+		c.t += dt
+		if c.leg == 2 and me.length() < 1.0 and c.t > 0.3:   # a hand on your collar (never the instant they appear)
 			_end_chase(); grabbed.emit(); return
-		var p: Vector3 = n.position + to.normalized() * float(c.speed) * dt
-		for z in ARCHES:
-			if absf(p.z - z) < 0.6: p.x = move_toward(p.x, 0.0, dt * 4.0)
-		if n.position.x <= W / 2 - 0.5: p.x = clampf(p.x, -W / 2 + 0.4, W / 2 - 0.4)
+		var to: Vector3 = (inside if c.leg == 0 else outside if c.leg == 1 else cam.position) - n.position; to.y = 0
+		var p: Vector3 = n.position + to.normalized() * minf(float(c.speed) * dt, to.length())
+		if c.leg == 2:
+			var lim := W / 2 - 0.4
+			for z in ARCHES: lim = minf(lim, lerpf((W - 0.9) / 2 - 0.3, W / 2 - 0.4, clampf((absf(p.z - z) - 0.6) / 1.2, 0.0, 1.0)))   # drifting to the middle for an archway
+			p.x = move_toward(n.position.x, clampf(p.x, -lim, lim), float(c.speed) * dt)
+		c.stride += dt * 12.0; p.y = absf(sin(c.stride)) * 0.07   # running, not strolling
 		n.position = p
-		n.rotation.y = atan2(-to.x, -to.z)
-		var before: float = c.stride
-		c.stride += dt * 12.0; n.position.y = absf(sin(c.stride)) * 0.07   # running, not strolling
-		if int(before / PI) != int(c.stride / PI): c.step.pitch_scale = randf_range(0.9, 1.05); c.step.play()
+		if to.length() > 0.05: n.rotation.y = lerp_angle(n.rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-dt * 14.0))
+		if int((c.stride - dt * 12.0) / PI) != int(c.stride / PI): c.step.pitch_scale = randf_range(0.9, 1.05); c.step.play()
 	if cam.position.z > 1.0:   # out of the alley
 		_end_chase(); _spooked = true; _talk = []
 		for g in _people: g.visible = false   # they've gone inside
@@ -278,10 +307,12 @@ func _chase_tick(dt: float) -> void:
 		got_away.emit()
 
 func _end_chase() -> void:
-	_chase = false; _chase_wait = 0.0; _chase_t = 0.0
+	_chase = false; _chase_t = 0.0; _gate_open = false
 	var v: AudioStreamPlayer3D = _voices[0]
 	if v.get_parent() != self: v.reparent(self, false); v.position = Vector3(W / 2 + 5.3, 1.55, MEET_Z + 0.9)
-	for c in _chasers: c.n.queue_free()
+	for c in _chasers:   # back where they were standing
+		c.beam.queue_free(); c.step.queue_free()
+		c.n.position = c.n.get_meta("home"); _pose(c.n, 0.0)
 	_chasers.clear()
 	if _gate: _gate.rotation_degrees.y = 0.0
 
@@ -311,11 +342,11 @@ func reset() -> void:
 	_end_chase()
 	if not _spooked:
 		for g in _people: g.visible = true
-	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _been_up = false; _lit_up = 0.0; _exposed = 0.0; _set_wary("")
+	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _been_up = false; _calm = 0.0; _seen_for = 0.0; _sus = [0.0, 0.0]; _looking = [0.0, 0.0]; _turned = [0.0, 0.0]; _set_wary("")
 	if _turning: _turning.kill()
 	_yaw = 0.0; _pitch = -3.0; _apply_look(); _vel = Vector3.ZERO
 	cam.position = Vector3(0, EYE, 1.2)
-	for g in _people: _turn(g, false, 0.1)
+	for g in _people: _pose(g, 0.0)
 	_can = false; climb_changed.emit(false, false)
 
 
@@ -347,8 +378,11 @@ func _walk(dt: float) -> void:
 	if speed < 0.05: cam.position.y = lerpf(cam.position.y, EYE, dt * 6.0); return
 	var p := cam.position + _vel * dt
 	var half := W / 2 - 0.35
-	for z in ARCHES:   # through an archway you have to fit through the opening
-		if absf(p.z - z) < 0.55: half = minf(half, (W - 0.9) / 2 - 0.3)
+	for z in ARCHES:   # an archway's pillars: solid from the front and back, and you slide along them inside
+		var gap := (W - 0.9) / 2 - 0.28; var deep := 0.35 + 0.3
+		if absf(p.z - z) < deep and absf(p.x) > gap:
+			if absf(cam.position.z - z) >= deep - 0.001: p.z = z + deep * signf(cam.position.z - z); p.x = move_toward(p.x, gap * 0.98 * signf(p.x), 2.2 * dt)   # ... and you scrape round the edge of it
+			else: p.x = clampf(p.x, -gap, gap)
 	p.x = clampf(p.x, -half, half); p.z = clampf(p.z, -L + 3.0, 2.4 if _chase else 1.6)
 	var before := _stride
 	_stride += speed * 2.6 * dt
@@ -541,11 +575,14 @@ func _figure(at: Vector3, h: float, face: float) -> Node3D:
 	var g := Node3D.new(); g.position = at; g.rotation_degrees.y = face; add_child(g)
 	var body := MeshInstance3D.new(); var cm := CapsuleMesh.new(); cm.radius = 0.24; cm.height = h * 0.78; body.mesh = cm
 	body.material_override = cloth; body.position = Vector3(0, h * 0.42, 0); g.add_child(body)
-	var head := MeshInstance3D.new(); var hm := SphereMesh.new(); hm.radius = 0.12; hm.height = 0.26; head.mesh = hm
-	head.material_override = cloth; head.position = Vector3(0, h - 0.11, 0); g.add_child(head)
-	var skin := StandardMaterial3D.new(); skin.albedo_color = Color(0.55, 0.42, 0.34); skin.roughness = 0.8
-	var face_ := MeshInstance3D.new(); var fm := SphereMesh.new(); fm.radius = 0.085; fm.height = 0.15; face_.mesh = fm
-	face_.material_override = skin; face_.position = Vector3(0, h - 0.11, -0.065); g.add_child(face_)   # the front of the head: the face
+	var head := Node3D.new(); head.position = Vector3(0, h - 0.13, 0); g.add_child(head); g.set_meta("head", head); g.set_meta("home", at)
+	var skull := MeshInstance3D.new(); var hm := SphereMesh.new(); hm.radius = 0.12; hm.height = 0.27; skull.mesh = hm
+	skull.material_override = cloth; skull.position = Vector3(0, 0.02, 0.015); head.add_child(skull)
+	var skin := StandardMaterial3D.new(); skin.albedo_color = Color(0.78, 0.6, 0.48); skin.roughness = 0.75
+	var face_ := MeshInstance3D.new(); var fm := SphereMesh.new(); fm.radius = 0.1; fm.height = 0.22; face_.mesh = fm
+	face_.material_override = skin; face_.position = Vector3(0, -0.015, -0.04); head.add_child(face_)   # the front of the head: the face
+	var nose := MeshInstance3D.new(); var nm := SphereMesh.new(); nm.radius = 0.018; nm.height = 0.05; nose.mesh = nm
+	nose.material_override = skin; nose.position = Vector3(0, -0.02, -0.14); head.add_child(nose)
 	g.set_meta("idle", face)
 	return g
 

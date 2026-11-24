@@ -31,7 +31,7 @@ if (n) {
   $('b').hidden = false;
   $('b').onclick = () => {
     const done = () => { $('ok').hidden = false };
-    const byHand = () => { const t = $('t'); t.hidden = false; t.value = text; t.focus(); t.select(); $('m').textContent = document.execCommand('copy') ? '' : 'Press and hold the text, Select all, Copy.'; done() };
+    const byHand = () => { const t = $('t'); t.hidden = false; t.value = text; t.focus(); t.select(); if (document.execCommand('copy')) done(); else $('m').textContent = 'Press and hold the text above, Select all, Copy. Then go back to the app: Settings, 2. Bring them in.' };
     navigator.clipboard ? navigator.clipboard.writeText(text).then(done, byHand) : byHand();
   };
 } else {

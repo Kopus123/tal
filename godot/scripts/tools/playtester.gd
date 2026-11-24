@@ -417,7 +417,8 @@ func _expected() -> void:
 				need.append_array(["Clear", "Say it", "Never mind"])
 			"type":
 				if not g.typed_close.is_empty(): need = ["Continue"]
-				else: need = ["ㅂ", "ㅁ", "ㅋ", "ㅡ", "⇧", "⌫", "space", "Hint", "Say it", "✕"]
+				elif Settings.get_("typing") == 0: need = [g.plain(b.ans[0][0]), "Never mind"]
+				else: need = ["ㅂ", "ㅁ", "ㅋ", "ㅡ", "⇧", "⌫", "space", "Skip", "Hint", "Say it", "✕"]
 			"present":
 				for e in g.owned(): need.append(g.plain(e.label))
 				need.append("Never mind")
@@ -676,6 +677,17 @@ func _try_all() -> void:
 				if main.kb == null or main.kb.shown.text != "가": bug("missing", "what you were typing is lost after looking in the notebook")
 				await press(main.bar_btns.board); await inspect()
 				if main.board_view: await press_text("Close the board", main))
+			await _branch(here + ">skip", func():
+				var was: String = g.S.node
+				await press_text("Skip", main.kb, true); await _frames(4)
+				if g.S.node == was: bug("dead", "Skip on the keyboard does nothing"))
+			await _branch(here + ">notyping", func():
+				var was: String = g.S.node
+				Settings.get_("typing"); Settings.v.typing = 0; main._refresh(); await settle(); await inspect()
+				if main.kb: bug("missing", "the keyboard still opens with typing off")
+				await press_text(g.plain(b.ans[0][0]), main.paper); await _frames(4)
+				if g.S.node == was: bug("dead", "the line button does nothing with typing off")
+				Settings.v.typing = 1; main._refresh(); await settle())
 			await _branch(here + ">leave", func(): await press_text("✕", main.kb, true))
 		"number":
 			await _branch(here + ">wrong", func(): await _enter_number("7", b))

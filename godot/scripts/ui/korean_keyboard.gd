@@ -5,6 +5,7 @@ extends PanelContainer
 
 signal submitted(text: String)
 signal closed
+signal skipped
 
 const ROWS := [["ㅂ", "ㅈ", "ㄷ", "ㄱ", "ㅅ", "ㅛ", "ㅕ", "ㅑ", "ㅐ", "ㅔ"], ["ㅁ", "ㄴ", "ㅇ", "ㄹ", "ㅎ", "ㅗ", "ㅓ", "ㅏ", "ㅣ"], ["ㅋ", "ㅌ", "ㅊ", "ㅍ", "ㅠ", "ㅜ", "ㅡ"]]
 const SHIFTED := {"ㅂ": "ㅃ", "ㅈ": "ㅉ", "ㄷ": "ㄸ", "ㄱ": "ㄲ", "ㅅ": "ㅆ", "ㅐ": "ㅒ", "ㅔ": "ㅖ"}
@@ -28,7 +29,8 @@ func _ready() -> void:
 	var mid := VBoxContainer.new(); mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL; mid.add_theme_constant_override("separation", -6); top.add_child(mid)
 	shown = Kit.label("", 40, Kit.PAPER); mid.add_child(shown)
 	hint_l = Kit.label("", 22, Kit.MUTE); mid.add_child(hint_l)
-	top.add_child(_key("Hint", _hint, 1.3))
+	top.add_child(_key("Skip", func(): skipped.emit(), 1.2))
+	top.add_child(_key("Hint", _hint, 1.2))
 	top.add_child(_key("Say it", _say, 1.6, true))
 	for r in ROWS.size():
 		var row := HBoxContainer.new(); row.alignment = BoxContainer.ALIGNMENT_CENTER; row.add_theme_constant_override("separation", 6); col.add_child(row)

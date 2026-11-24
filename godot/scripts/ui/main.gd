@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.7.2"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.8.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -567,11 +567,16 @@ func _type_beat(b: Dictionary) -> void:
 		var df := _diff(Game.typed_close.yours, Game.typed_close.correct)
 		_text("[color=#8a7d66]Close enough! Watch the marked letters.[/color]\nYou wrote:  %s\nRight:  %s" % [df[0], df[1]], 24)
 		_act("Continue", func(): Game.close_go_on(), true); return
+	if Settings.get_("typing") == 0 and not b.ans.is_empty():   # no typing: what you'd say is a button
+		if kb: kb.queue_free(); kb = null
+		var say := _act("“%s”" % Game.plain(b.ans[0][0]), func(): pass, true); say.pressed.connect(func(): _speak(say, b.ans[0][0], Game.skip_type))
+		_leave_btn(); return
 	if kb == null:
 		kb = load("res://scripts/ui/korean_keyboard.gd").new(); add_child(kb)
 		kb.hint_text = Game.plain(b.ans[0][0]) if not b.ans.is_empty() else ""
 		kb.submitted.connect(func(t): _speak(null, t, func(): Game.answer_type(t)))
 		kb.closed.connect(func(): kb = null; Game.leave())
+		kb.skipped.connect(func(): _speak(null, b.ans[0][0], Game.skip_type))
 
 
 func _cards(items: Array, pick: Callable, picked: Array = []) -> void:
@@ -725,7 +730,7 @@ func _settings() -> void:
 func _fill_settings(inner: VBoxContainer) -> void:
 	var rows := [["auto", "Read lines aloud by themselves", [[1, "On"], [0, "Off"]]], ["voices", "Voices", [[1, "On"], [0, "Off"]]],
 		["slow", "Voice speed", [[0, "Normal"], [1, "Slow"]]], ["size", "Korean text size", [[0, "Small"], [1, "Medium"], [2, "Large"]]],
-		["glow", "Things glow when named", [[1, "On"], [0, "Off"]]], ["fade", "Hints fade as you learn words", [[1, "On"], [0, "Off"]]], ["sound", "Sound effects", [[1, "On"], [0, "Off"]]], ["music", "Music", [[2, "On"], [1, "Low"], [0, "Off"]]],
+		["glow", "Things glow when named", [[1, "On"], [0, "Off"]]], ["typing", "When you have to type", [[1, "Type it"], [0, "Say it for me"]]], ["fade", "Hints fade as you learn words", [[1, "On"], [0, "Off"]]], ["sound", "Sound effects", [[1, "On"], [0, "Off"]]], ["music", "Music", [[2, "On"], [1, "Low"], [0, "Off"]]],
 		["amb", "Background sounds", [[2, "On"], [1, "Low"], [0, "Off"]]]]
 	for r in rows:
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); inner.add_child(row)

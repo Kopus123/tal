@@ -540,6 +540,16 @@ func answer_type(val: String) -> String:
 	go(b.get("miss", "")); return "miss"
 
 
+## you'd rather not type it: it's said for you (and doesn't count as you knowing the words)
+func skip_type() -> void:
+	var b := beat()
+	if b.get("type", "") != "type" or b.ans.is_empty(): return
+	var a: Array = b.ans[0]
+	note("  skipped typing: " + plain(a[0]))
+	if _tnorm(a[0]).contains("안녕"): S.F["said_hi_" + S.loc] = W.day
+	reveal_heard(); _log("you", a[0]); go(a[1])
+
+
 func close_go_on() -> void:
 	var t: String = typed_close.target; typed_close = {}; go(t)
 

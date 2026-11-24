@@ -4,7 +4,7 @@ extends RefCounted
 ## so starting over doesn't reset them.
 
 const PATH := "user://settings.json"
-const DEFAULTS := {"auto": 1, "slow": 0, "size": 1, "sound": 1, "music": 2, "amb": 2, "voices": 1, "glow": 1, "fade": 1}
+const DEFAULTS := {"auto": 1, "slow": 0, "size": 1, "sound": 1, "music": 2, "amb": 2, "voices": 1, "glow": 1, "fade": 1, "typing": 1}
 static var v: Dictionary = {}
 
 

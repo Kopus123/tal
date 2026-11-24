@@ -22,7 +22,7 @@ func _init(game: Node) -> void:
 func run(name: String) -> bool:
 	## returns true when the route played through (or reached stop_at)
 	route = name; failed = false; skipped = 0
-	var text := FileAccess.get_file_as_string("res://tests/routes/%s.route" % name)
+	var text := FileAccess.get_file_as_string(route_file(name))
 	var n := 0; line_no = 0
 	for raw in text.split("\n"):
 		line_no += 1
@@ -42,6 +42,11 @@ func run(name: String) -> bool:
 		if after_step.is_valid(): await after_step.call(cmd, arg)
 	if not failed: print("ok   %s: %d steps%s" % [name, n, ("  (%d skipped: notebook details)" % skipped) if skipped else ""])
 	return not failed
+
+
+## another story (--story DIR) brings its own routes
+func route_file(name: String) -> String:
+	return ("res://tests/routes/%s.route" if g.story_dir == "res://story/" else g.story_dir + "%s.route") % name
 
 
 func fail(msg: String) -> void:

@@ -16,8 +16,6 @@ const SPOT_R := 0.075            ## how close (fraction of the picture's width) 
 const LEAN_ZOOM := 1.6
 const STEP_BACK := 0.28          ## leaning in: a tap further than this (fraction of the width) from the middle steps back
 const DRAG_PX := 24.0
-## moonlight through the shed window, per drawing: where (fraction of the picture), how strong, how far
-const MOON := {"shed": [Vector2(0.81, 0.25), 0.55, 1.1], "shed_window": [Vector2(0.3, 0.3), 0.5, 2.2]}
 ## the light outside at each time of day (indoors it changes less)
 const SKY := {"morning": Color(1.0, 0.97, 0.92), "afternoon": Color.WHITE, "evening": Color(1.0, 0.8, 0.66), "night": Color(0.42, 0.48, 0.72)}
 
@@ -211,7 +209,7 @@ func refresh() -> void:
 	if not exam and Game.ST.get("free", false) and ResourceLoader.exists("res://art/%s_live.png" % key): key += "_live"
 	if key != _art_key:
 		_art_key = key
-		var tex := load("res://art/%s.png" % key) as Texture2D
+		var tex: Texture2D = load("res://art/%s.png" % key) if ResourceLoader.exists("res://art/%s.png" % key) else null
 		art.texture = tex
 		if tex: art.scale = Vector2(ART_W / tex.get_width(), ART_H / tex.get_height())
 		modulate.a = 0.0; create_tween().tween_property(self, "modulate:a", 1.0, 0.35)
@@ -227,8 +225,8 @@ func refresh() -> void:
 		var sky: Color = SKY[Game.slot_name()] if Game.S.F.has("started") else Color.WHITE
 		night.color = sky.lerp(Color.WHITE, 0.55) if pl.get("light", "") == "indoors" else sky
 	torch.enabled = dark > 0 and bool(Game.F.get("lit", 0)) and not exam
-	if MOON.has(key) and dark > 0:
-		moon.enabled = true; moon.position = MOON[key][0] * Vector2(ART_W, ART_H); moon.energy = MOON[key][1]; moon.texture_scale = MOON[key][2]
+	if pl.has("moon") and dark > 0 and not exam:
+		moon.enabled = true; moon.position = Vector2(pl.moon[0], pl.moon[1]) / 100.0 * Vector2(ART_W, ART_H); moon.energy = pl.moon[2]; moon.texture_scale = pl.moon[3]
 	else: moon.enabled = false
 	# the camera: yours to raise when you're standing somewhere (not mid-conversation, not at the board)
 	var can_shoot: bool = not Game.ST.is_empty() and Game.node == "" and not exam and pl.get("mode", "") != "board"

@@ -1,0 +1,21 @@
+chapter tide
+choose Wave
+idle
+spot Rope
+idle
+spot Lighthouse
+type 안녕하세요
+idle
+map dock
+#@ Back at the dock
+map lamp
+spot 봄
+present rope
+idle
+solve q1 배 ; s_bom
+spot Lamp
+idle
+done tide
+spot Boat
+idle
+done dawn

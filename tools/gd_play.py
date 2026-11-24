@@ -22,7 +22,8 @@ shutil.rmtree(out, ignore_errors=True); out.mkdir(parents=True, exist_ok=True)
 cache = ROOT / "godot" / ".godot" / "global_script_class_cache.cfg"
 if not cache.exists() or "Swipe" not in cache.read_text(encoding="utf-8"):
     subprocess.run([GODOT, "--headless", "--path", str(ROOT / "godot"), "--import"], capture_output=True, timeout=600)
-marks = [l[2:].strip() for l in (ROOT / "godot/tests/routes" / (route + ".route")).read_text(encoding="utf-8").splitlines() if l.startswith("#@")]
+swap = ROOT / "godot/tests" / route / "world.story"   # a whole other story, with its own route
+marks = [l[2:].strip() for l in (ROOT / "godot/tests" / (route if swap.exists() else "routes") / (route + ".route")).read_text(encoding="utf-8").splitlines() if l.startswith("#@")]
 parts = [(a, b) for a, b in zip([""] + marks, marks + [""])]
 if frm: parts = parts[[p[0] for p in parts].index(frm):]
 if to: parts = parts[:[p[1] for p in parts].index(to) + 1]
@@ -40,7 +41,7 @@ while queue or running:
         args = [GODOT, "--path", str(ROOT / "godot"), "--resolution", "1544x720", "--audio-driver", "Dummy", "--disable-vsync"]
         if not show: args += ["--position", "-6000,-6000"]
         f = open(d / "log.txt", "wb")
-        running.append({"p": subprocess.Popen(args + ["--", "--play", d.as_posix(), route, b or "-", a] + (["--show"] if show else []) + (["--large"] if parts.index((a, b)) % 2 else []), stdout=f, stderr=subprocess.STDOUT), "d": d, "f": f, "size": 0, "since": time.time(), "start": time.time(), "part": (a, b), "why": ""})
+        running.append({"p": subprocess.Popen(args + ["--", "--play", d.as_posix(), route, b or "-", a] + (["--show"] if show else []) + (["--large"] if parts.index((a, b)) % 2 else []) + (["--story", "res://tests/" + route] if swap.exists() else []), stdout=f, stderr=subprocess.STDOUT), "d": d, "f": f, "size": 0, "since": time.time(), "start": time.time(), "part": (a, b), "why": ""})
     time.sleep(0.1)
     for r in running[:]:
         n = (r["d"] / "log.txt").stat().st_size

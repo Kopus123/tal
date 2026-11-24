@@ -51,17 +51,20 @@ var _leaning := false
 var _t0 := 0
 
 
+var story_dir := "res://story/"   ## --story DIR plays another story with the same game
 func _ready() -> void:
+	var args := OS.get_cmdline_user_args()
+	if "--story" in args: story_dir = args[args.find("--story") + 1].trim_suffix("/") + "/"
 	changed.connect(func(): call_deferred("_case_tick"))   # keep the board up to date with the story
-	world_st = Story.parse(_read("res://story/world.story"), "world.story"); world = world_st
+	world_st = Story.parse(_read(story_dir + "world.story"), "world.story"); world = world_st
 	for c in world_st.chapters:
 		if c.file == "": continue
 		var st := {}
 		for f in c.file.split("+"):
-			st = Story.parse(_read("res://story/" + f.strip_edges()), f.strip_edges(), st)
+			st = Story.parse(_read(story_dir + f.strip_edges()), f.strip_edges(), st)
 		CH[c.id] = st
 	for pf in world_st.people_files:
-		var d := Story.parse(_read("res://story/people/" + pf.file), pf.file)
+		var d := Story.parse(_read(story_dir + "people/" + pf.file), pf.file)
 		PEOPLE.merge(d.people); PNODES.merge(d.nodes)
 	for p in PEOPLE.values():
 		for x in p.chat + p.story + p.ask: PSTART[x.scene] = true
@@ -95,7 +98,10 @@ func _fresh() -> Dictionary:
 
 ## ---------- the play log: everything you do, with the time, to read after a playtest.
 ##   adb shell run-as com.kopus123.tal cat files/playlog.txt
+var trace: Array = []        ## the last things you did (the bug button keeps them)
 func note(what: String) -> void:
+	trace.append(what.strip_edges())
+	if trace.size() > 25: trace.pop_front()
 	if testing: return
 	var s := (Time.get_ticks_msec() - _t0) / 1000
 	var f := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE if FileAccess.file_exists(LOG_PATH) else FileAccess.WRITE)
@@ -177,6 +183,9 @@ func start_chapter(id: String, restart := true) -> void:
 func start(file: String) -> void:
 	for c in world_st.chapters:
 		if c.file == file: start_chapter(c.id, true); return
+
+
+func first_chapter() -> String: return world_st.chapters[0].id
 
 
 func next_chapter() -> Dictionary:
@@ -622,9 +631,8 @@ func hint() -> String:
 ## ---------- pockets: evidence you carry (notes and papers stay on the case board)
 func pockets() -> Array:
 	var out := []
-	for id in ST.evidence:
-		var e: Dictionary = ST.evidence[id]
-		if S.F.has("ev_" + id) and e.icon not in ["letter", "photo", "phone", "card", "ticket", "man", "fake", "eyebrow", "paint", "wood", "boots", "bag"]: out.append(e)
+	for id in ST.meta.get("pockets", "").split(",", false):
+		if S.F.has("ev_" + id.strip_edges()) and ST.evidence.has(id.strip_edges()): out.append(ST.evidence[id.strip_edges()])
 	return out
 
 

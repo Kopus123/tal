@@ -30,7 +30,7 @@ func go(m: Control, dir_: String) -> void:
 	ThemeDB.fallback_font.fallbacks = fb
 	_overlay()
 	await _frames(6)
-	main.leave_title(); g.S = g._fresh(); g.start_chapter("prologue", true); await settle()
+	main.leave_title(); g.S = g._fresh(); g.start_chapter(g.first_chapter(), true); await settle()
 	_start = Time.get_ticks_msec()
 	_write("ready.txt", _describe())
 	while true:

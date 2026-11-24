@@ -19,6 +19,7 @@
 # ===================================================================
 
 === meta
+pockets flashlight, sh_driver, sh_key, sh_oil, sh_hammer
 lang ko
 start sh_open
 start-place shed
@@ -52,6 +53,7 @@ sound wind
 name 창고
 sub The shed
 art shed
+moon 81 25 0.55 1.1
 travel no
 desc if free: The door is off its hinges. Cold air is coming in.
 desc Dark. A little moonlight comes in through one dirty window. It smells of rust and old paint.
@@ -96,6 +98,7 @@ sound wind
 name 창문
 sub The window
 art shed_window
+moon 30 30 0.5 2.2
 travel no
 desc A small window in a heavy wooden frame. Outside: weeds, a broken fence, nobody.
 spot "Latch" 50 51 -> sh_latch_oil if hold:sh_oil&!latchOiled

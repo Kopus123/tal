@@ -22,7 +22,7 @@ static func open(main: Control) -> void:
 	o.add_child(body)
 	var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 0); body.add_child(col)
 	var status := HBoxContainer.new(); col.add_child(status)
-	var tl := Kit.label("08:47", 15, SOFT); tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; status.add_child(tl)
+	var tl := Kit.label(Game.ST.meta.get("phone-clock", {"morning": "08:47", "afternoon": "14:20", "evening": "18:35", "night": "22:10"}[Game.slot_name()]), 15, SOFT); tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; status.add_child(tl)
 	status.add_child(Kit.label("▂▄▆  42%", 15, SOFT))
 	var top := HBoxContainer.new(); top.add_theme_constant_override("separation", 8); col.add_child(top)
 	var screen := PanelContainer.new(); screen.size_flags_vertical = Control.SIZE_EXPAND_FILL

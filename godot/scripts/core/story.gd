@@ -10,7 +10,7 @@ extends RefCounted
 
 static func empty() -> Dictionary:
 	return {"meta": {}, "cast": {}, "words": {}, "meanings": {}, "names": {}, "grammar": {}, "tells": {}, "places": {}, "nodes": {},
-		"evidence": {}, "statements": {}, "examines": {}, "phones": [], "cases": [], "hints": [], "chapters": [], "map": [],
+		"evidence": {}, "statements": {}, "examines": {}, "phones": [], "cases": [], "hints": [], "chapters": [], "map": [], "map_paths": [],
 		"calendar": [], "people": {}, "people_files": [], "events": [], "encounters": [], "jobs": {}, "cards": {}, "unlocks": [], "questions": {}, "endings": [], "patterns": [], "warnings": []}
 
 
@@ -91,6 +91,8 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 			"map":
 				m = R("^pin\\s+(\\S+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+(above|left|right|below))?").search(line)
 				if m: st.map.append({"p": m.get_string(1), "x": float(m.get_string(2)), "y": float(m.get_string(3)), "side": m.get_string(4) if m.get_string(4) != "" else "above"})
+				m = R("^path\\s+(\\S+)\\s+(\\S+)(?:\\s+(bus))?$").search(line)
+				if m: st.map_paths.append([m.get_string(1), m.get_string(2), m.get_string(3)])
 			"people":
 				var p := _bar(line)
 				if p.size() >= 2: st.people_files.append({"id": p[0], "file": p[1]})
@@ -215,6 +217,8 @@ static func parse(src: String, file := "story", st: Dictionary = {}) -> Dictiona
 			"place":
 				m = R("^(name|sub|art|first|always|ambient|travel|music|sound|light|mode|dark|back|scene|overhear)\\s+(.+)$").search(line)
 				if m: cur[m.get_string(1)] = m.get_string(2); continue
+				m = R("^moon\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)$").search(line)
+				if m: cur["moon"] = [float(m.get_string(1)), float(m.get_string(2)), float(m.get_string(3)), float(m.get_string(4))]; continue
 				m = R("^desc\\s+(?:if\\s+(\\S+):\\s*)?(.+)$").search(line)
 				if m: cur.desc.append({"c": m.get_string(1), "t": m.get_string(2)}); continue
 				m = R("^closed\\s+(\\S+)\\s*\\|\\s*(.+)$").search(line)

@@ -5,6 +5,7 @@
 # ===================================================================
 
 === meta
+pockets flashlight
 lang ko
 start so_open
 start-place so_alley

@@ -27,7 +27,7 @@
 #    === job ID             title 한국어 | English / level easy|medium / client WHO / pay N / thanks N / note TEXT
 #                           / start SCENE / ask WHO SCENE / [when COND]   (notice-board jobs: js/core/jobs.js;
 #                           in scenes: ! job done / ! job fail; conditions job:ID, jobdone:ID; ids start with ID_)
-#    === map                pin PLACE X% Y% [above|left|right|below]
+#    === map                pin PLACE X% Y%     path PLACE PLACE [bus]
 #    === cast               key | name | color | voice rate pitch | look
 #    === words              word = picture [+past] [+future] [+not]      (pictures: js/icons.js)
 #                           piece = (grammar)                            (explained under === grammar)
@@ -149,19 +149,29 @@ staff    | staff.people
 ajumma   | ajumma.people
 
 === map
-# pin PLACE X% Y% [above|left|right|below]  (places show on the map once you've been there;
-#   the last word says where the name goes, for pins that sit close together. Default: above)
-pin madang 40 50 left
-pin gongbang 50 44 right
-pin golmok 34 60 left
-pin sanqil 16 27
-pin sikdang 51 70 left
-pin jeong 61 74 below
-pin museum 86 30
-pin gang 79 55
-pin jeol 9 14 below
-pin sijang 84 79
-pin hall 22 46
+# pin PLACE X% Y% of the drawn map (its little drawing is godot/map/PLACE.svg, made by tools/make_map.py)
+# path PLACE PLACE [bus]      drawn once both are on your map
+pin madang    37.3 34.9
+pin gongbang  50.2 24.2
+pin golmok    32.8 60.6
+pin hall      25.0 22.4
+pin sanqil    16.3 40.0
+pin jeol      8.7 15.4
+pin sikdang   46.0 73.8
+pin jeong     58.5 84.8
+pin gang      68.8 47.3
+pin museum    88.3 19.8
+pin sijang    84.2 82.9
+path madang gongbang
+path madang golmok
+path golmok hall
+path golmok sanqil
+path sanqil jeol
+path golmok sikdang
+path sikdang jeong
+path jeong gang
+path jeong sijang bus
+path sijang museum bus
 
 === cast
 # key      | name          | color    | voice  rate  pitch | look (see js/people.js)

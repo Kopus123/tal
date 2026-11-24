@@ -74,7 +74,7 @@ func play(m: Control, out_dir: String, name: String, stop := "", from := "") -> 
 	main.room.vp.size = Vector2i(640, 480); main.room.vp.size_2d_override = Vector2i(1600, 1200); main.room.vp.size_2d_override_stretch = true   # the same picture, cheaper to draw
 	await _frames(4)
 	var first := ""
-	for l in FileAccess.get_file_as_string("res://tests/routes/%s.route" % name).split("\n"):
+	for l in FileAccess.get_file_as_string(route_file(name)).split("\n"):
 		if l.begins_with("chapter "): first = l.substr(8).strip_edges(); break
 	if stop == "-": stop = ""
 	_part("")
@@ -189,7 +189,7 @@ func _gone(n: Node) -> bool:
 
 func walk(n: Node, out: Array, f: Callable) -> void:
 	for k in n.get_children():
-		if k is SubViewport or k.is_queued_for_deletion(): continue
+		if k is SubViewport or k is CanvasLayer or k.is_queued_for_deletion(): continue
 		if k is CanvasItem and not k.visible: continue
 		if f.call(k): out.append(k)
 		walk(k, out, f)
@@ -455,6 +455,7 @@ func _reach() -> Dictionary:
 			if pl.has(key) and not g.S.visited.has(pl.get("id", "")): ends = _follow(pl[key], nodes, go) or ends
 		for p in go:
 			if g.ST.places.has(p) and not places.has(p) and not g.is_closed(p): places[p] = 1; todo.append(p)
+	for id in g.job_on().get("ask", {}).values(): _follow(id, nodes, [])   # what you can ask people about the job you're on
 	return {"places": places, "nodes": nodes, "ends": ends}
 
 
@@ -849,7 +850,7 @@ func _tap_spot(s: Dictionary) -> void:
 ## ---------- the steps of a route, by finger
 func play_route(name: String, stop := "") -> bool:
 	route = name; failed = false; line_no = 0
-	for raw in FileAccess.get_file_as_string("res://tests/routes/%s.route" % name).split("\n"):
+	for raw in FileAccess.get_file_as_string(route_file(name)).split("\n"):
 		line_no += 1
 		if line_no < _from_line: continue
 		var line := raw.strip_edges()
@@ -1215,10 +1216,10 @@ func _title_screen(first: String) -> void:
 	await inspect()
 	if find_btn("Chapters", top()):
 		await press_text("Chapters", top()); await inspect(); snap_screen("chapters")
-		if first != "prologue":
+		if first != g.first_chapter():
 			await close_top(); main.leave_title(); g.S = g._fresh(); g.start_chapter(first, true); await settle(); return
 		await close_top(); await settle()
-		if g.S.ch == "": bug("stuck", "closing Chapters on the title screen leaves an empty game", null)
+		if g.S.ch == "" and not is_instance_valid(main._title_o): bug("stuck", "closing Chapters on the title screen leaves an empty game", null)
 		if find_btn("New game", top()) == null and find_btn("Start", top()) == null: main._title(); await settle()
 	var b := find_btn("New game", top())
 	if b == null: b = find_btn("Start", top(), true)
@@ -1280,6 +1281,7 @@ func _pages(label: String) -> void:
 	await _timed("notebook", _notebook if _full() else _notebook_quick)
 	if not main.bar_btns.board.disabled: await _timed("board", _board)
 	await _timed("menu", _menu)
+	await _bug_button()
 	_depth -= 1
 	await _back_to(k); _step = was_step
 
@@ -1436,6 +1438,30 @@ func _camera() -> void:
 	if not _seen.has("camshot"): _seen["camshot"] = 1; snap_screen("camera")
 	await press(main.room.cam_x)
 	if main.room.cam_mode: bug("dead", "✕ doesn't lower the camera")
+
+
+## the bug button: one tap keeps a report with a picture, wherever you are; it never covers a button of the game
+func _bug_button() -> void:
+	var bb: CanvasLayer = main.bugs
+	for x in buttons(main):
+		if x.is_visible_in_tree() and rect_of(x).intersects(rect_of(bb.btn)): bug("covered", "the bug button covers \"%s\"" % text_of(x), x)
+	if _tried.has("bugbtn"): return
+	_tried["bugbtn"] = 1
+	var d: String = bb.get_script().folder
+	bb.get_script().folder = "user://bugs_test_%d" % OS.get_process_id()
+	await tap_at(rect_of(bb.btn).get_center())
+	var f: String = bb.get_script().folder + "/bug_001"
+	var j = JSON.parse_string(FileAccess.get_file_as_string(f + ".json"))
+	if not (j is Dictionary) or j.get("place", "") != g.S.loc: bug("dead", "the bug button didn't keep a report")
+	await settle()
+	var b: BaseButton = find_btn("Confusing", bb.strip) if is_instance_valid(bb.strip) else null
+	if b == null: bug("missing", "the bug button doesn't ask what kind it was")
+	else:
+		await tap_at(rect_of(b).get_center())
+		j = JSON.parse_string(FileAccess.get_file_as_string(f + ".json"))
+		if not (j is Dictionary) or j.get("kind", "") != "Confusing": bug("dead", "saying what kind of bug it was isn't kept")
+	for x in [".json", ".jpg"]: DirAccess.remove_absolute(f + x)
+	DirAccess.remove_absolute(bb.get_script().folder); bb.get_script().folder = d
 
 
 func _menu() -> void:

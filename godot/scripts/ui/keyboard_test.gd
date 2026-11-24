@@ -4,7 +4,6 @@ extends ColorRect
 
 const ROWS := [["ㅂ", "ㅈ", "ㄷ", "ㄱ", "ㅅ", "ㅛ", "ㅕ", "ㅑ", "ㅐ", "ㅔ"], ["ㅁ", "ㄴ", "ㅇ", "ㄹ", "ㅎ", "ㅗ", "ㅓ", "ㅏ", "ㅣ"], ["ㅋ", "ㅌ", "ㅊ", "ㅍ", "ㅠ", "ㅜ", "ㅡ"]]
 const SHIFTED := {"ㅂ": "ㅃ", "ㅈ": "ㅉ", "ㄷ": "ㄸ", "ㄱ": "ㄲ", "ㅅ": "ㅆ", "ㅐ": "ㅒ", "ㅔ": "ㅖ"}
-const WORDS := ["기름", "망치", "먼저", "탈", "할머니", "열쇠", "사진"]
 
 var main: Control
 var h := Hangul.new()
@@ -84,5 +83,6 @@ func _check() -> void:
 
 
 func _next_word() -> void:
-	target = WORDS[round_i % WORDS.size()]; h.clear(); shown.text = ""
+	var pool: Array = Game.world.words.keys().filter(func(w): return w.length() <= 3 and not w.contains(" ") and Game.world.words[w].get("p", "") != "" and Kit.icon(w) != null)
+	pool.sort(); target = pool[(round_i * 37 + 5) % pool.size()]; h.clear(); shown.text = ""
 	pic.texture = Kit.icon(target)

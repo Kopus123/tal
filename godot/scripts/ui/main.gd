@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.6.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.7.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -24,6 +24,7 @@ var card: Control
 var tour: RefCounted
 var kb: Control                      ## the Korean keyboard while a typed answer is open
 var kb_gap: Control
+var bugs: CanvasLayer               ## the bug button, over everything
 var scroller: Swipe
 var _shown_loc := ""
 var _shown_ch := ""
@@ -161,6 +162,7 @@ func _build() -> void:
 	foot = HBoxContainer.new(); foot.add_theme_constant_override("separation", 8); col.add_child(foot)
 	kb_gap = Control.new(); kb_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE; kb_gap.visible = false; col.add_child(kb_gap)   # the keyboard covers the bottom: the paper ends above it
 	var bl := Kit.label("build %s" % BUILD, 12, Color(1, 1, 1, 0.25)); bl.anchor_top = 1; bl.anchor_bottom = 1; bl.offset_top = -18; bl.offset_left = 16; add_child(bl)
+	bugs = load("res://scripts/ui/bug_button.gd").new(); bugs.main = self; add_child(bugs)
 	toast_box = VBoxContainer.new(); toast_box.anchor_left = 0.345; toast_box.anchor_right = 0.345; toast_box.offset_top = 20; toast_box.alignment = BoxContainer.ALIGNMENT_BEGIN; toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_box.grow_horizontal = Control.GROW_DIRECTION_BOTH; add_child(toast_box)
 
@@ -773,9 +775,9 @@ func _title() -> void:
 	var go_on := func(f: Callable): o.queue_free(); f.call()
 	if Game.has_save():
 		var b := Kit.button("Continue", false); b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		b.pressed.connect(func(): go_on.call(func(): if not Game.load_save(): Game.start_chapter("prologue", true))); v.add_child(b)
+		b.pressed.connect(func(): go_on.call(func(): if not Game.load_save(): Game.start_chapter(Game.first_chapter(), true))); v.add_child(b)
 	var n := Kit.button("New game" if Game.has_save() else "Start", not Game.has_save()); n.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var begin := func(): go_on.call(func(): Game.S = Game._fresh(); Game.start_chapter("prologue", true))
+	var begin := func(): go_on.call(func(): Game.S = Game._fresh(); Game.start_chapter(Game.first_chapter(), true))
 	if Game.has_save(): Kit.sure(n, "Erase your game and start again? Tap again.", begin)
 	else: n.pressed.connect(begin)
 	v.add_child(n)

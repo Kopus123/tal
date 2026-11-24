@@ -239,7 +239,9 @@ func refresh() -> void:
 		if climb_btn: climb_btn.visible = not cam_mode and (set3.up or set3.can_climb())
 		if cam_mode: stick.moved.emit(Vector2.ZERO)
 	back_btn.visible = pl.has("back") and Game.node == "" and not cam_mode
-	marks.visible = not cam_mode and not Game._leaning; figs.visible = not Game._leaning
+	if not Game._leaning and not (_lean_tw and _lean_tw.is_running()) and cam.zoom != Vector2.ONE:   # never left zoomed in, whatever happened
+		cam.zoom = Vector2.ONE; cam.position = Vector2(ART_W, ART_H) / 2
+	marks.visible = not cam_mode and _whole(); figs.visible = _whole()
 	if cam_mode: set_process(true); veil.queue_redraw(); _place_cam_btns()
 	frame.visible = b.get("type", "") == "camera" or cam_mode
 	if frame.visible and not frame.has_meta("placed"):
@@ -511,17 +513,23 @@ func shoot(b: Dictionary) -> void:
 
 ## ---------- leaning in on a thing you're looking at
 var _lean_on := false
+var _lean_tw: Tween      ## only one at a time: a zoom-in still playing would win over the zoom-out after a quick tap
 func _on_lean(at: Vector2, on: bool) -> void:
 	_lean_on = on
-	at.y -= 9.0   # a little above the spot: people's faces stay in the picture
-	var t := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).set_parallel()
+	if _lean_tw and _lean_tw.is_valid(): _lean_tw.kill()
+	_lean_tw = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).set_parallel()
 	if on:
 		var half := Vector2(ART_W, ART_H) / LEAN_ZOOM / 2
 		var c := (at / 100.0 * Vector2(ART_W, ART_H)).clamp(half, Vector2(ART_W, ART_H) - half)
-		t.tween_property(cam, "zoom", Vector2.ONE * LEAN_ZOOM, 0.55); t.tween_property(cam, "position", c, 0.55)
+		_lean_tw.tween_property(cam, "zoom", Vector2.ONE * LEAN_ZOOM, 0.55); _lean_tw.tween_property(cam, "position", c, 0.55)
 	else:
-		t.tween_property(cam, "zoom", Vector2.ONE, 0.45); t.tween_property(cam, "position", Vector2(ART_W, ART_H) / 2, 0.45)
+		_lean_tw.tween_property(cam, "zoom", Vector2.ONE, 0.45); _lean_tw.tween_property(cam, "position", Vector2(ART_W, ART_H) / 2, 0.45)
+		_lean_tw.chain().tween_callback(func(): _lean_tw = null; refresh())   # the rings and people come back once the picture is whole again
 	marks.visible = not on; figs.visible = not on
+
+
+## the picture is whole (not leaning in, not on its way back out)
+func _whole() -> bool: return not _lean_on and not (_lean_tw and _lean_tw.is_running())
 
 
 ## ---------- small marks: a faint dot on things you've found, ripples where you tapped nothing

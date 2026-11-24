@@ -653,8 +653,20 @@ func tap_spot(s: Dictionary) -> void:
 		if m: enter(m.get_string(1))
 		elif s.t == "board": changed.emit()   # the notice board opens from the screen
 	else:
-		_leaning = true; _lean_loc = S.loc; lean.emit(Vector2(s.x, s.y), true)
+		_leaning = true; _lean_loc = S.loc; lean.emit(Vector2(s.x, s.y - (9.0 if _someone(s.t) else 0.0)), true)
 		go(s.t)
+
+
+## does someone you can see speak at the start of this scene?
+func _someone(sc: String) -> bool:
+	var id := target(sc)
+	for i in 4:
+		var nd: Dictionary = ST.nodes.get(id, {})
+		if nd.is_empty(): return false
+		if nd.has("ko") and ST.cast.get(nd.get("who", ""), {}).get("look", "") != "": return true
+		if nd.has("ch") or nd.has("type"): return false
+		id = target(nd.get("next", ""))
+	return false
 
 
 func _end_lean() -> void:

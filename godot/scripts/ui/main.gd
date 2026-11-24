@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.8.1"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.8.2"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -740,14 +740,6 @@ func _fill_settings(inner: VBoxContainer) -> void:
 			b.pressed.connect(func():
 				Settings.set_(r[0], opt[0]); voice.apply(); scape.update(Game.place()); Kit.refill(inner, _fill_settings.bind(inner)); _refresh())
 			row.add_child(b)
-	inner.add_child(Kit.label("YOUR NOTES FROM THE WEB VERSION", 14, Kit.MUTE))
-	var wo := Kit.button("1. Get them (opens your browser: tap Copy my notes)", false, 18); inner.add_child(wo)
-	wo.pressed.connect(func(): OS.shell_open("https://kopus123.github.io/tal/notes.html"))
-	var wb := Kit.button("2. Bring them in", false, 18); inner.add_child(wb)
-	wb.pressed.connect(func():
-		var got: int = Game.import_web(DisplayServer.clipboard_get())
-		_toast("Nothing copied yet. Do step 1 first, and tap Copy my notes." if got < 0 else ("Brought in %d notes." % got if got > 0 else "Nothing new to bring in."))
-		_refresh())
 	var t := Kit.button("▶  Test the voice", false, 18); t.pressed.connect(func(): voice.say("{안녕하세요}", "word")); inner.add_child(t)
 
 

@@ -263,7 +263,10 @@ func inspect() -> void:
 	if _seen.has(key): return
 	_seen[key] = 1; screens += 1
 	var t := Time.get_ticks_usec()
-	if sc == main: _expected()
+	if sc == main:
+		await main.get_tree().create_timer(0.8).timeout   # (a few hundredths of a second, at this speed) anything moving has settled
+		if g.S.node == "" and main.room.visible and main.room.cam.zoom != Vector2.ONE: bug("dead", "the picture is left zoomed in (%s)" % g.S.loc)
+		_expected()
 	_check_buttons(sc, bs)
 	_check_text(sc)
 	_ti += Time.get_ticks_usec() - t
@@ -820,6 +823,21 @@ func _real(s: float) -> void:
 	while Time.get_ticks_msec() - t < s * 1000: await _frames(1)
 
 
+## tapping through a short look faster than the zoom takes: it must not stay zoomed in
+func _test_quick_look() -> void:
+	if _tried.has("quick") or g.S.node != "" or g.spots_now().is_empty(): return
+	_tried["quick"] = 1
+	var k := _keep()
+	for gap in [0.05, 0.2, 0.35, 0.5]:
+		g._leaning = true; g._lean_loc = g.S.loc; g.lean.emit(Vector2(30, 60), true)
+		await main.get_tree().create_timer(gap).timeout
+		g._end_lean(); g.changed.emit()
+		await main.get_tree().create_timer(1.2).timeout; await _frames(3)
+		if main.room.cam.zoom != Vector2.ONE: bug("dead", "looking at something and tapping on after %.2f s leaves the picture zoomed in" % gap)
+		if not main.room.marks.visible: bug("missing", "the rings don't come back after a quick look")
+	await _back_to(k)
+
+
 func _test_double_tap() -> void:
 	var b := find_btn("Continue", main.paper)
 	if b == null or _tried.has("double"): return
@@ -1289,7 +1307,7 @@ func _pages(label: String) -> void:
 	await inspect()
 	# tapping nothing in the picture must not break anything
 	await tap_at(rect_of(main.room).position + rect_of(main.room).size * Vector2(0.5, 0.06))
-	if g.S.node == "": await _timed("camera", _camera)
+	if g.S.node == "": await _timed("camera", _camera); await _test_quick_look()
 	if main.clock_btn.is_visible_in_tree(): await press(main.clock_btn); await inspect(); snap_screen("day_panel"); await close_top()
 	if not main.bar_btns.map.disabled and not main.bar_btns.map.get_meta("dim"): await press(main.bar_btns.map); await inspect(); snap_screen("map"); await _map_page()
 	if not main.bar_btns.phone.disabled: await _timed("phone", _phone)

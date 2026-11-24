@@ -141,7 +141,9 @@ func _turn(g: Node3D, to_wall: bool, t := 0.8) -> void:
 
 signal wary(what: String)      ## "" / "look" (one's turning round) / "listen" (they heard you) / "light" (they'll see your light)
 const LOOK_GRACE := 3.4        ## from the moment one starts to turn round until you're seen, if you're still up there
-const FIRST_LOOK := 20.0       ## getting up there buys you at least this long: enough for the whole conversation
+const FIRST_LOOK := 10.0       ## the first time you get up there, at least this long before one looks round (most of the conversation, not all)
+const NEXT_LOOK := 2.0         ## every time after that: hopping down and up again doesn't buy you more
+var _been_up := false
 var _exposed := 0.0            ## how long you've been up there with someone watching the wall
 var _wary := ""
 
@@ -168,7 +170,7 @@ func _notice_tick(dt: float) -> void:
 		else:
 			_glancing -= dt
 			if _glancing <= 0.0:
-				_exposed = 0.0; _next = 1.2; _set_wary(""); _turn(_people[0], false); _glance_in = randf_range(16.0, 26.0)
+				_exposed = 0.0; _next = 1.2; _set_wary(""); _turn(_people[0], false); _glance_in = randf_range(8.0, 14.0)
 		return
 	_set_wary("light" if _lit_up > 0.2 else "")
 	_glance_in -= dt
@@ -177,7 +179,7 @@ func _notice_tick(dt: float) -> void:
 
 ## you're up: they're mid-conversation, and nobody looks round for a while
 func _got_up() -> void:
-	_glance_in = maxf(_glance_in, FIRST_LOOK); _next = minf(_next, 1.2)
+	_glance_in = maxf(_glance_in, NEXT_LOOK if _been_up else FIRST_LOOK); _been_up = true; _next = minf(_next, 1.2)
 
 ## running near them: footsteps they can hear. They go quiet and listen for a bit
 func _heard_you() -> void:
@@ -287,7 +289,7 @@ func reset() -> void:
 	_end_chase()
 	if not _spooked:
 		for g in _people: g.visible = true
-	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _lit_up = 0.0; _exposed = 0.0; _set_wary("")
+	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _been_up = false; _lit_up = 0.0; _exposed = 0.0; _set_wary("")
 	_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
 	cam.position = Vector3(0, EYE, 1.2); cam.rotation_degrees = _base_rot
 	for g in _people: _turn(g, false, 0.1)

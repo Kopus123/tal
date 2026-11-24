@@ -142,8 +142,8 @@ func _make(id: String) -> Control:
 				tp.position = Vector2(-8 if side < 0 else 154, -2 if side < 0 else -10); tp.rotation_degrees = -32 * side; c.add_child(tp)
 		"thing":
 			var bg := ColorRect.new(); bg.color = Color("2f2f31"); bg.position = Vector2(7, 7); bg.size = Vector2(130, 114); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.add_child(bg)
-			var pic: Texture2D = load("res://art/photo.png") if cd.icon == "photo" and ResourceLoader.exists("res://art/photo.png") else Kit.icon("#" + cd.icon)
-			_photo(c, pic, Rect2(17, 15, 110, 98), _mat_sepia() if cd.icon == "photo" else null)
+			var pic: Texture2D = _picture(cd)
+			_photo(c, pic, Rect2(17, 15, 110, 98), _mat_sepia() if cd.icon == "photo" and Kit.pic(cd.id) == null else null)
 			var tag := Label.new(); tag.text = "#%d" % _evidence_no(cd.id); tag.add_theme_font_size_override("font_size", 17); tag.add_theme_color_override("font_color", Color.BLACK)
 			tag.add_theme_stylebox_override("normal", Kit.box(2, Color("f4c20d"), Color.TRANSPARENT, 0, 3)); tag.position = Vector2(2, 100); tag.mouse_filter = Control.MOUSE_FILTER_IGNORE; c.add_child(tag)
 			_text(c, Game.plain(cd.label), Rect2(3, 122, 138, 52), 18, Color("2a2a2a"))
@@ -205,6 +205,7 @@ static func _picture(cd: Dictionary) -> Texture2D:
 		"heard": return Kit.face(cd.who)
 		"say", "person": return Kit.face(cd.who, cd.get("ex", "neutral"))
 		"thing":
+			if Kit.pic(cd.id): return Kit.pic(cd.id)
 			if cd.icon == "photo" and ResourceLoader.exists("res://art/photo.png"): return load("res://art/photo.png")
 			return Kit.icon("#" + cd.icon)
 		"place": return load("res://art/%s.png" % cd.art) if ResourceLoader.exists("res://art/%s.png" % cd.art) else null

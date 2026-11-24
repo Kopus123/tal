@@ -91,7 +91,7 @@ desc if clock: The courtyard. Quiet days, for now.
 desc The courtyard, the morning after. The mask lies on the wooden floor. 수진 sits next to it.
 spot "The mask" 58 70 -> c1_mask
 spot "Talk to 수진" 30 66 -> c1_sjhub
-spot "Back wall" 92 62 -> c1_wall
+spot "Clay jars" 88 80 -> c1_wall
 spot "Workshop" 82 46 => place gongbang
 spot "Front gate" 10 84 => place golmok
 glow 탈 58 70 7
@@ -104,12 +104,13 @@ music tense
 sound room
 name 공방
 sub 할머니's workshop
-art gongbang
+art gongbang2
 ambient dust
 desc The workshop. Something here has changed since yesterday.
 spot "Workbench" 50 80 -> c1_bench
 spot "Sketch on the wall" 14 38 -> c1_sketch
 spot "Empty hook" 50 40 -> c1_hook
+spot "Calendar" 89 31 -> c1_cal
 spot "Back to the courtyard" 12 90 => place madang
 glow 탈 50 40 30
 glow 나무 50 82 14
@@ -208,10 +209,10 @@ ambient dust
 travel no
 first c1_m1
 desc The market. Fish on ice, mountains of cabbage, and the stall full of paint pots and wood.
-spot "The paint stall" 66 56 -> c1_mbuy if !paid
-spot "The paint stall" 66 56 -> c1_mtalk if paid&!marketDone
-spot "The paint stall" 66 56 -> c1_mafter if marketDone
-spot "Fish stall" 18 60 -> c1_mfish
+spot "The paint stall" 66 44 -> c1_mbuy if !paid
+spot "The paint stall" 66 44 -> c1_mtalk if paid&!marketDone
+spot "The paint stall" 66 44 -> c1_mafter if marketDone
+spot "Fish stall" 17 44 -> c1_mfish
 spot "Take the bus back" 78 88 -> c1_mback
 glow 나무 72 50 9
 glow 물감 60 50 9
@@ -600,6 +601,10 @@ sign: {나무} · 30cm
 (She planned this. Down to the size of the block of wood.)
 ! give sketch
 
+=== scene c1_cal
+sign: {9시} {박물관}
+(Yesterday's square, circled twice. She was going to be there. The square for today is empty.)
+
 === scene c1_hook
 ~ The hook in the middle of the wall is still empty. The real mask never came back here.
 
@@ -613,10 +618,9 @@ yuna[worried]: {할머니}... {찾아요}?
 * {아니요}! -> c1_owrong
 
 === scene c1_owrong
-yuna[surprised]: {아니요}? 아... {네}...
-(She doesn't believe you for a second. You look like someone who hasn't slept, searching for someone.)
-~ You are obviously still looking. Be honest with her.
-<- c1_o1.3
+yuna[sad]: 아... {네}...
+(You shake your head: you haven't found her. She understands, and her face falls.)
+-> c1_o2
 
 === scene c1_o2
 minsu[worried]: {어제} {밤}{에}... {다리}{에} {남자}{가|이/가} {있었어요}.
@@ -900,7 +904,7 @@ ajumma[surprised]: {백} {원}? {아니요}, {아니요}! {천 원}!
 
 === scene c1_mpaid
 ! money -1000
-ajumma[happy]: {고마워요}, {고마워요}!
+ajumma[happy]: {감사합니다}!
 (She wraps your purchase in newspaper and hands it over. Then she leans on her counter. She has a minute now.)
 ! set paid
 -> c1_mtalk

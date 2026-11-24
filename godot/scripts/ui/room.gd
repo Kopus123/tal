@@ -119,7 +119,7 @@ func _ring(c: Color) -> StyleBoxFlat:   ## the shutter: a white disc in a dark r
 
 
 func _place_cam_btns() -> void:
-	cam_btn.position = Vector2(size.x - 94, size.y - 94)
+	cam_btn.position = Vector2(size.x - 94, 10)
 	shutter.position = Vector2(size.x - 124, (size.y - 104) / 2)
 	cam_x.position = Vector2(size.x - 94, 10)
 
@@ -510,7 +510,10 @@ func shoot(b: Dictionary) -> void:
 
 
 ## ---------- leaning in on a thing you're looking at
+var _lean_on := false
 func _on_lean(at: Vector2, on: bool) -> void:
+	_lean_on = on
+	at.y -= 9.0   # a little above the spot: people's faces stay in the picture
 	var t := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).set_parallel()
 	if on:
 		var half := Vector2(ART_W, ART_H) / LEAN_ZOOM / 2
@@ -528,6 +531,7 @@ func _ripple(p: Vector2) -> void:
 	tw.tween_callback(func(): _ripples.erase(r); marks.queue_redraw())
 
 
+var _label_box := Kit.box(9, Color(0.08, 0.1, 0.14, 0.72), Color.TRANSPARENT, 0, 0)
 func _draw_marks() -> void:
 	if Game.ST.is_empty(): return
 	if Game.beat().get("type", "") == "examine":
@@ -545,7 +549,7 @@ func _draw_marks() -> void:
 				if found: marks.draw_circle(c, 5, Color(1, 0.98, 0.92, 0.35))
 				continue
 			# a way out: always marked and named. Something to look at: a soft ring; its name once you've looked
-			var exit: bool = s.kind == "=>"
+			var exit: bool = s.kind == "=>" or (s.kind == "->" and Game._scene_exit(Game.target(s.t), 1) != "")   # "Take the bus back" is a way out as well
 			marks.draw_circle(c, 15, Color(1, 0.98, 0.92, 0.16))
 			marks.draw_arc(c, 15, 0, TAU, 40, Color(1, 0.98, 0.92, 0.85), 2.5)
 			if exit: marks.draw_arc(c, 6, 0, TAU, 16, Color(1, 0.98, 0.92, 0.85), 3)
@@ -553,7 +557,7 @@ func _draw_marks() -> void:
 				var label: String = s.l
 				var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 19).x
 				var at := Vector2(clampf(c.x - w / 2, 4, size.x - w - 4), c.y + 22)
-				marks.draw_rect(Rect2(at - Vector2(10, 18), Vector2(w + 20, 28)), Color(0.08, 0.1, 0.14, 0.82))
+				marks.draw_style_box(_label_box, Rect2(at - Vector2(10, 18), Vector2(w + 20, 28)))
 				marks.draw_string(font, at + Vector2(0, 2), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(0.95, 0.92, 0.86))
 	for r in _ripples:
 		marks.draw_arc(r.p, 10 + 26 * r.t, 0, TAU, 32, Color(1, 1, 1, 0.8 * (1 - r.t)), 2.5)

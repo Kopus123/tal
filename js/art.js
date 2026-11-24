@@ -144,7 +144,7 @@ function artMadang(eve){
   }
   return svg(s);
 }
-function artGongbang(){
+function artGongbang(after){
   let s=`<rect width="400" height="300" fill="url(#plank)"/>`;
   s+=`<rect x="0" y="0" width="400" height="14" fill="#3f7f6e"/><rect y="12" width="400" height="3" fill="#b5412d"/>`;
   const cols=['#e7d2a7','#f1ece0','#d9a07a','#e7d2a7','#c4865c','#efe2c0'];
@@ -152,7 +152,8 @@ function artGongbang(){
     s+=`<circle cx="${x}" cy="${y-24}" r="2" fill="#2a1d12"/>`;
     if(r===1&&c===2){s+=`<ellipse cx="${x}" cy="${y}" rx="15" ry="19" fill="#8a6545" stroke="#c9b48c" stroke-dasharray="3 3" stroke-width="1.2"/>`}
     else s+=mask(x,y,.95,{c:cols[k++%cols.length]});}
-  s+=`<rect x="28" y="88" width="40" height="50" fill="#f3ead7" transform="rotate(-4 48 113)"/><rect x="32" y="92" width="32" height="34" fill="#b9a585" transform="rotate(-4 48 113)"/>`;
+  s+=after?`<g transform="rotate(3 50 113)"><rect x="24" y="86" width="52" height="56" fill="#faf6ea" stroke="#cbbf9f" stroke-width=".8"/><ellipse cx="42" cy="112" rx="12" ry="15" fill="none" stroke="#55504a" stroke-width="1.1"/><path d="M34,106 q4,-4 7,0 M44,106 q4,-4 7,0 M36,118 q6,6 12,0 M42,97 v30 M30,112 h24" stroke="#55504a" stroke-width=".7" fill="none"/><path d="M64,98 q7,14 0,28 q-4,-14 0,-28" fill="none" stroke="#55504a" stroke-width="1"/><path d="M28,90 h10 M60,134 h12 M28,134 h8" stroke="#8a8378" stroke-width=".8"/><circle cx="50" cy="87" r="2.4" fill="#b5412d"/></g>`
+    :`<rect x="28" y="88" width="40" height="50" fill="#f3ead7" transform="rotate(-4 48 113)"/><rect x="32" y="92" width="32" height="34" fill="#b9a585" transform="rotate(-4 48 113)"/>`;
   s+=`<rect x="330" y="60" width="52" height="64" fill="#f6f0e0"/><rect x="330" y="60" width="52" height="12" fill="#b5412d"/>`;
   for(let i=0;i<4;i++)for(let j=0;j<4;j++)s+=`<rect x="${335+j*12}" y="${78+i*11}" width="8" height="7" fill="#d9cfb8"/>`;
   s+=`<circle cx="363" cy="92" r="7" fill="none" stroke="#b5412d" stroke-width="1.6"/>`;
@@ -510,7 +511,7 @@ const ART={
   ph_shed:()=>artPH('창고 · the shed',{window:1}), ph_door:()=>artPH('문 · the door'), ph_bench:()=>artPH('작업대 · the workbench'),
   ph_shelf:()=>artPH('선반 · the shelf'), ph_window:()=>artPH('창문 · the window',{window:1}), ph_floor:()=>artPH('구석 · the dark corner'),
   madang:()=>artMadang(false), madang_eve:()=>artMadang(true), madang_mask:artMadangMask, river:artRiver, temple:artTemple, market:artMarket,
-  gongbang:artGongbang, golmok:artGolmok, golmok_night:artGolmokNight, san:artSan, sikdang:artSikdang,
+  gongbang:()=>artGongbang(),gongbang2:()=>artGongbang(true), golmok:artGolmok, golmok_night:artGolmokNight, san:artSan, sikdang:artSikdang,
   jeong:artJeong, bus:artBus, museum:artMuseum, gate:artGate, hall:artHall,
   mask_fake:()=>closeMask(false), mask_real:()=>closeMask(true), mud:closeMud,
   photo_old:()=>closeMask(true).replace('<svg class="art"','<svg class="art" style="filter:sepia(.85) contrast(.9) brightness(1.08)"')

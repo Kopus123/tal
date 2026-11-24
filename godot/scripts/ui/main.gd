@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.7.1"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.7.2"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -735,6 +735,11 @@ func _fill_settings(inner: VBoxContainer) -> void:
 			b.pressed.connect(func():
 				Settings.set_(r[0], opt[0]); voice.apply(); scape.update(Game.place()); Kit.refill(inner, _fill_settings.bind(inner)); _refresh())
 			row.add_child(b)
+	var wb := Kit.button("📋  Bring in my notes from the web version", false, 18); inner.add_child(wb)
+	wb.pressed.connect(func():
+		var got: int = Game.import_web(DisplayServer.clipboard_get())
+		_toast("Copy your save in the web version first: Settings, Playtest tools on, Copy save data." if got < 0 else ("Brought in %d notes." % got if got > 0 else "Nothing new to bring in."))
+		_refresh())
 	var t := Kit.button("▶  Test the voice", false, 18); t.pressed.connect(func(): voice.say("{안녕하세요}", "word")); inner.add_child(t)
 
 

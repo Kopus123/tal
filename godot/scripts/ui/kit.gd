@@ -112,6 +112,12 @@ static func icon(key: String) -> Texture2D:
 	return a
 
 
+## a piece of evidence that has a picture of its own (godot/pics/ID.svg)
+static func pic(id: String) -> Texture2D:
+	var p := "res://pics/%s.svg" % id.trim_prefix("ev:")
+	return load(p) if ResourceLoader.exists(p) else null
+
+
 static func _load_people() -> void:
 	if _people != null: return
 	_people = load("res://art/people.png")

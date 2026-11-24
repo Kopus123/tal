@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="392" viewBox="0 0 220 196">
+<rect width="220" height="196" fill="#e8d8b4"/><rect x="0" y="0" width="220" height="132" fill="#b89b6c"/>
+<g stroke="#a3875a" stroke-width="2"><path d="M0,22 H220 M0,44 H220 M0,66 H220 M0,88 H220 M0,110 H220"/></g>
+<g fill="#d8c193" stroke="#6f5738" stroke-width="1.6"><ellipse cx="34" cy="38" rx="13" ry="16"/><ellipse cx="34" cy="88" rx="13" ry="16"/><ellipse cx="188" cy="36" rx="13" ry="16"/><ellipse cx="188" cy="88" rx="13" ry="16"/></g>
+<g stroke="#5a442a" stroke-width="2" fill="none" stroke-linecap="round"><path d="M28,35 q3,-3 5,0 M36,35 q3,-3 5,0 M27,43 q7,6 14,0 M182,33 q3,-3 5,0 M190,33 q3,-3 5,0 M181,41 q7,6 14,0 M28,85 q3,-3 5,0 M36,85 q3,-3 5,0 M27,93 q7,6 14,0 M182,85 q3,-3 5,0 M190,85 q3,-3 5,0 M181,93 q7,6 14,0"/></g>
+<rect y="132" width="220" height="64" fill="#8a6c45"/><path d="M0,132 H220" stroke="#6b5132" stroke-width="3"/>
+<path d="M64,196 Q66,140 92,128 L128,128 Q154,140 156,196 Z" fill="#cbb48a" stroke="#5a442a" stroke-width="2.4"/>
+<path d="M92,128 L110,154 L128,128" fill="#efe2c2" stroke="#5a442a" stroke-width="2"/><path d="M110,154 q-8,16 -6,40 M110,154 q8,14 10,26" stroke="#8c5a44" stroke-width="5" fill="none" stroke-linecap="round"/>
+<rect x="101" y="112" width="18" height="20" fill="#e6cda2"/>
+<path d="M80,92 Q76,52 110,50 Q144,52 140,92 Q142,122 132,134 L128,100 L92,100 L88,134 Q78,122 80,92 Z" fill="#3c2c1c"/>
+<ellipse cx="110" cy="92" rx="25" ry="29" fill="#ecd6ac" stroke="#5a442a" stroke-width="2"/>
+<g stroke="#4a3620" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M96,90 q4,-5 9,0 M115,90 q4,-5 9,0"/><path d="M110,94 q-2,6 1,8"/><path d="M98,107 q12,11 24,0" /></g>
+<circle cx="93" cy="101" r="4.5" fill="#d9a98a" opacity=".7"/><circle cx="127" cy="101" r="4.5" fill="#d9a98a" opacity=".7"/>
+<g transform="rotate(-7 110 46)"><ellipse cx="110" cy="44" rx="27" ry="24" fill="#d6b57c" stroke="#4a3620" stroke-width="2.4"/>
+<path d="M89,36 q9,-8 17,-2 M114,34 q8,-6 17,3" stroke="#33261a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M97,30 l2,7" stroke="#d6b57c" stroke-width="3"/>
+<path d="M95,45 q5,-5 10,0 M115,45 q5,-5 10,0" stroke="#33261a" stroke-width="2.4" fill="none"/><path d="M94,54 q16,14 32,0 q-16,6 -32,0" fill="#33261a"/><circle cx="92" cy="50" r="4" fill="#b97a5c"/><circle cx="128" cy="50" r="4" fill="#b97a5c"/></g>
+<rect width="220" height="196" fill="#c79a55" opacity=".13"/><path d="M0,0 L34,0 L0,26 Z M220,196 L192,196 L220,172 Z" fill="#efe3c4" opacity=".75"/><path d="M150,0 q-6,40 4,70 M30,196 q10,-30 2,-52" stroke="#efe3c4" stroke-width="1.6" opacity=".6" fill="none"/>
+<text x="204" y="188" font-family="serif" font-size="17" fill="#5a442a" text-anchor="end">1979</text></svg>

@@ -48,6 +48,7 @@ var words: Dictionary = {}           ## your notebook: guesses, sure, lines you'
 var enc_off := false                 ## tests turn encounters off (they'd interrupt a planned route)
 var testing := false                 ## tests: don't write the save or the play log
 var _leaning := false
+var _lean_loc := ""                  ## where the thing is that you are leaning over
 var _t0 := 0
 
 
@@ -68,10 +69,7 @@ func _ready() -> void:
 		PEOPLE.merge(d.people); PNODES.merge(d.nodes)
 	for p in PEOPLE.values():
 		for x in p.chat + p.story + p.ask: PSTART[x.scene] = true
-	var saved := _read(WORDS_PATH)
-	if saved != "":
-		var w = JSON.parse_string(saved)
-		if w is Dictionary: words = w
+	words = _load_words()
 	_check_patterns(); _pats_ready = true   # pages already open don't announce themselves again
 	S = _fresh()
 
@@ -112,8 +110,7 @@ func note(what: String) -> void:
 ## ---------- saving: one file, written after every change
 func save() -> void:
 	if testing: return
-	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if f: f.store_string(JSON.stringify(S))
+	_store(SAVE_PATH, JSON.stringify(S))
 
 
 func has_save() -> bool:
@@ -123,7 +120,7 @@ func has_save() -> bool:
 func load_save() -> bool:
 	var d = JSON.parse_string(_read(SAVE_PATH))
 	if not (d is Dictionary) or not CH.has(d.get("ch", "")): return false
-	S = _fresh(); S.merge(d, true); S.world = _fresh_world(); S.world.merge(d.world, true)
+	_end_lean(); S = _fresh(); S.merge(d, true); S.world = _fresh_world(); S.world.merge(d.world, true)
 	_use(S.ch)
 	if not S.has("named"):   # a save from before the drawn map
 		for e in S.get("log", []):
@@ -136,8 +133,45 @@ func load_save() -> bool:
 
 func save_words() -> void:
 	if testing: return
-	var f := FileAccess.open(WORDS_PATH, FileAccess.WRITE)
-	if f: f.store_string(JSON.stringify(words))
+	_store(WORDS_PATH, JSON.stringify(words))
+
+
+## written beside the old file first, then swapped in: a crash halfway never leaves half a file
+func _store(path: String, text: String) -> void:
+	var f := FileAccess.open(path + ".new", FileAccess.WRITE)
+	if f == null: return
+	f.store_string(text); f.close()
+	DirAccess.rename_absolute(path + ".new", path)
+
+
+## your notebook: the file, or (if it's broken) the copy from the last time the game opened. The copy is only replaced by
+## one with at least as much written in it, so an emptied notebook never overwrites a full one.
+func _load_words() -> Dictionary:
+	var n := func(d: Dictionary) -> int: return d.values().filter(func(r): return r is Dictionary and str(r.get("note", "")).strip_edges() != "").size()
+	var w = JSON.parse_string(_read(WORDS_PATH)) if FileAccess.file_exists(WORDS_PATH) else null
+	var b = JSON.parse_string(_read(WORDS_PATH + ".bak")) if FileAccess.file_exists(WORDS_PATH + ".bak") else null
+	if not (w is Dictionary): w = b if b is Dictionary else {}
+	if testing: return w
+	if not w.is_empty() and (not (b is Dictionary) or n.call(w) >= n.call(b)): _store(WORDS_PATH + ".bak", JSON.stringify(w))
+	return w
+
+
+## the notebook from the web version ("Copy save data" there): what you wrote about each word; never over something you
+## already wrote here. Returns how many came in, or -1 if that isn't a web save.
+func import_web(text: String) -> int:
+	var d = JSON.parse_string(text)
+	if not (d is Dictionary) or not (d.get("w") is Dictionary): return -1
+	var n := 0
+	for id in d.w:
+		var r = d.w[id]
+		if not (r is Dictionary) or not world.words.has(id): continue
+		var t := str(r.get("note", "")).strip_edges()
+		if t == "": continue
+		var mine := word(id)
+		if mine.note.strip_edges() != "": continue
+		mine.note = t; mine.sure = bool(r.get("sure", false)); n += 1
+	save_words(); note("brought in %d notes from the web version" % n)
+	return n
 
 
 ## ---------- chapters
@@ -168,7 +202,7 @@ func start_chapter(id: String, restart := true) -> void:
 	_vcards = {}
 	_stash()
 	var p: Dictionary = S.prog.get(id, {}) if not restart else {}
-	S.ch = id; _use(id); _leaning = false
+	_end_lean(); S.ch = id; _use(id)
 	if not p.is_empty() and p.get("F", {}).get("started", false):
 		for k in ["loc", "node", "F", "cs", "visited"]: S[k] = p[k]
 		if not ST.places.has(S.loc): S.loc = ST.meta.get("start-place", "")
@@ -302,7 +336,9 @@ func _effect(k: String, a: String) -> void:
 				S.F["ev_" + id] = 1
 		"statement":
 			if not S.F.has("st_" + a): S.F["st_" + a] = 1; toast.emit("Statement saved to your evidence box.")
-		"place": S.loc = a; S.known[a] = 1
+		"place":
+			if a != S.loc: _end_lean()   # you've left what you were leaning over
+			S.loc = a; S.known[a] = 1
 		"led": S.F["led"] = a
 		"sfx": sound.emit(a)
 		"toast": toast.emit(a)
@@ -607,7 +643,7 @@ func tap_spot(s: Dictionary) -> void:
 		if m: enter(m.get_string(1))
 		elif s.t == "board": changed.emit()   # the notice board opens from the screen
 	else:
-		_leaning = true; lean.emit(Vector2(s.x, s.y), true)
+		_leaning = true; _lean_loc = S.loc; lean.emit(Vector2(s.x, s.y), true)
 		go(s.t)
 
 

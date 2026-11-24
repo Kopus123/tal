@@ -385,6 +385,7 @@ func _expected() -> void:
 		if main.room.cam_mode:
 			if not main.room.shutter.is_visible_in_tree() or not main.room.cam_x.is_visible_in_tree(): bug("missing", "the camera has no shutter or no ✕")
 			return
+		if main.room._lean_on: bug("dead", "the picture stays zoomed in while looking around (%s)" % g.S.loc)
 		if not main.room.marks.is_visible_in_tree(): bug("missing", "the rings on the picture are gone while looking around")
 		if not main.room.figs.is_visible_in_tree(): bug("missing", "the people in the picture are gone while looking around")
 		if main.room.back_btn.visible and main.room.cam_mode: bug("overlap", "the back arrow shows with the camera up")
@@ -404,6 +405,7 @@ func _expected() -> void:
 		for e in g.pockets(): need.append(g.plain(e.label))
 		if g.spots_now().is_empty() and need.is_empty() and not pl.has("back"): bug("stuck", "nothing to do in %s" % g.S.loc)
 	else:
+		if main.room._lean_on != g._leaning or (g._leaning and g._lean_loc != g.S.loc): bug("dead", "the picture is zoomed in on something from before (%s)" % g.S.loc)
 		if t in ["", "say"] and not main.room.cam_btn.is_visible_in_tree() and not main.room.cam_mode: bug("missing", "no camera button while someone's line waits")
 		match t:
 			"card": need = ["Begin"]
@@ -588,7 +590,7 @@ func _spot_pos(s: Dictionary) -> Vector2:
 
 ## ---------- side trips: try it, see it doesn't break or trap you, then take it back
 func _keep() -> Dictionary:
-	return {"S": g.S.duplicate(true), "words": g.words.duplicate(true), "close": g.typed_close.duplicate(true), "bv": main.board_view, "talks": _talks()}
+	return {"S": g.S.duplicate(true), "words": g.words.duplicate(true), "close": g.typed_close.duplicate(true), "bv": main.board_view, "lean": g._leaning, "lean_loc": g._lean_loc, "talks": _talks()}
 
 func _talks() -> Dictionary:   # talk menus are made on the spot, not in the story files
 	var out := {}
@@ -601,6 +603,7 @@ func _back_to(k: Dictionary) -> void:
 	g.S = k.S.duplicate(true); g.words = k.words.duplicate(true); g.typed_close = k.close.duplicate(true); g._vcards = {}; g._use(g.S.ch); g.ST.nodes.merge(k.talks, true)
 	main.board_view = k.bv; main.lab_go = false; main.card_sel = ""; main.busy = false
 	g._leaning = false; g.lean.emit(Vector2.ZERO, false)
+	if k.get("lean", false): g._leaning = true; g._lean_loc = k.lean_loc; main.room._lean_on = true
 	if main.kb: main.kb.queue_free(); main.kb = null
 	main._shown_node = "?"
 	g.changed.emit(); await settle()

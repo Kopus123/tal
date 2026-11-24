@@ -291,7 +291,7 @@ detail strap 12 51 7 | The strap is brand-new cord, bright and stiff. Old masks 
 === examine bridgemud
 art mud
 prompt Mud, reeds, footprints. What do you notice?
-detail tread 43 48 22 key | A deep bootprint with a sharp zigzag tread. New hiking boots, much bigger than yours. ! give bootprint
+detail tread 44 54 25 key | A deep bootprint with a sharp zigzag tread. New hiking boots, much bigger than yours. ! give bootprint
 detail ring 72 37 8 key | A perfect ring pressed into the mud: a heavy flashlight, stood on its end while someone waited.
 detail ticket 76 77 8 | Half-buried in the reeds: a train ticket from {서울}, dated yesterday. ! give ticket
 

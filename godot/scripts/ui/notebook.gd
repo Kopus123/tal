@@ -209,7 +209,7 @@ static func _key(inner: VBoxContainer) -> void:
 			["guess", "새", "Guessing: you wrote what you think it means."], ["sure", "새", "Got it: you ticked \"I'm sure\"."], ["gram", "는", "A grammar piece: a little part that sticks to words. Tap it for an explanation."]]:
 		var r := Kit.rich(22); r.text = "[color=#%s][u]%s[/u][/color]   %s" % [Kit.STATUS_COLORS[row[0]], row[1], row[2]]; inner.add_child(r)
 	inner.add_child(Kit.label("ON THE CASE BOARD", 14, Kit.MUTE))
-	for t in ["Pink notes are questions. Tie the things that answer one to it; nobody tells you when it's right, you'll notice.",
+	for t in ["Pink notes are your questions: they go up by themselves. Tie the things that answer one to it; nobody tells you when it's right, you'll notice.",
 			"Photos you take are captioned only with where and when. Whether one matters is for you to work out.",
 			"Taking a string down frays it; a frayed one snaps next time. A tack you pull out is bent."]:
 		inner.add_child(Kit.label("·  " + t, 19, Kit.PAPER_INK, true))

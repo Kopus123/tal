@@ -1346,6 +1346,8 @@ func _back_in_notebook(tab: String) -> void:
 func _board() -> void:
 	await _open_board(); await inspect(); snap_screen("board")
 	var b: Dictionary = g.board()
+	for q in g.ST.cases:
+		if not q.needs.is_empty() and g.cond(q.c) and g.ST.questions.has(q.id) and not main.cork._cards.has("q:" + q.id) and not b.cards.get("q:" + q.id, {}).has("put"): bug("missing", "the question %s isn't on the board" % q.id)
 	# the box
 	await tap_at(rect_of(main.cork).position + main.cork.box_rect().get_center())
 	if top() == main: bug("dead", "tapping the evidence box doesn't open it")
@@ -1387,7 +1389,7 @@ func _board() -> void:
 				await inspect(); snap_screen("board_tied")
 				var nl: int = b.links.size()
 				if await press_text("Take down the string", main.paper) and b.links.size() != nl - 1: bug("dead", "Take down the string does nothing")
-		await press_text("Pull the thumbtack out", main.paper)
+		await press_text("Peel it off" if b.cards[up[1]].get("stuck", false) else "Pull the thumbtack out", main.paper)
 		if g.is_pinned(up[1]): bug("dead", "Pull the thumbtack out does nothing")
 		await press_text("Put it in the box", main.paper)
 		if not g.is_boxed(up[1]): bug("dead", "Put it in the box does nothing")

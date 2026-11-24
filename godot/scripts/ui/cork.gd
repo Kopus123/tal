@@ -102,6 +102,7 @@ func _autoplace(id: String) -> void:
 func _help_text() -> void:
 	var t := ""
 	if from != "": t = "Holding a string from: %s\nTap another pinned card, then \"Tie the string here\" on the right." % Game.card_label(Game.card(from))
+	elif not Game.F.has("board_tied") and _cards.keys().any(func(i): return i.begins_with("q:")): t = "The pink notes are your questions. Open the box, put up what answers one,\nthen tie a string between them (the buttons on the right)."
 	elif not Game.F.has("board_tied"): t = "Tap a card to look at it.  Pin cards up with thumbtacks,\nthen tie string between them (the buttons on the right)."
 	_help.visible = t != ""
 	(_help.get_node("L") as Label).text = t
@@ -455,6 +456,9 @@ func _draw_top() -> void:
 			for d in [Vector2(-7, -5), Vector2(6, -7), Vector2(-4, 8), Vector2(8, 5)]: _top.draw_line(k, k + d * s, WORN, 1.2 * s, true)
 	for id in _cards:
 		if not b.cards[id].get("pinned", false): continue
+		if b.cards[id].get("stuck", false):
+			var tp := _pin(id); _top.draw_set_transform(tp, deg_to_rad(-6)); _top.draw_rect(Rect2(Vector2(-20, -7) * s, Vector2(40, 14) * s), Color(0.96, 0.93, 0.8, 0.85)); _top.draw_set_transform(Vector2.ZERO)
+			continue
 		var tk := _pin(id); var col: Color = TACKS[absi(hash(id)) % TACKS.size()]
 		_top.draw_circle(tk + Vector2(3, 4) * s, 7.5 * s, Color(0, 0, 0, 0.35))
 		_top.draw_circle(tk, 7.5 * s, col.darkened(0.25)); _top.draw_circle(tk + Vector2(-1, -1) * s, 6 * s, col)

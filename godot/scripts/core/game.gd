@@ -1069,6 +1069,9 @@ func _case_tick(finals := false) -> void:   ## finals: a last deduction with not
 		if not q.needs.is_empty() and cond(q.c) and ST.questions.has(q.id): want.append("q:" + q.id)
 	for id in want:
 		if not b.cards.has(id) and not card(id).is_empty(): _board_add(id); added = true
+		# your own questions go straight up, stuck on (no thumbtack needed): until you put one away yourself
+		if id.begins_with("q:") and b.cards.has(id) and b.cards[id].get("boxed", false) and not b.cards[id].has("put"):
+			b.cards[id].boxed = false; b.cards[id].pinned = true; b.cards[id].stuck = true; b.cards[id].auto = true; b.cards[id].new = true; added = true
 	for q in ST.cases:
 		if S.cs.has(q.id) or not cond(q.c): continue
 		var ok := false
@@ -1156,7 +1159,8 @@ func board_box(id: String) -> void:
 		if id in [l[0], l[1]]:
 			b.links.erase(l); b.strings += 1
 			if l.size() > 2 and l[2]: b.frayed = b.get("frayed", 0) + 1
-	if is_pinned(id): b.tacks += 1
+	if is_pinned(id) and not b.cards[id].get("stuck", false): b.tacks += 1
+	b.cards[id].erase("stuck"); b.cards[id].put = true
 	b.cards[id].pinned = false; b.cards[id].boxed = true; b.cards[id].new = false; b.cards[id].auto = true
 	note("  into the box: " + id); sound.emit("tap"); save(); changed.emit()
 
@@ -1182,8 +1186,10 @@ func board_unpin(id: String) -> void:
 	if not is_pinned(id): return
 	for l in b.links.duplicate():
 		if id in [l[0], l[1]]: board_unlink(l[0], l[1])
-	b.cards[id].pinned = false; b.bent = b.get("bent", 0) + 1
-	note("  unpinned: " + id); toast.emit("You pull the tack out. It's bent."); save(); changed.emit()
+	b.cards[id].pinned = false
+	if b.cards[id].get("stuck", false): b.cards[id].erase("stuck"); note("  unstuck: " + id)
+	else: b.bent = b.get("bent", 0) + 1; note("  unpinned: " + id); toast.emit("You pull the tack out. It's bent.")
+	save(); changed.emit()
 
 ## a string between two pinned cards ("" when it worked, otherwise why not)
 func board_link(a: String, b_: String) -> String:

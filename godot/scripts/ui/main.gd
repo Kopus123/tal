@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.5.7"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.5.8"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -359,7 +359,7 @@ func _lab() -> void:
 			var worn: bool = l.size() > 2 and l[2]
 			var a: String = l[0]; var b: String = l[1]
 			_act("✂  Take down the string to %s%s" % [Game.card_label(Game.card(other)), "  (frayed: it'll snap)" if worn else ""], func(): Game.board_unlink(a, b))
-		if pinned and cork.from == "": _act("Pull the thumbtack out", func(): Game.board_unpin(id))
+		if pinned and cork.from == "": _act("Peel it off" if bd.cards[id].get("stuck", false) else "Pull the thumbtack out", func(): Game.board_unpin(id))
 		if cork.from == "": _act("📦  Put it in the box", func(): card_sel = ""; cork.sel = ""; Game.board_box(id); cork.refresh(); _refresh())
 	else:
 		_text(Kit.esc(Game.desc()), 22)

@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>탈 · your notes</title>
+<style>
+body{margin:0;background:#151a24;color:#efe6cf;font:18px/1.5 system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
+main{max-width:460px;padding:24px;text-align:center}
+h1{font-size:26px;margin:0 0 8px}
+button{font:inherit;font-weight:600;background:#efe6cf;color:#2a231d;border:0;border-radius:14px;padding:18px 26px;margin:18px 0;width:100%}
+p{margin:8px 0}.mute{color:#9b9482;font-size:15px}
+textarea{width:100%;height:90px;box-sizing:border-box;background:#0f131b;color:#9b9482;border:1px solid #333;border-radius:10px;font-size:12px}
+</style>
+<main>
+<h1>Your notes from the web version</h1>
+<p id="n"></p>
+<button id="b" hidden>Copy my notes</button>
+<p id="ok" hidden>Copied. Now go back to the app: ☰ → Settings → <b>2. Bring them in</b>.</p>
+<textarea id="t" hidden readonly></textarea>
+<p class="mute" id="m"></p>
+</main>
+<script>
+// reads only what this browser saved for the game, and copies only the notes; nothing is sent anywhere
+const $ = id => document.getElementById(id);
+let s = null;
+try { s = JSON.parse(localStorage.getItem('tal-save-v2') || 'null') } catch (e) {}
+const w = {};
+for (const [k, r] of Object.entries((s && s.w) || {})) if (r && r.note && r.note.trim()) w[k] = { note: r.note, sure: r.sure || 0 };
+const n = Object.keys(w).length, text = JSON.stringify({ w });
+if (n) {
+  $('n').textContent = n + ' words with notes are saved in this browser.';
+  $('b').hidden = false;
+  $('b').onclick = () => {
+    const done = () => { $('ok').hidden = false };
+    const byHand = () => { const t = $('t'); t.hidden = false; t.value = text; t.focus(); t.select(); $('m').textContent = document.execCommand('copy') ? '' : 'Press and hold the text, Select all, Copy.'; done() };
+    navigator.clipboard ? navigator.clipboard.writeText(text).then(done, byHand) : byHand();
+  };
+} else {
+  $('n').textContent = 'This browser has no notes.';
+  $('m').textContent = 'Notes stay in the browser you played in. Try opening this same page in your other browser (Chrome, Samsung Internet), or on your laptop: kopus123.github.io/tal/notes.html';
+}
+</script>

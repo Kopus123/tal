@@ -1058,7 +1058,9 @@ func p_map(a: String) -> void:
 	if main.bar_btns.map.disabled or main.bar_btns.map.get_meta("dim"): bug("missing", "no map button here"); g.enter(a); await settle(); return
 	await press(main.bar_btns.map); await inspect()
 	var pl: Dictionary = g.ST.places.get(a, {})
-	var b := find_btn("%s\n%s" % [pl.get("name", a), pl.get("sub", "")], top())
+	var b: BaseButton = null
+	for x in buttons(top()):
+		if x.get_meta("place", "") == a: b = x
 	if b == null: bug("missing", "%s isn't on the map page" % a); await close_top(); g.enter(a); await settle(); return
 	await press(b)
 	if g.S.loc != a and not g.is_closed(a): fail("map didn't go to " + a)
@@ -1273,13 +1275,28 @@ func _pages(label: String) -> void:
 	await tap_at(rect_of(main.room).position + rect_of(main.room).size * Vector2(0.5, 0.06))
 	if g.S.node == "": await _timed("camera", _camera)
 	if main.clock_btn.is_visible_in_tree(): await press(main.clock_btn); await inspect(); snap_screen("day_panel"); await close_top()
-	if not main.bar_btns.map.disabled and not main.bar_btns.map.get_meta("dim"): await press(main.bar_btns.map); await inspect(); snap_screen("map"); await close_top()
+	if not main.bar_btns.map.disabled and not main.bar_btns.map.get_meta("dim"): await press(main.bar_btns.map); await inspect(); snap_screen("map"); await _map_page()
 	if not main.bar_btns.phone.disabled: await _timed("phone", _phone)
 	await _timed("notebook", _notebook if _full() else _notebook_quick)
 	if not main.bar_btns.board.disabled: await _timed("board", _board)
 	await _timed("menu", _menu)
 	_depth -= 1
 	await _back_to(k); _step = was_step
+
+
+## the map: every place you know is on it and tappable; one you've only heard of doesn't take you there
+func _map_page() -> void:
+	var pins := {}
+	for x in buttons(top()):
+		if x.has_meta("place"): pins[x.get_meta("place")] = x
+	for p in g.world_st.map:
+		if not g.ST.places.has(p.p): continue
+		if (g.S.known.has(p.p) or g.named(p.p)) and not pins.has(p.p): bug("missing", "%s isn't on the map" % p.p)
+		if pins.has(p.p) and not g.S.known.has(p.p):
+			var was: String = g.S.loc
+			await press(pins[p.p])
+			if g.S.loc != was or top() == main: bug("dead", "you can go to %s without having been there" % p.p)
+	await close_top()
 
 
 func _phone() -> void:

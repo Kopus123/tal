@@ -90,7 +90,7 @@ func _fresh_world() -> Dictionary:
 
 
 func _fresh() -> Dictionary:
-	return {"world": _fresh_world(), "prog": {}, "done": {}, "ch": "", "loc": "", "node": "", "F": {}, "cs": {}, "visited": {}, "known": {}, "mx": {}, "tl": {}, "log": []}
+	return {"world": _fresh_world(), "prog": {}, "done": {}, "ch": "", "loc": "", "node": "", "F": {}, "cs": {}, "visited": {}, "known": {}, "mx": {}, "tl": {}, "log": [], "named": {}}
 
 
 ## ---------- the play log: everything you do, with the time, to read after a playtest.
@@ -119,6 +119,9 @@ func load_save() -> bool:
 	if not (d is Dictionary) or not CH.has(d.get("ch", "")): return false
 	S = _fresh(); S.merge(d, true); S.world = _fresh_world(); S.world.merge(d.world, true)
 	_use(S.ch)
+	if not S.has("named"):   # a save from before the drawn map
+		for e in S.get("log", []):
+			if not e.get("heard", false): _name_places(e.get("ko", ""))
 	if not ST.places.has(S.loc): S.loc = ST.meta.get("start-place", "")
 	if S.node != "" and not ST.nodes.has(S.node): S.node = ""
 	_t0 = Time.get_ticks_msec(); note("\n===== back in %s, %s =====" % [S.ch, Time.get_datetime_string_from_system(false, true)])
@@ -375,7 +378,7 @@ func _log(who: String, ko_: String, en: String = "", ex: String = "neutral", hea
 ## you did something: what you'd only heard gets written down now (in the log, and its words in your notebook)
 func reveal_heard() -> void:
 	for e in S.get("log", []):
-		if e.get("heard", false): e.heard = false; _met(e.ko)
+		if e.get("heard", false): e.heard = false; _met(e.ko, false)   # (what you only heard, you may have misheard)
 	if S.log.size() > 200: S.log = S.log.slice(S.log.size() - 200)
 
 
@@ -763,7 +766,17 @@ func _check_patterns() -> void:
 var _pats_ready := false
 
 
-func _met(text: String) -> void:
+## a place is on your map once someone has named it where you could read it (its name is one of the words of the line)
+func named(p: String) -> bool: return S.get("named", {}).has(p)
+func _name_places(text: String) -> void:
+	if not S.has("named"): S["named"] = {}
+	var ws: Array = Story.tokens(text).map(func(t): return t[1])
+	for p in ST.get("places", {}):
+		if not S.named.has(p) and not S.known.has(p) and ST.places[p].get("name", "") in ws: S.named[p] = 1; note("  heard of: " + p)
+
+
+func _met(text: String, place_names := true) -> void:
+	if place_names: _name_places(text)
 	var line := plain(text)
 	for t in Story.tokens(text):
 		var r := word(t[1])

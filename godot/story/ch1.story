@@ -430,6 +430,18 @@ sujin[worried]: {김밥} {두 개}... {할머니}{는|은/는} {혼자} {안} {�
 show: threat -> c1_show
 show: fakemask -> c1_sjfake
 show: letter -> c1_sjletter
+show: photo79 -> c1_sjx_photo79
+show: couplephoto -> c1_sjx_couplephoto
+show: note -> c1_sjx_note
+show: nochip -> c1_sjx_nochip
+show: freshwood -> c1_sjx_freshwood
+show: wall -> c1_sjx_wall
+show: paintbag -> c1_sjx_paintbag
+show: sketch -> c1_sjx_sketch
+show: bootprint -> c1_sjx_bootprint
+show: gramboots -> c1_sjx_gramboots
+show: ticket -> c1_sjx_ticket
+show: card -> c1_sjx_card
 miss -> c1_sjnope
 
 === scene c1_sjfake
@@ -442,6 +454,66 @@ sujin[surprised]: {할머니}{의} {편지}...
 (She reads it twice, mouthing the words. At 비밀 she stops.)
 sujin[worried]: {비밀}...? {비밀}...
 (She looks at you, then at the workshop. She had no idea.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_photo79
+sujin[happy]: {사진}...
+(She smiles at the young woman in it. It takes her a while to hand it back.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_couplephoto
+sujin[sad]: {할머니}...
+(She touches the blurry shape behind the couple with one finger.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_note
+sujin[sad]: ...
+(She turns her face away. She has read it enough times.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_nochip
+sujin: 음...
+(She tilts her head one way, then the other, like someone looking at modern art.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_freshwood
+sujin: {나무}?
+(She sniffs her fingers and shrugs.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_wall
+sujin[surprised]: {뒤에}...?
+(She glances over her shoulder at the clay jars.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_paintbag
+sujin: {물감}?
+(She peers into the pot, and gets a red dot on the end of her nose.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_sketch
+sujin[happy]: {예뻐요}.
+(She traces one of the eyebrows in the air.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_bootprint
+sujin[surprised]: 어...?
+(She holds her own shoe out next to it. It would fit twice.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_gramboots
+sujin[worried]: {장화}?
+(She leans back from the smell.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_ticket
+sujin: {서울}...
+(She turns it over, looks at the back, and turns it over again.)
+-> c1_sjhub.2
+
+=== scene c1_sjx_card
+sujin: 네...
+(She takes it with both hands, reads it politely, and gives it back with both hands.)
 -> c1_sjhub.2
 
 === scene c1_sjnope
@@ -496,9 +568,8 @@ miss -> c1_showmiss
 
 === scene c1_showalmost
 sujin: {가요}!
-(She says it for you, already halfway to the gate.)
-~ Almost. 가 already ends in ㅏ, so 가 + 아요 squeezes together into 가요.
-<- c1_show.5
+(She's already halfway to the gate.)
+~ Right: 가 + 아요. But 가 already ends in ㅏ, so the two melt together and you hear 가요.
 
 === scene c1_showmiss
 sujin[surprised]: {네}?
@@ -1033,6 +1104,18 @@ haraboji[worried]: {몰라요}.
 show: threat -> c1_gshow
 show: letter -> c1_gletter
 show: couplephoto -> c1_gphoto
+show: fakemask -> c1_gx_fakemask
+show: photo79 -> c1_gx_photo79
+show: note -> c1_gx_note
+show: nochip -> c1_gx_nochip
+show: freshwood -> c1_gx_freshwood
+show: wall -> c1_gx_wall
+show: paintbag -> c1_gx_paintbag
+show: sketch -> c1_gx_sketch
+show: bootprint -> c1_gx_bootprint
+show: gramboots -> c1_gx_gramboots
+show: ticket -> c1_gx_ticket
+show: card -> c1_gx_card
 miss -> c1_gnope
 
 === scene c1_gletter
@@ -1047,6 +1130,66 @@ haraboji[surprised]: ...
 (He stares at the blurry woman behind the couple for a long moment.)
 haraboji[worried]: {몰라요}.
 ~ He knew she left. That isn't news to him.
+<- c1_gpresent.2
+
+=== scene c1_gx_fakemask
+haraboji[surprised]: {탈}!
+(He jerks back as if it might bite. Then he pretends he didn't.)
+<- c1_gpresent.2
+
+=== scene c1_gx_photo79
+haraboji: ...
+(He looks at it, sniffs, and looks at the river.)
+<- c1_gpresent.2
+
+=== scene c1_gx_note
+haraboji: {몰라요}.
+(He holds it at arm's length, then closer, then at arm's length again, and gives up.)
+<- c1_gpresent.2
+
+=== scene c1_gx_nochip
+haraboji: {뭐}?
+(He looks at you as if you had shown him a potato.)
+<- c1_gpresent.2
+
+=== scene c1_gx_freshwood
+haraboji: {나무}.
+(He raps on it with a knuckle, the way he would test a melon.)
+<- c1_gpresent.2
+
+=== scene c1_gx_wall
+haraboji: ...
+(He scratches his ear.)
+<- c1_gpresent.2
+
+=== scene c1_gx_paintbag
+haraboji[worried]: 아이고...
+(He gets red on his thumb, and wipes it on your sleeve.)
+<- c1_gpresent.2
+
+=== scene c1_gx_sketch
+haraboji: 음...
+(He looks at it upside down for a long time.)
+<- c1_gpresent.2
+
+=== scene c1_gx_bootprint
+haraboji: ...
+(He lifts one foot, studies the bottom of his own boot, and puts it down again.)
+<- c1_gpresent.2
+
+=== scene c1_gx_gramboots
+haraboji[surprised]: {제} {장화}!
+(He looks at his feet, then at the boots, then at you.)
+<- c1_gpresent.2
+
+=== scene c1_gx_ticket
+haraboji: {서울}...
+(He hands it back by one corner, like a fish that's gone off.)
+<- c1_gpresent.2
+
+=== scene c1_gx_card
+haraboji: {몰라요}.
+(He uses it to pick something out of his reel.)
 <- c1_gpresent.2
 
 === scene c1_gnope
@@ -1142,17 +1285,66 @@ halmeoni[surprised]: {누구}... {누구}{예요|이에요}?
 (She clutches the bundle to her chest.)
 @present Show her who you are.
 show: letter -> c1_j2
-miss -> c1_jwrong
+show: fakemask -> c1_jwrong
+show: nochip -> c1_jwrong
+show: freshwood -> c1_jwrong
+show: photo79 -> c1_jx_photo79
+show: couplephoto -> c1_jx_couplephoto
+show: note -> c1_jx_note
+show: threat -> c1_jx_threat
+show: paintbag -> c1_jx_paintbag
+show: sketch -> c1_jx_sketch
+show: gramboots -> c1_jx_gramboots
+miss -> c1_jno
 
 === scene c1_jagain
 halmeoni[worried]: {누구}{예요|이에요}...?
 (She's still holding the bundle tight, waiting to see who you are.)
 -> c1_j1.4
 
+=== scene c1_jx_photo79
+halmeoni[surprised]: 아...
+(For a moment she forgets to be afraid.)
+<- c1_j1.4
+
+=== scene c1_jx_couplephoto
+halmeoni[worried]: ...
+(She sees herself in it, small and blurry, and pulls the blanket tighter.)
+<- c1_j1.4
+
+=== scene c1_jx_note
+halmeoni[surprised]: ...
+(Her own handwriting. She looks at it as if it had followed her up the mountain.)
+<- c1_j1.4
+
+=== scene c1_jx_threat
+halmeoni[worried]: ...!
+(The screen lights up her face. She turns away from it.)
+<- c1_j1.4
+
+=== scene c1_jx_paintbag
+halmeoni[worried]: {물감}...
+(She looks at the red under her own fingernails.)
+<- c1_j1.4
+
+=== scene c1_jx_sketch
+halmeoni[surprised]: ...
+(She reaches out to fix a line, and stops herself.)
+<- c1_j1.4
+
+=== scene c1_jx_gramboots
+halmeoni[happy]: 하하...
+(A small laugh gets out before she can catch it.)
+<- c1_j1.4
+
+=== scene c1_jno
+halmeoni[worried]: {누구}...?
+(She doesn't look at what's in your hand. She's looking at your face.)
+<- c1_j1.4
+
 === scene c1_jwrong
 halmeoni[worried]: {가짜}...?!
 (She shrinks back against the temple door, holding the bundle tighter.)
-~ That means nothing to her. She doesn't recognize you in the dark.
 <- c1_j1.4
 
 === scene c1_j2

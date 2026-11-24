@@ -141,7 +141,7 @@ func _describe() -> String:
 	for b in buttons(t):
 		var s: String = b.text.replace("\n", " / ").strip_edges()
 		if main.kb and main.kb.is_ancestor_of(b) and not s in ["Hint", "✕"]: continue
-		if s == "": s = "📷 camera" if b == main.room.cam_btn else ("shutter (take the picture)" if b == main.room.shutter else b.get_meta("word", "(picture button)"))
+		if s == "": s = "📷 camera" if b == main.room.cam_btn else ("shutter (take the picture)" if b == main.room.shutter else b.get_meta("word", "(picture button)") + ("  (only heard of)" if b.get_meta("heard", false) else ""))
 		if OFF.any(func(x): return s.contains(x)): continue
 		_list.append(b); names.append("%d) %s%s" % [_list.size(), s, "  [greyed]" if b.disabled or b.get_meta("dim", false) else ""])
 	o.append("BUTTONS (tap N, or tap part of the words):"); o.append("  " + "\n  ".join(names))

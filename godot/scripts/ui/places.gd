@@ -1,17 +1,11 @@
 extends RefCounted
 ## Getting around and starting things: the village map, the notice board (jobs), the chapter list.
 
-## the map: places you've been, tap one to go there
+## the map: the drawn village; places you've been to are drawn in (tap one to go), places you've only heard of are pencilled
 static func map(main: Control) -> void:
-	var inner := Kit.sheet(main, "지도 · the village", 0.6)
-	var pins: Array = Game.world_st.map.filter(func(p): return Game.S.known.has(p.p) and Game.ST.places.has(p.p))
-	if pins.is_empty(): inner.add_child(Kit.label("You haven't been anywhere you could walk back to yet.", 20, Kit.MUTE, true)); return
-	var grid := GridContainer.new(); grid.columns = 2; grid.add_theme_constant_override("h_separation", 8); grid.add_theme_constant_override("v_separation", 8); inner.add_child(grid)
-	for p in pins:
-		var pl: Dictionary = Game.ST.places[p.p]
-		var b := Kit.button("%s\n%s%s" % [pl.get("name", p.p), pl.get("sub", ""), "  · you're here" if p.p == Game.S.loc else ""], p.p == Game.S.loc, 20)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.custom_minimum_size.y = 72
-		b.pressed.connect(func(): Kit.close(inner); Game.enter(p.p)); grid.add_child(b)
+	var inner := Kit.sheet(main, "지도 · the village", 0.94)
+	var m: Control = load("res://scripts/ui/village_map.gd").new(); m.custom_minimum_size = Vector2(0, main.size.y * 0.92 - 130); m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	m.picked.connect(func(p): Kit.close(inner); Game.enter(p)); inner.add_child(m)
 
 
 ## the notice board in the village hall: today's jobs, the one you're on

@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.5.5"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.5.6"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -23,6 +23,16 @@ var toast_box: VBoxContainer
 var card: Control
 var tour: RefCounted
 var kb: Control                      ## the Korean keyboard while a typed answer is open
+var kb_gap: Control
+var scroller: Swipe
+var _shown_loc := ""
+var _shown_ch := ""
+var _lock: Control                   ## a combination lock over the picture
+var _lock_node := ""
+var _new_at := 0                     ## when what is on the paper came up
+static var guard := 220              ## a press this soon (ms) after that was meant for what was there before
+var _title_o: Control                ## the start screen, while it's up
+var _back_at := -9999
 var _build_seq: Array = []           ## sentence tiles picked so far
 var _picks: Array = []               ## contradictions: the two you picked
 var _numpad := ""
@@ -37,6 +47,7 @@ var busy := false                    ## your own line is playing: wait for it
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Kit.INK)
+	get_tree().quit_on_go_back = false
 	add_child(voice)
 	_build()
 	Game.changed.connect(_refresh)
@@ -45,7 +56,10 @@ func _ready() -> void:
 	Game.rewound.connect(_rewound)
 	Game.timecard.connect(_timecard)
 	Game.finished.connect(_finished)
-	Game.reply.connect(func(k, e): _reply = [k, e]; voice.say(k, Game.beat().get("to", "sign")); _refresh())
+	Game.reply.connect(func(k, e): 
+		_reply = [k, e]
+		if kb: kb.clear()
+		voice.say(k, Game.beat().get("to", "sign")); _refresh())
 	var args := OS.get_cmdline_user_args()
 	scape = load("res://scripts/ui/scape.gd").new(); add_child(scape)
 	if "--shots" in args:
@@ -55,11 +69,48 @@ func _ready() -> void:
 		tour.run(self, args[i + 1] if i + 1 < args.size() else "user://shots", args[i + 2] if i + 2 < args.size() else "shed", args[i + 3] if i + 3 < args.size() else "")
 		return
 	_title()
+	if "--play" in args:   # the playtester (scripts/tools/playtester.gd): starts from the title, like anyone
+		AudioServer.set_bus_mute(0, true)
+		var i := args.find("--play")
+		tour = load("res://scripts/tools/playtester.gd").new(Game)
+		tour.play(self, args[i + 1], args[i + 2] if i + 2 < args.size() else "ch1", args[i + 3] if i + 3 < args.size() else "", args[i + 4] if i + 4 < args.size() else "")
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST: _go_back()
+
+
+func _go_back() -> void:
+	for i in range(get_child_count() - 1, -1, -1):
+		var c := get_child(i)
+		if c.has_meta("closes") and not c.is_queued_for_deletion(): _play("tap"); c.queue_free(); return
+	if room.cam_mode: room.camera(false); return
+	if kb and kb.visible: kb.closed.emit(); return
+	if board_view: board_view = false; card_sel = ""; _refresh(); return
+	if lab_go: lab_go = false; _refresh(); return
+	if Time.get_ticks_msec() - _back_at < 2500: Game.save(); get_tree().quit()
+	_back_at = Time.get_ticks_msec(); _toast("Swipe back again to leave the game.")
+
+
+## Android's own keyboard (your notes): the sheet ends above it, so you can see what you're writing
+var _kb_h := 0.0
+func _process(_dt: float) -> void:
+	var h := DisplayServer.virtual_keyboard_get_height() * size.y / maxf(1.0, DisplayServer.window_get_size().y) if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD) else 0.0
+	if h == _kb_h: return
+	_kb_h = h
+	for c in get_children():
+		if not c.has_meta("panel"): continue
+		var p: Control = c.get_meta("panel"); p.offset_bottom = minf(0.0, size.y * 0.04 - h - 6)
+		var f := get_viewport().gui_get_focus_owner()
+		if f and h > 0 and p.is_ancestor_of(f):
+			var n := f.get_parent()
+			while n and not (n is Swipe): n = n.get_parent()
+			if n: (func(): n.ensure_control_visible(f)).call_deferred()
 
 
 ## ---------- layout
 func _build() -> void:
-	var bg := ColorRect.new(); bg.color = Kit.INK; bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(bg)
+	var bg := ColorRect.new(); bg.color = Kit.INK; bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(bg)
 	var row := HBoxContainer.new(); row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); row.add_theme_constant_override("separation", 14)
 	row.offset_left = 14; row.offset_top = 12; row.offset_right = -14; row.offset_bottom = -12
 	add_child(row)
@@ -85,54 +136,75 @@ func _build() -> void:
 
 	var head := HBoxContainer.new(); head.add_theme_constant_override("separation", 6); col.add_child(head)
 	var names := VBoxContainer.new(); names.size_flags_horizontal = Control.SIZE_EXPAND_FILL; names.add_theme_constant_override("separation", -4); head.add_child(names)
-	title_ko = Kit.label("", 28); names.add_child(title_ko)
-	title_en = Kit.label("", 14, Kit.MUTE); title_en.clip_text = true; names.add_child(title_en)
-	for k in [["note", "수첩"], ["board", "사건"], ["phone", "폰"], ["map", "지도"], ["menu", "☰"]]:
-		var b := Kit.button(k[1], true, 17); b.custom_minimum_size = Vector2(52, 52); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; head.add_child(b); bar_btns[k[0]] = b
+	title_ko = Kit.label("", 28); title_ko.clip_text = true; names.add_child(title_ko)
+	title_en = Kit.label("", 14, Kit.MUTE); title_en.clip_text = true; title_en.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; names.add_child(title_en)
+	for k in [["phone", "폰"], ["map", "지도"], ["board", "사건"], ["note", "수첩"], ["menu", "☰"]]:
+		var b := Kit.button(k[1], true, 17); b.custom_minimum_size = Vector2(54, 54)
+		for st in ["normal", "hover", "focus", "pressed", "disabled"]:
+			var bs: StyleBoxFlat = b.get_theme_stylebox(st).duplicate(); bs.content_margin_left = 6; bs.content_margin_right = 6; b.add_theme_stylebox_override(st, bs)
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER; head.add_child(b); bar_btns[k[0]] = b
 	bar_btns.note.pressed.connect(func(): _open("notebook"))
 	bar_btns.board.pressed.connect(func(): _open("board"))
 	bar_btns.phone.pressed.connect(func(): _open("phone"))
 	bar_btns.map.pressed.connect(func(): _open("map"))
 	bar_btns.menu.pressed.connect(_menu)
 
-	var scroll := ScrollContainer.new(); scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.scroll_deadzone = 24   # a tap that wobbles a little is still a tap, not a scroll
-	col.add_child(scroll)
-	var inner := VBoxContainer.new(); inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; inner.add_theme_constant_override("separation", 12); scroll.add_child(inner)
+	var inner := Swipe.make(col); inner.add_theme_constant_override("separation", 12); scroller = inner.get_meta("swipe")
 	body = VBoxContainer.new(); body.add_theme_constant_override("separation", 8); inner.add_child(body)
 	acts = VBoxContainer.new(); acts.add_theme_constant_override("separation", 8); inner.add_child(acts)
 	var pk := VBoxContainer.new(); pk.add_theme_constant_override("separation", 6); col.add_child(pk)
 	pockets_box = HFlowContainer.new(); pockets_box.add_theme_constant_override("h_separation", 8); pk.add_child(pockets_box)
 	pocket_hint = Kit.label("", 15, Kit.MUTE, true); pk.add_child(pocket_hint)
 	foot = HBoxContainer.new(); foot.add_theme_constant_override("separation", 8); col.add_child(foot)
+	kb_gap = Control.new(); kb_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE; kb_gap.visible = false; col.add_child(kb_gap)   # the keyboard covers the bottom: the paper ends above it
 	var bl := Kit.label("build %s" % BUILD, 12, Color(1, 1, 1, 0.25)); bl.anchor_top = 1; bl.anchor_bottom = 1; bl.offset_top = -18; bl.offset_left = 16; add_child(bl)
-	toast_box = VBoxContainer.new(); toast_box.set_anchors_preset(Control.PRESET_CENTER_TOP); toast_box.position.y = 20; toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toast_box = VBoxContainer.new(); toast_box.anchor_left = 0.345; toast_box.anchor_right = 0.345; toast_box.offset_top = 20; toast_box.alignment = BoxContainer.ALIGNMENT_BEGIN; toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_box.grow_horizontal = Control.GROW_DIRECTION_BOTH; add_child(toast_box)
 
 
 ## ---------- what's on the paper
+## asked for often (several times per tap), done once, at the end of the frame
+var _dirty := false
 func _refresh() -> void:
+	if _dirty: return
+	_dirty = true; _redraw.call_deferred()
+
+
+## never while a finger is holding a button on the paper: the button would vanish from under it
+func _redraw() -> void:
+	for i in 120:
+		var on := get_viewport().gui_get_hovered_control()
+		if not (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and on is BaseButton and on.button_pressed and paper.is_ancestor_of(on)): break
+		await get_tree().process_frame
+	_dirty = false
 	if Game.ST.is_empty(): return
+	if Game.S.ch != _shown_ch:   # another chapter: off the old one's board, and none of its cards stay
+		_shown_ch = Game.S.ch; board_view = false; card_sel = ""; lab_go = false; _en_open = ""; busy = false; cork.empty(); room.camera(false)
 	var pl: Dictionary = Game.place()
 	var b: Dictionary = Game.beat()
-	title_ko.text = pl.get("name", ""); title_en.text = pl.get("sub", "").to_upper()
-	bar_btns.phone.visible = Game.has_phone()
-	bar_btns.board.visible = not Game.ST.cases.is_empty() or not Game.owned().is_empty()
-	bar_btns.map.visible = b.is_empty() and pl.get("travel", "") != "no" and Game.S.known.size() > 1
+	title_ko.text = pl.get("name", ""); title_ko.add_theme_font_size_override("font_size", clampi(int(126.0 / maxf(1.0, title_ko.text.length())), 18, 28)); title_en.text = pl.get("sub", "").to_upper()
+	_bar("phone", Game.has_phone())
+	_bar("board", not Game.ST.cases.is_empty() or not Game.owned().is_empty() or not Game.board().photos.is_empty() or Game.ST.free)
+	_bar("map", Game.S.known.size() > 1, not b.is_empty() or pl.get("travel", "") == "no")
+	if Game.node != _shown_node or Game.loc != _shown_loc: scroller.scroll_vertical = 0   # something new: from its top
+	_shown_loc = Game.loc
 	clock_btn.visible = Game.S.F.has("started") and pl.get("mode", "") != "explore"
 	clock_btn.text = "%d일째 · %s   %s" % [Game.W.day, Game.SLOT_KO[Game.slot_name()], Game.won(Game.W.money)]
 	Kit.clear(body); Kit.clear(acts); Kit.clear(foot)
 	var t: String = b.get("type", "")
 	card.visible = t == "card"
-	if kb and (t != "type" or Game.node != _shown_node): kb.queue_free(); kb = null
+	if kb and (t != "type" or Game.node != _shown_node or not Game.typed_close.is_empty()): kb.queue_free(); kb = null
 	if Game.node != _shown_node:
 		_build_seq = []; _picks = []; _numpad = ""; _reply = []
 		if b.has("ko") and not b.get("audio", false) and b.who != "narr" and Settings.get_("auto") == 1: voice.say(b.ko, b.who)
 		elif b.get("audio", false): voice.say(b.ko, b.who)
+	if Game.node != _shown_node: _new_at = Time.get_ticks_msec()
+	if is_instance_valid(_lock) and Game.node != _lock_node: _lock.queue_free(); _lock = null   # you've walked away from it
 	_shown_node = Game.node
 	if scape: scape.update(pl)
 	var lab: bool = pl.get("mode", "") == "board" or board_view
 	cork.visible = lab; room.visible = not lab
+	if kb: kb.visible = not lab
 	if lab: cork.refresh()
 	if lab and (b.is_empty() or board_view): _lab()
 	elif b.is_empty(): _looking()
@@ -152,11 +224,20 @@ func _refresh() -> void:
 		_text(Kit.esc(b.en)); _cont("Continue")
 	else: _say_beat(b)
 	_pockets(b.is_empty())
+	kb_gap.visible = kb != null and kb.visible; kb_gap.custom_minimum_size.y = size.y * 0.56 - 16
 	room.refresh()
 
 
+## a button in the top bar keeps its place whether you have it yet or not; "dim": not right now (tapping says why)
+func _bar(k: String, have: bool, dim := false) -> void:
+	var b: Button = bar_btns[k]
+	b.self_modulate.a = (0.45 if dim else 1.0) if have else 0.0; b.mouse_filter = Control.MOUSE_FILTER_STOP if have else Control.MOUSE_FILTER_IGNORE
+	b.disabled = not have; b.set_meta("dim", dim)
+	for c in ["font_color", "font_disabled_color"]: b.add_theme_color_override(c, Color(Kit.PAPER, (0.6 if dim else 1.0) if have else 0.0))
+
+
 func _text(bb: String, sz := 24, c: Color = Kit.PAPER_INK) -> RichTextLabel:
-	var r := Kit.rich(sz, c); r.text = bb; r.meta_clicked.connect(func(w): _word(str(w))); body.add_child(r); return r
+	var r := Kit.rich(sz, c); body.add_child(r); r.text = bb; r.meta_clicked.connect(func(w): _word(str(w))); return r   # into the tree first: laying it out twice is slow
 
 
 func _act(t: String, f: Callable, dark := false) -> Button:
@@ -164,7 +245,12 @@ func _act(t: String, f: Callable, dark := false) -> Button:
 
 
 func _cont(t: String) -> void:
-	_act(t, func(): Game.sound.emit("tap"); Game.next(), true)
+	_act(t, func():
+		if _too_soon(): return
+		Game.sound.emit("tap"); Game.next(), true)
+
+
+func _too_soon() -> bool: return Time.get_ticks_msec() - _new_at < guard
 
 
 ## nothing happening: where you are, and (free days) who's here, the clock
@@ -281,14 +367,14 @@ func _lab() -> void:
 	else: _act("Leave the board ▸", func(): lab_go = true; _refresh())
 	if id != "" and not Game.card(id).is_empty():   # the card itself, bigger; tap it to see it full screen
 		var pv: Control = cork.preview(id, 300.0); pv.mouse_filter = Control.MOUSE_FILTER_STOP; acts.add_child(pv)
-		pv.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed: card_big(id))
+		pv.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed and Rect2(Vector2.ZERO, pv.size).has_point(e.position): card_big(id))
 		acts.add_child(Kit.label("(tap the card to see it bigger)", 16, Kit.MUTE))
 
 
 ## a card over the whole screen; tap anywhere (or ✕) to put it back
 func card_big(id: String) -> void:
 	Game.sound.emit("tap")
-	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.82); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(o)
+	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.82); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); o.set_meta("closes", true); add_child(o)
 	var c: Control = cork._make(id); c.set_meta("preview", true); c.rotation_degrees = 0
 	var k := minf(size.x * 0.9 / c.size.x, size.y * 0.88 / c.size.y)
 	c.scale = Vector2(k, k); cork.crisp(c, k); c.position = (size - c.size * k) / 2; o.add_child(c)
@@ -301,6 +387,10 @@ func card_big(id: String) -> void:
 ## the evidence box: everything you've taken down, and everything new. Put any of it back up.
 func _box() -> void:
 	var inner := Kit.sheet(self, "증거 상자 · Evidence box", 0.7)
+	_fill_box(inner)
+
+
+func _fill_box(inner: VBoxContainer) -> void:
 	var ids: Array = Game.boxed()
 	if ids.is_empty(): inner.add_child(Kit.label("Empty. Drag a card onto the box to put it away.", 20, Kit.MUTE, true))
 	for id in ids:
@@ -311,7 +401,7 @@ func _box() -> void:
 		var l := Kit.label(("● " if Game.board().cards[id].get("new", false) else "") + Game.card_label(cd), 20, Kit.PAPER_INK, true)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(l)
 		var b := Kit.button("Put it up", true, 18); row.add_child(b)
-		b.pressed.connect(func(): Game.board_unbox(id); cork.refresh(); Kit.close(inner); _box())
+		b.pressed.connect(func(): Game.board_unbox(id); cork.refresh(); Kit.refill(inner, _fill_box.bind(inner)))
 	Game.box_seen(); cork.refresh()
 
 
@@ -341,7 +431,7 @@ func _say_beat(b: Dictionary) -> void:
 		if b.get("audio", false):
 			right.add_child(Kit.label("You only hear this. It gets written down once you act on it.", 17, Kit.MUTE, true))
 		else:
-			var r := Kit.rich(30); r.text = Kit.ko(b.ko); r.meta_clicked.connect(func(w): _word(str(w))); right.add_child(r)
+			var r := Kit.rich(30); right.add_child(r); r.text = Kit.ko(b.ko); r.meta_clicked.connect(func(w): _word(str(w)))
 		var again := Kit.button("▶ Again", false, 16); again.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		again.pressed.connect(func(): voice.say(b.ko, who)); right.add_child(again)
 		if b.has("en"):
@@ -354,12 +444,24 @@ func _say_beat(b: Dictionary) -> void:
 		if not Game.cond(o.c): continue
 		shown += 1
 		var t: String = ("“%s”" % Game.plain(o.ko)) if o.has("ko") else o.get("en", "")
-		_act(t, func():
-			if busy: return
-			if o.has("ko"):
-				busy = true; voice.say_then(o.ko, "you", func(): busy = false; Game.choose(o))
-			else: Game.choose(o))
+		var btn := _act(t, func(): pass)
+		btn.pressed.connect(func():
+			if _too_soon(): return
+			if o.has("ko"): _speak(btn, o.ko, func(): Game.choose(o))
+			elif not busy: Game.choose(o))
 	if shown == 0: _cont("Continue" if (b.has("next") or b.has("rewind")) else "Look around")
+
+
+## you say your line, then the story goes on. The other buttons wait, greyed; tapping yours again skips the voice.
+func _speak(btn: BaseButton, ko: String, then: Callable) -> void:
+	if busy: voice.stop(); return
+	busy = true
+	var at: String = Game.node
+	for x in acts.find_children("*", "BaseButton", true, false) + foot.get_children():
+		if x is BaseButton and x != btn: x.disabled = true
+	voice.say_then(ko, "you", func():
+		busy = false
+		if Game.node == at: then.call())
 
 
 func _hear(b: Dictionary) -> void:
@@ -370,7 +472,8 @@ func _hear(b: Dictionary) -> void:
 func _number(b: Dictionary) -> void:
 	_text(Kit.esc(b.en))
 	if b.kind == "count":
-		var lock = load("res://scripts/ui/lock.gd").new()
+		if is_instance_valid(_lock) and not _lock.is_queued_for_deletion(): return   # already in front of you
+		var lock = load("res://scripts/ui/lock.gd").new(); _lock = lock; _lock_node = Game.node
 		lock.setup(len(Game._digits(b.ans[0][0])) if not b.ans.is_empty() else 4)
 		lock.tried.connect(func(v): Game.answer(v))
 		room.add_child(lock); return
@@ -418,8 +521,7 @@ func _build_beat(b: Dictionary) -> void:
 	var say := Kit.button("Say it", true); say.size_flags_horizontal = Control.SIZE_EXPAND_FILL; say.disabled = _build_seq.is_empty()
 	say.pressed.connect(func():
 		var seq: Array = _build_seq.map(func(i): return b.tiles[i])
-		if busy: return
-		busy = true; voice.say_then(" ".join(seq) if not b.join else "".join(seq), "you", func(): busy = false; Game.answer_build(seq)))
+		_speak(say, " ".join(seq) if not b.join else "".join(seq), func(): Game.answer_build(seq)))
 	row.add_child(say)
 	_leave_btn()
 
@@ -463,9 +565,7 @@ func _type_beat(b: Dictionary) -> void:
 	if kb == null:
 		kb = load("res://scripts/ui/korean_keyboard.gd").new(); add_child(kb)
 		kb.hint_text = Game.plain(b.ans[0][0]) if not b.ans.is_empty() else ""
-		kb.submitted.connect(func(t):
-			if busy: return
-			busy = true; voice.say_then(t, "you", func(): busy = false; Game.answer_type(t)))
+		kb.submitted.connect(func(t): _speak(null, t, func(): Game.answer_type(t)))
 		kb.closed.connect(func(): kb = null; Game.leave())
 
 
@@ -541,6 +641,7 @@ func _pockets(free: bool) -> void:
 ## ---------- pop-ups
 func _open(what: String) -> void:
 	_play("tap")
+	if bar_btns.has(what) and bar_btns[what].get_meta("dim", false): _toast("You can't walk home from here. Find the way you came." if what == "map" and Game.beat().is_empty() else "Finish what you're doing here first."); return
 	match what:
 		"notebook": load("res://scripts/ui/notebook.gd").open(self, "")
 		"board":
@@ -582,10 +683,14 @@ func start_over(id: String) -> void:
 
 
 ## 기록: every line so far in this chapter, newest at the bottom; tap ▶ to hear one again
-func _log_sheet() -> void:
+func _log_sheet(all := false) -> void:
 	var inner := Kit.sheet(self, "기록 · what was said", 0.72)
 	var lines: Array = Game.S.get("log", [])
 	if lines.is_empty(): inner.add_child(Kit.label("Nothing yet.", 20, Kit.MUTE)); return
+	if lines.size() > 30 and not all:   # the last bit first: the whole chapter at once makes the phone pause
+		var eb := Kit.button("▴  Earlier", false, 18); eb.alignment = HORIZONTAL_ALIGNMENT_CENTER; inner.add_child(eb)
+		eb.pressed.connect(func(): Kit.close(inner); _log_sheet(true))
+		lines = lines.slice(lines.size() - 30)
 	for e in lines:
 		if e.who == "narr":
 			inner.add_child(Kit.label(e.en, 18, Kit.MUTE, true)); continue
@@ -597,18 +702,22 @@ func _log_sheet() -> void:
 		col.add_child(Kit.label("You" if e.who == "you" else ("Written" if e.who == "sign" else Game.ST.cast.get(e.who, {}).get("n", e.who)), 15, Kit.MUTE))
 		if e.get("heard", false): col.add_child(Kit.label("🔊 Heard, not written down yet", 20, Kit.MUTE))
 		else:
-			var r := Kit.rich(22); r.text = Kit.ko(e.ko); r.meta_clicked.connect(func(w): _word(str(w))); col.add_child(r)
+			var r := Kit.rich(22); col.add_child(r); r.text = Kit.ko(e.ko); r.meta_clicked.connect(func(w): _word(str(w)))
 		if e.get("en", "") != "": col.add_child(Kit.label(e.en, 16, Kit.MUTE, true))
 		var say := Kit.button("▶", false, 18); var k: String = e.ko; var who: String = e.who
 		say.pressed.connect(func(): voice.say(k, who)); row.add_child(say)
 	await get_tree().process_frame
-	var sc := inner.get_parent() as ScrollContainer
-	if sc: sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)
+	await get_tree().process_frame
+	if is_instance_valid(inner): (inner.get_meta("swipe") as Swipe).scroll_vertical = 1000000
 
 
 ## 설정: how it sounds and how big the Korean is
 func _settings() -> void:
 	var inner := Kit.sheet(self, "설정 · settings", 0.62)
+	_fill_settings(inner)
+
+
+func _fill_settings(inner: VBoxContainer) -> void:
 	var rows := [["auto", "Read lines aloud by themselves", [[1, "On"], [0, "Off"]]], ["voices", "Voices", [[1, "On"], [0, "Off"]]],
 		["slow", "Voice speed", [[0, "Normal"], [1, "Slow"]]], ["size", "Korean text size", [[0, "Small"], [1, "Medium"], [2, "Large"]]],
 		["glow", "Things glow when named", [[1, "On"], [0, "Off"]]], ["fade", "Hints fade as you learn words", [[1, "On"], [0, "Off"]]], ["sound", "Sound effects", [[1, "On"], [0, "Off"]]], ["music", "Music", [[2, "On"], [1, "Low"], [0, "Off"]]],
@@ -619,7 +728,7 @@ func _settings() -> void:
 		for opt in r[2]:
 			var b := Kit.button(opt[1], Settings.get_(r[0]) == opt[0], 18); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.custom_minimum_size.x = 96
 			b.pressed.connect(func():
-				Settings.set_(r[0], opt[0]); voice.apply(); scape.update(Game.place()); Kit.close(inner); _settings(); _refresh())
+				Settings.set_(r[0], opt[0]); voice.apply(); scape.update(Game.place()); Kit.refill(inner, _fill_settings.bind(inner)); _refresh())
 			row.add_child(b)
 	var t := Kit.button("▶  Test the voice", false, 18); t.pressed.connect(func(): voice.say("{안녕하세요}", "word")); inner.add_child(t)
 
@@ -653,7 +762,7 @@ func _day_panel() -> void:
 
 ## ---------- the start screen
 func _title() -> void:
-	var o := ColorRect.new(); o.color = Kit.INK; o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(o)
+	var o := ColorRect.new(); o.color = Kit.INK; o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(o); _title_o = o
 	var c := CenterContainer.new(); c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); o.add_child(c)
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 14); v.custom_minimum_size.x = 440; c.add_child(v)
 	var t := Kit.label("탈", 120, Kit.PAPER); t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; v.add_child(t)
@@ -663,9 +772,17 @@ func _title() -> void:
 		var b := Kit.button("Continue", false); b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.pressed.connect(func(): go_on.call(func(): if not Game.load_save(): Game.start_chapter("prologue", true))); v.add_child(b)
 	var n := Kit.button("New game" if Game.has_save() else "Start", not Game.has_save()); n.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	n.pressed.connect(func(): go_on.call(func(): Game.S = Game._fresh(); Game.start_chapter("prologue", true))); v.add_child(n)
+	var begin := func(): go_on.call(func(): Game.S = Game._fresh(); Game.start_chapter("prologue", true))
+	if Game.has_save(): Kit.sure(n, "Erase your game and start again? Tap again.", begin)
+	else: n.pressed.connect(begin)
+	v.add_child(n)
 	var ch := Kit.button("Chapters"); ch.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ch.pressed.connect(func(): go_on.call(func(): Game.load_save(); load("res://scripts/ui/places.gd").chapters(self))); v.add_child(ch)
+	ch.pressed.connect(func(): _play("tap"); Game.load_save(); load("res://scripts/ui/places.gd").chapters(self)); v.add_child(ch)
+
+
+func leave_title() -> void:
+	if is_instance_valid(_title_o): _title_o.queue_free()
+	board_view = false; card_sel = ""; lab_go = false
 
 
 ## ---------- the title card ("@card 1장 | 탈"), the time-of-day card, the end of a chapter
@@ -680,6 +797,8 @@ func _card() -> Control:
 
 
 func _timecard() -> void:
+	await get_tree().process_frame
+	if card.visible or not room.visible: return   # a title card says it already
 	var l := Kit.label("%s\nday %d · %s" % [Game.SLOT_KO[Game.slot_name()], Game.W.day, Game.slot_name()], 56, Kit.PAPER)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -714,5 +833,5 @@ func _play(n: String) -> void:
 func _toast(t: String) -> void:
 	var p := PanelContainer.new(); p.add_theme_stylebox_override("panel", Kit.box(14, Color(0.08, 0.09, 0.12, 0.92), Color.TRANSPARENT, 0, 12))
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	p.add_child(Kit.label(Game.plain(t), 20, Kit.PAPER)); toast_box.add_child(p)
+	var tl := Kit.label(Game.plain(t), 20, Kit.PAPER, true); tl.custom_minimum_size.x = minf(560, tl.get_theme_font("font").get_string_size(tl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 4); p.add_child(tl); toast_box.add_child(p)
 	var tw := create_tween(); tw.tween_interval(2.8); tw.tween_property(p, "modulate:a", 0.0, 0.4); tw.tween_callback(p.queue_free)

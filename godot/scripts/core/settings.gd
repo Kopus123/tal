@@ -25,7 +25,9 @@ static func load_() -> void:
 		if d is Dictionary: v.merge(d, true)
 
 
+static var frozen := false   ## the playtester: nothing it changes is kept
 static func save_() -> void:
+	if frozen: return
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f: f.store_string(JSON.stringify(v))
 

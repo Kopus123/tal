@@ -5,6 +5,7 @@ extends Node
 ## things and anyone without a voice of their own, "word|..." for single words, "you|..." for what you say).
 
 var on := true
+static var instant := false   ## the playtester: a line takes one frame
 var _index: Dictionary = {}
 var _player: AudioStreamPlayer
 
@@ -68,6 +69,10 @@ func stop() -> void: _player.stop()
 func say_then(text: String, who: String, then: Callable) -> void:
 	var f: String = _index.get(key(text, who), "") if on else ""
 	if f == "": then.call(); return
+	if instant: await get_tree().process_frame; then.call(); return
 	say(text, who)
-	await _player.finished
+	var s := _player.stream; var left := (s.get_length() if s else 0.0) / maxf(0.1, _player.pitch_scale) + 0.5
+	while left > 0.0 and _player.playing and _player.stream == s:   # over, stopped, or another line cut in: go on either way
+		await get_tree().process_frame
+		left -= get_process_delta_time()
 	then.call()

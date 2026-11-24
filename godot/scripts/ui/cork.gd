@@ -19,6 +19,7 @@ var sel := ""                      ## the card you're looking at
 var from := ""                     ## a string picked up from this card, waiting to be pinned
 var _press := {}                   ## {id, at, grab, moved}
 var _cards := {}                   ## id -> Control
+var _wall: Control                 ## the brick wall and the cork: drawn once
 var _top: Control                  ## strings and tacks: drawn over the cards
 var _help: PanelContainer          ## how to tie, until you've done it once (and while you carry a string)
 static var _bw: ShaderMaterial     ## old black-and-white photo
@@ -29,6 +30,8 @@ func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	resized.connect(func(): if visible: refresh() else: _layout())   # the first time it opens it has no size yet: cards find their places now
+	_wall = Control.new(); _wall.mouse_filter = Control.MOUSE_FILTER_IGNORE; _wall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_wall.draw.connect(_draw_wall); add_child(_wall)
 	_top = Control.new(); _top.mouse_filter = Control.MOUSE_FILTER_IGNORE; _top.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_top.draw.connect(_draw_top); add_child(_top)
 	_help = PanelContainer.new(); _help.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -38,27 +41,33 @@ func _ready() -> void:
 
 
 func _s() -> float: return clampf(size.y / 720.0 * 0.86, 0.45, 1.4)   ## card scale
+func _cs() -> float: return _s() * clampf(sqrt(14.0 / maxf(1.0, _cards.size())), 0.74, 1.0)   ## the more cards, the smaller
 func _inner() -> Rect2:   ## the cork inside the frame
 	var m := 46.0 * _s()
 	return Rect2(Vector2(m, m), size - Vector2(m, m) * 2)
 
 
+func empty() -> void:
+	for id in _cards: _cards[id].queue_free()
+	_cards.clear(); sel = ""; from = ""; _press = {}
+
+
 func refresh() -> void:
 	var b: Dictionary = Game.board()
 	for id in _cards.keys():
-		if not b.cards.has(id) or Game.is_boxed(id): _cards[id].queue_free(); _cards.erase(id)
+		if not b.cards.has(id) or Game.is_boxed(id) or Game.card(id).is_empty(): _cards[id].queue_free(); _cards.erase(id)
 	for id in b.cards:
-		if not _cards.has(id) and not Game.is_boxed(id): _cards[id] = _make(id); add_child(_cards[id])
+		if not _cards.has(id) and not Game.is_boxed(id) and not Game.card(id).is_empty(): _cards[id] = _make(id); add_child(_cards[id])
 	if sel != "" and not _cards.has(sel): sel = ""
 	if size.x > 0:
 		for id in b.cards:
 			if b.cards[id].get("auto", false) and _cards.has(id): _autoplace(id)
 	move_child(_top, -1); move_child(_help, -1)   # strings over cards; the how-to over everything
-	_layout(); queue_redraw()
+	_layout()
 
 
 func _layout() -> void:
-	var b: Dictionary = Game.board(); var r := _inner(); var s := _s()
+	var b: Dictionary = Game.board(); var r := _inner(); var s := _cs()
 	for id in _cards: _place(id, b.cards[id], r, s)
 	_help_text()
 	_top.queue_redraw()
@@ -75,13 +84,13 @@ func _place(id: String, d: Dictionary, r: Rect2, s: float) -> void:
 
 ## a new card goes up where it covers the least of what's already there
 func _autoplace(id: String) -> void:
-	var b: Dictionary = Game.board(); var r := _inner(); var s := _s()
+	var b: Dictionary = Game.board(); var r := _inner(); var s := _cs()
 	var me: Vector2 = _cards[id].size * s; var room := r.size - me
 	var best := Vector2(0.5, 0.5); var least := INF
 	for j in 7:
 		for i in 9:
 			var p := Vector2(i / 8.0, j / 6.0); var at := r.position + p * room
-			var cover := 0.0
+			var cover := Rect2(at, me).intersection(box_rect().grow(6)).get_area() * 3.0
 			for o in b.cards:
 				if o == id or b.cards[o].get("auto", false) or not _cards.has(o): continue
 				var oc: Control = _cards[o]; var op: Vector2 = r.position + Vector2(b.cards[o].x, b.cards[o].y) * (r.size - oc.size * s)
@@ -150,7 +159,7 @@ func _make(id: String) -> Control:
 			_text(c, Game.plain(cd.ko), Rect2(4, 133, 178, 28), 16, Color("3a3226"))
 		"say":
 			_photo(c, Kit.face(cd.who, cd.get("ex", "neutral")), Rect2(8, 12, 42, 42), _mat_bw())
-			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(0, 56, 58, 34), 14, Color("5a5a6a"))
+			_text(c, Game.ST.cast.get(cd.who, {}).get("n", cd.who), Rect2(0, 56, 60, 48), 13, Color("5a5a6a"))
 			var q := _text(c, "“" + Game.plain(cd.ko) + "”", Rect2(62, 6, 160, 132), 18, INK)
 			q.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT; q.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	return c
@@ -226,7 +235,9 @@ static func _mat_sepia() -> ShaderMaterial:
 
 ## the paper of each card (its children draw on top of this)
 func _draw_card(c: Control, id: String) -> void:
-	var cd: Dictionary = Game.card(id); var k := _kind(cd); var r := Rect2(Vector2.ZERO, c.size)
+	var cd: Dictionary = Game.card(id)
+	if cd.is_empty(): return
+	var k := _kind(cd); var r := Rect2(Vector2.ZERO, c.size)
 	var lifted: bool = not _press.is_empty() and _press.moved and _press.id == id
 	c.draw_rect(Rect2(Vector2(3, 5) * (2.2 if lifted else 1.0), c.size), Color(0, 0, 0, 0.38 if lifted else 0.3))   # shadow
 	match k:
@@ -261,7 +272,7 @@ func _pin(id: String) -> Vector2:   ## where a card's thumbtack is
 func _card_at(p: Vector2) -> String:
 	var ids := []
 	for k in get_children():   # topmost first
-		if k != _top and k != _help: ids.push_front(k)
+		if k != _top and k != _help and k != _wall: ids.push_front(k)
 	for k in ids:
 		var local: Vector2 = (k as Control).get_transform().affine_inverse() * p
 		if Rect2(Vector2.ZERO, k.size).grow(4).has_point(local): return _cards.find_key(k)
@@ -272,7 +283,7 @@ func _card_at(p: Vector2) -> String:
 func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
-			_press = {"id": _card_at(e.position), "at": e.position, "moved": false}
+			_press = {"id": "" if box_rect().has_point(e.position) else _card_at(e.position), "at": e.position, "moved": false}
 			if _press.id != "":
 				_press.grab = e.position - _cards[_press.id].position   # where on the card your finger is
 				move_child(_cards[_press.id], _top.get_index() - 1)    # it comes to the front
@@ -282,10 +293,10 @@ func _gui_input(e: InputEvent) -> void:
 		if not _press.moved and e.position.distance_to(_press.at) > 22: _press.moved = true
 		if _press.moved and _press.id != "":   # drag the card
 			var c: Control = _cards[_press.id]; var r := _inner()
-			var room := r.size - c.size * _s()
+			var room := r.size - c.size * _cs()
 			var np: Vector2 = (e.position - _press.grab - r.position) / room   # the card stays under your finger
 			Game.board_move(_press.id, np.x, np.y)
-			_place(_press.id, Game.board().cards[_press.id], r, _s()); _top.queue_redraw()
+			_place(_press.id, Game.board().cards[_press.id], r, _cs()); _top.queue_redraw()
 
 
 func _release(p: Vector2) -> void:
@@ -297,7 +308,7 @@ func _release(p: Vector2) -> void:
 		Game.board_box(pr.id); refresh(); selected.emit(sel); return
 	if not pr.moved and pr.id == "" and box_rect().has_point(p): Game.sound.emit("tap"); box_open.emit(); return
 	if pr.moved:
-		if pr.id != "": Game.save(); _place(pr.id, Game.board().cards[pr.id], _inner(), _s())   # saved once, when you let go
+		if pr.id != "": Game.save(); _place(pr.id, Game.board().cards[pr.id], _inner(), _cs())   # saved once, when you let go
 		_top.queue_redraw(); return
 	pick(pr.id)   # a tap: look at that card (bare cork: look at nothing)
 
@@ -350,9 +361,9 @@ static func crisp(c: Control, k: float) -> void:
 
 
 ## ---------- drawing: the brick wall, the metal frame, the cork
-func _draw() -> void:
+func _draw_wall() -> void:
 	var s := _s(); var r := _inner()
-	draw_rect(Rect2(Vector2.ZERO, size), Color("6e3b2a"))   # mortar
+	_wall.draw_rect(Rect2(Vector2.ZERO, size), Color("6e3b2a"))   # mortar
 	var rng := RandomNumberGenerator.new(); rng.seed = 11
 	var bw := 64.0 * s; var bh := 26.0 * s; var g := 3.0 * s
 	var row := 0; var y := 0.0
@@ -360,28 +371,28 @@ func _draw() -> void:
 		var x := -bw / 2.0 if row % 2 == 1 else 0.0
 		while x < size.x:
 			var tone := rng.randf_range(-0.07, 0.07)
-			draw_rect(Rect2(x + g, y + g, bw - g, bh - g), Color(0.55 + tone, 0.24 + tone * 0.6, 0.17 + tone * 0.4))
+			_wall.draw_rect(Rect2(x + g, y + g, bw - g, bh - g), Color(0.55 + tone, 0.24 + tone * 0.6, 0.17 + tone * 0.4))
 			x += bw
 		y += bh; row += 1
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.35))   # the room's dim; the board's lit
+	_wall.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.35))   # the room's dim; the board's lit
 	# the aluminium frame
 	var f := 14.0 * s; var fr := r.grow(f)
-	draw_rect(Rect2(fr.position + Vector2(6, 8) * s, fr.size), Color(0, 0, 0, 0.45))
-	draw_rect(fr, Color("9aa1a8"))
-	draw_rect(Rect2(fr.position, Vector2(fr.size.x, f * 0.45)), Color("d3d8dc"))
-	draw_rect(Rect2(fr.position, Vector2(f * 0.45, fr.size.y)), Color("c3c9ce"))
-	draw_rect(Rect2(fr.position + Vector2(0, fr.size.y - f * 0.4), Vector2(fr.size.x, f * 0.4)), Color("6c737a"))
-	draw_rect(Rect2(fr.position + Vector2(fr.size.x - f * 0.4, 0), Vector2(f * 0.4, fr.size.y)), Color("7b8289"))
+	_wall.draw_rect(Rect2(fr.position + Vector2(6, 8) * s, fr.size), Color(0, 0, 0, 0.45))
+	_wall.draw_rect(fr, Color("9aa1a8"))
+	_wall.draw_rect(Rect2(fr.position, Vector2(fr.size.x, f * 0.45)), Color("d3d8dc"))
+	_wall.draw_rect(Rect2(fr.position, Vector2(f * 0.45, fr.size.y)), Color("c3c9ce"))
+	_wall.draw_rect(Rect2(fr.position + Vector2(0, fr.size.y - f * 0.4), Vector2(fr.size.x, f * 0.4)), Color("6c737a"))
+	_wall.draw_rect(Rect2(fr.position + Vector2(fr.size.x - f * 0.4, 0), Vector2(f * 0.4, fr.size.y)), Color("7b8289"))
 	# the cork
-	draw_rect(r, Color("b88a57"))
+	_wall.draw_rect(r, Color("b88a57"))
 	rng.seed = 7
 	for i in 1400:
 		var c := Color(0.36, 0.22, 0.1, rng.randf_range(0.12, 0.4)) if rng.randf() < 0.7 else Color(0.9, 0.74, 0.5, rng.randf_range(0.15, 0.35))
-		draw_circle(r.position + Vector2(rng.randf() * r.size.x, rng.randf() * r.size.y), rng.randf_range(0.8, 2.4) * s, c)
+		_wall.draw_circle(r.position + Vector2(rng.randf() * r.size.x, rng.randf() * r.size.y), rng.randf_range(0.8, 2.4) * s, c)
 	# old pin holes
-	for i in 40: draw_circle(r.position + Vector2(rng.randf() * r.size.x, rng.randf() * r.size.y), 1.6 * s, Color(0.2, 0.12, 0.05, 0.6))
+	for i in 40: _wall.draw_circle(r.position + Vector2(rng.randf() * r.size.x, rng.randf() * r.size.y), 1.6 * s, Color(0.2, 0.12, 0.05, 0.6))
 	# a shadow along the top of the cork, under the frame
-	for i in 6: draw_rect(Rect2(r.position + Vector2(0, i * 2 * s), Vector2(r.size.x, 2 * s)), Color(0, 0, 0, 0.16 - i * 0.025))
+	for i in 6: _wall.draw_rect(Rect2(r.position + Vector2(0, i * 2 * s), Vector2(r.size.x, 2 * s)), Color(0, 0, 0, 0.16 - i * 0.025))
 
 
 ## the evidence box, in the bottom right corner of the cork

@@ -12,7 +12,7 @@ const ACCENT := Color("8fd3c0")
 
 
 static func open(main: Control) -> void:
-	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.7); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); main.add_child(o)
+	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.7); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); o.set_meta("closes", true); main.add_child(o)
 	var body := PanelContainer.new()
 	var frame := StyleBoxFlat.new(); frame.bg_color = BAR; frame.set_corner_radius_all(38); frame.border_color = Color("1b1f27"); frame.set_border_width_all(10)
 	frame.content_margin_left = 10; frame.content_margin_right = 10; frame.content_margin_top = 8; frame.content_margin_bottom = 14
@@ -27,14 +27,13 @@ static func open(main: Control) -> void:
 	var top := HBoxContainer.new(); top.add_theme_constant_override("separation", 8); col.add_child(top)
 	var screen := PanelContainer.new(); screen.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	screen.add_theme_stylebox_override("panel", Kit.box(14, SCREEN, Color.TRANSPARENT, 0, 10)); col.add_child(screen)
-	var sc := ScrollContainer.new(); sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.scroll_deadzone = 24; screen.add_child(sc)
-	var inner := VBoxContainer.new(); inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; inner.add_theme_constant_override("separation", 8); sc.add_child(inner)
+	var inner := Swipe.make(screen, true); inner.add_theme_constant_override("separation", 8); var sc: Swipe = inner.get_meta("swipe")
 	var ctx := {"main": main, "o": o, "top": top, "inner": inner, "sc": sc}
 	_list(ctx)
 
 
 static func _flat(t: String, c: Color, sz := 20) -> Button:
-	var b := Button.new(); b.text = t; b.flat = true; b.add_theme_font_size_override("font_size", sz)
+	var b := Button.new(); b.text = t; b.flat = true; b.add_theme_font_size_override("font_size", sz); b.custom_minimum_size = Vector2(60, 52)
 	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(st, c)
 	return b
 
@@ -93,9 +92,10 @@ static func _thread(ctx: Dictionary, t: Dictionary) -> void:
 		var hear := _flat("▶", ACCENT, 16); hear.pressed.connect(func(): main.voice.say(m.ko, "sign")); foot.add_child(hear)
 		var tm := Kit.label(m.get("t", ""), 14, SOFT); tm.size_flags_horizontal = Control.SIZE_EXPAND_FILL; tm.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; foot.add_child(tm)
 		# tapping the bubble itself plays it too
-		bub.gui_input.connect(func(e):
-			if e is InputEventMouseButton and e.pressed: main.voice.say(m.ko, "sign"))
+		bub.gui_input.connect(func(e):   # on letting go, and only if the finger stayed (not a swipe)
+			if e is InputEventMouseButton and not e.pressed and Rect2(Vector2.ZERO, bub.size).has_point(e.position): main.voice.say(m.ko, "sign"))
 	if t.has("note") and Game.cond(t.get("note_c", "")):
 		ctx.inner.add_child(Kit.label(t.note, 17, SOFT, true))
 	await ctx.main.get_tree().process_frame
-	ctx.sc.scroll_vertical = 100000
+	await ctx.main.get_tree().process_frame
+	if is_instance_valid(ctx.sc): ctx.sc.scroll_vertical = 100000

@@ -9,18 +9,18 @@ at afternoon jeong 88 84
 at evening gang 64 68
 at evening golmok 36 74
 greet hb_hi
-chat 0 hb_fish
-chat 0 hb_know
-chat 0 hb_busy
+chat 0 hb_fish if @gang
+chat 0 hb_know if @gang
+chat 0 hb_busy if @gang
 ask 할머니 hb_ask_gm
-ask 물고기 hb_ask_fish
+ask 물고기 hb_ask_fish if @gang
 bye hb_bye
 bye hb_bye2
 bye hb_bye3
 
 === scene hb_hi
 haraboji: ...{네}.
-(He nods without taking his eyes off the water. From him, that is a warm welcome.)
+(He nods without quite looking at you. From him, that is a warm welcome.)
 
 === scene hb_fish
 haraboji: {물고기}{가|이/가} {없어요}.
@@ -77,7 +77,7 @@ haraboji: ...{낚시}{하거든요|거든요}.
 
 === scene hb_ask_gm
 haraboji: ...
-(He doesn't answer for a long time. The float bobs.)
+(He doesn't answer for a long time.)
 haraboji[sad]: {좋은} {친구}{예요|이에요}. {옛날}{부터}.
 (Since long ago. He says nothing more, and you don't ask.)
 ! rel haraboji +1

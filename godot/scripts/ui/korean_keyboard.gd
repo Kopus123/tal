@@ -57,6 +57,10 @@ func _type(j: String) -> void:
 	shown.text = h.text()
 
 
+func clear() -> void:   ## said: an empty line for the next thing
+	h.clear(); shown.text = ""
+
+
 func _say() -> void:
 	if h.text().strip_edges() != "": submitted.emit(h.text())
 

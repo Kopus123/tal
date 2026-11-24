@@ -85,4 +85,4 @@ func _check() -> void:
 
 func _next_word() -> void:
 	target = WORDS[round_i % WORDS.size()]; h.clear(); shown.text = ""
-	pic.texture = main._icon(target) if main else null
+	pic.texture = Kit.icon(target)

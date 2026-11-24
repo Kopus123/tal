@@ -12,12 +12,12 @@ greet sj_hi
 greet sj_hi2
 chat 0 sj_weather
 chat 0 sj_what
-chat 0 sj_hungry
+chat 0 sj_hungry if @madang
 chat 0 sj_photo
 chat 1 sj_junho
 ask 할머니 sj_ask_gm
 ask 탈 sj_ask_mask
-story 1 sj_workshop
+story 1 sj_workshop if @gongbang
 bye sj_bye
 bye sj_bye2
 bye sj_bye3

@@ -141,6 +141,9 @@ func _snap() -> void:
 	if Time.get_ticks_msec() - _last_snap < 700: return   # the film has to wind on
 	_last_snap = Time.get_ticks_msec()
 	var r := Rect2(frame.position / size * 100.0, frame.size / size * 100.0)
+	if not set3 and cam.zoom != Vector2.ONE:   # leaning in: the part of the drawing you're really seeing
+		var mid := cam.get_screen_center_position() / Vector2(ART_W, ART_H) * 100.0
+		r = Rect2(mid + (r.position - Vector2(50, 50)) / cam.zoom, r.size / cam.zoom)
 	var why := ""
 	if set3:   # what the 3D scene shows inside your frame
 		var im: Image = vp3.get_texture().get_image(); var v := Vector2(vp3.size)
@@ -229,7 +232,7 @@ func refresh() -> void:
 	else: moon.enabled = false
 	# the camera: yours to raise when you're standing somewhere (not mid-conversation, not at the board)
 	var can_shoot: bool = not Game.ST.is_empty() and Game.node == "" and not exam and pl.get("mode", "") != "board"
-	if set3 and pl.has("scene") and Game.node != "": can_shoot = b.get("type", "say") in ["say", ""] and not exam   # in 3D you can walk while a line waits on the paper, so you can shoot too
+	if not Game.ST.is_empty() and Game.node != "" and pl.get("mode", "") != "board": can_shoot = b.get("type", "say") in ["say", ""]   # a line waiting on the paper doesn't stop you taking a picture
 	if not can_shoot: cam_mode = false
 	cam_btn.visible = can_shoot and not cam_mode; shutter.visible = cam_mode; cam_x.visible = cam_mode; veil.visible = cam_mode
 	if set3 and stick:   # framing a shot: the walking controls step aside
@@ -238,7 +241,7 @@ func refresh() -> void:
 		if climb_btn: climb_btn.visible = not cam_mode and (set3.up or set3.can_climb())
 		if cam_mode: stick.moved.emit(Vector2.ZERO)
 	back_btn.visible = pl.has("back") and Game.node == "" and not cam_mode
-	marks.visible = not cam_mode and cam.zoom == Vector2.ONE
+	marks.visible = not cam_mode and not Game._leaning; figs.visible = not Game._leaning
 	if cam_mode: set_process(true); veil.queue_redraw(); _place_cam_btns()
 	frame.visible = b.get("type", "") == "camera" or cam_mode
 	if frame.visible and not frame.has_meta("placed"):
@@ -254,7 +257,7 @@ func refresh() -> void:
 
 ## ---------- what someone just named lights up in the picture (a soft golden ring)
 func _draw_glow() -> void:
-	if Settings.get_("glow") == 0 or cam_mode or cam.zoom != Vector2.ONE: return
+	if Settings.get_("glow") == 0 or cam_mode or Game._leaning: return
 	var b: Dictionary = Game.beat()
 	if not b.has("ko"): return
 	var named: Array = Story.tokens(b.ko).map(func(t): return t[1])
@@ -497,13 +500,15 @@ func _exam_tap(pct: Vector2) -> void:
 
 
 ## the camera: the people (the target) have to be inside the frame
+var _shooting := false
 func shoot(b: Dictionary) -> void:
+	if _shooting: return   # a second press while the flash fades would skip a line
 	var r := Rect2(frame.position / size * 100.0, frame.size / size * 100.0).grow(-6)
 	if not r.has_point(Vector2(b.tx, b.ty)):
 		Game.sound.emit("wrong"); Game.toast.emit("They're not in the frame yet. Drag the frame over them first."); return
-	Game.sound.emit("tap")
-	var f := ColorRect.new(); f.color = Color.WHITE; f.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(f)
-	var tw := create_tween(); tw.tween_property(f, "modulate:a", 0.0, 0.5); tw.tween_callback(func(): f.queue_free(); Game.next())
+	Game.sound.emit("click"); _shooting = true
+	var f := ColorRect.new(); f.color = Color.WHITE; f.mouse_filter = Control.MOUSE_FILTER_IGNORE; f.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); add_child(f)
+	var tw := create_tween(); tw.tween_property(f, "modulate:a", 0.0, 0.5); tw.tween_callback(func(): f.queue_free(); _shooting = false; if Game.beat() == b: Game.next())
 
 
 ## ---------- leaning in on a thing you're looking at

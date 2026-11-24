@@ -50,8 +50,8 @@ static func chapters(main: Control) -> void:
 		var started: bool = Game.S.prog.get(c.id, {}).get("F", {}).get("started", false) or Game.S.ch == c.id
 		var label := "%s · %s%s" % [c.t, c.sub, "  (test area)" if c.dev else ""]
 		var b := Kit.wide(label + ("" if unlocked else "  🔒"), false, 22); b.disabled = not unlocked
-		b.pressed.connect(func(): Kit.close(inner); Game.start_chapter(c.id, not started))
+		b.pressed.connect(func(): Kit.close(inner); main.leave_title(); Game.start_chapter(c.id, not started))
 		inner.add_child(b)
 		if started and not c.free:
 			var r := Kit.button("    ↺ start %s over" % c.t, false, 17)
-			r.pressed.connect(func(): Kit.close(inner); main.start_over(c.id)); inner.add_child(r)
+			Kit.sure(r, "    ↺ Start over? Your place in it is lost. Tap again.", func(): Kit.close(inner); main.leave_title(); main.start_over(c.id)); inner.add_child(r)

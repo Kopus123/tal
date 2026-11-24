@@ -24,19 +24,32 @@ static func box(radius: int, bg: Color, border: Color = Color.TRANSPARENT, bw :=
 	return s
 
 
+static var _looks: Dictionary = {}   ## dark or not -> its normal, pressed and greyed look (shared by every button)
 ## dark = the main action (ink on paper inverted); otherwise a paper button with an ink border
 static func button(t: String, dark := false, sz := 22) -> Button:
 	var b := Button.new(); b.text = t; b.add_theme_font_size_override("font_size", sz)
-	var n := box(12, PAPER_INK if dark else PAPER_LIGHT, PAPER_INK, 0 if dark else 2, 12); n.content_margin_left = 16; n.content_margin_right = 16
-	var p := n.duplicate(); p.bg_color = n.bg_color.darkened(0.15)
-	var d := n.duplicate(); d.bg_color = n.bg_color.lerp(PAPER, 0.6); d.border_color = LINE
-	for st in ["normal", "hover", "focus"]: b.add_theme_stylebox_override(st, n)
-	b.add_theme_stylebox_override("pressed", p); b.add_theme_stylebox_override("disabled", d)
+	if not _looks.has(dark):
+		var n := box(12, PAPER_INK if dark else PAPER_LIGHT, PAPER_INK, 0 if dark else 2, 12); n.content_margin_left = 16; n.content_margin_right = 16
+		var p := n.duplicate(); p.bg_color = n.bg_color.darkened(0.15)
+		var d := n.duplicate(); d.bg_color = n.bg_color.lerp(PAPER, 0.6); d.border_color = LINE
+		_looks[dark] = [n, p, d]
+	for st in ["normal", "hover", "focus"]: b.add_theme_stylebox_override(st, _looks[dark][0])
+	b.add_theme_stylebox_override("pressed", _looks[dark][1]); b.add_theme_stylebox_override("disabled", _looks[dark][2])
 	var fc := PAPER if dark else PAPER_INK
 	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(st, fc)
 	b.add_theme_color_override("font_disabled_color", MUTE)
 	b.alignment = HORIZONTAL_ALIGNMENT_CENTER if dark else HORIZONTAL_ALIGNMENT_LEFT
 	return b
+
+
+## a press that can't be taken back: the first one asks, the second (within a few seconds) does it
+static func sure(b: Button, ask: String, f: Callable) -> void:
+	var was := b.text
+	b.pressed.connect(func():
+		if b.has_meta("asked"): f.call(); return
+		b.set_meta("asked", true); b.text = ask; Game.sound.emit("tap")
+		await b.get_tree().create_timer(4.0).timeout
+		if is_instance_valid(b): b.remove_meta("asked"); b.text = was)
 
 
 ## a full-width button whose text wraps onto more lines (choices, cards)
@@ -48,19 +61,27 @@ static func wide(t: String, dark := false, sz := 22) -> Button:
 ## a sheet of paper over everything (the case board, the phone, the notebook...). Returns the inside to fill;
 ## close it with `Kit.close(inside)`.
 static func sheet(parent: Control, title: String, wide := 0.8) -> VBoxContainer:
-	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.6); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); parent.add_child(o)
-	var p := PanelContainer.new(); p.add_theme_stylebox_override("panel", box(18, PAPER, Color.TRANSPARENT, 0, 20))
+	var o := ColorRect.new(); o.color = Color(0, 0, 0, 0.6); o.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); o.set_meta("closes", true); parent.add_child(o)
+	var p := PanelContainer.new(); o.set_meta("panel", p); p.add_theme_stylebox_override("panel", box(18, PAPER, Color.TRANSPARENT, 0, 20))
 	p.anchor_left = (1 - wide) / 2; p.anchor_right = 1 - (1 - wide) / 2; p.anchor_top = 0.04; p.anchor_bottom = 0.96; o.add_child(p)
 	var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 10); p.add_child(col)
 	var head := HBoxContainer.new(); col.add_child(head)
 	var t := label(title, 30); t.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(t)
 	var x := button("✕", true); x.custom_minimum_size = Vector2(56, 56); head.add_child(x)
 	x.pressed.connect(func(): Game.sound.emit("tap"); o.queue_free())
-	var sc := ScrollContainer.new(); sc.size_flags_vertical = Control.SIZE_EXPAND_FILL; sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; col.add_child(sc)
-	sc.scroll_deadzone = 24
-	var inner := VBoxContainer.new(); inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; inner.add_theme_constant_override("separation", 10); sc.add_child(inner)
+	var inner := Swipe.make(col)
 	inner.set_meta("overlay", o)
 	return inner
+
+
+## the same sheet, filled again, its list where you left it
+static func refill(inner: VBoxContainer, fill: Callable) -> void:
+	var s: Swipe = inner.get_meta("swipe"); var at := s.scroll_vertical
+	clear(inner); fill.call()
+	for i in 3:
+		await inner.get_tree().process_frame
+		if not is_instance_valid(s) or not is_instance_valid(inner) or not inner.is_inside_tree(): return
+		s.scroll_vertical = at
 
 
 static func close(inner: Control) -> void:

@@ -235,10 +235,7 @@ expect day=5&time:morning&on:market
 fx rel sujin =3
 talk sujin
 idle
-# (close enough now: her personal story comes first, then the menu)
-talk sujin
-idle
-saved world.seen.sj_workshop
+# (her personal story waits until you find her in the workshop)
 talk sujin
 choose 할머니는
 idle
@@ -266,8 +263,14 @@ map madang
 wait
 wait
 sleep
-# --- day 6: you don't go to the river in the evening, so you miss what happens there
+# --- day 6: 수진 tells you about the workshop, in the workshop; you don't go to the river in the evening, so you miss what happens there
 wait
+talk sujin
+idle
+talk sujin
+idle
+saved world.seen.sj_workshop
+map madang
 wait
 wait
 expect time:night&day=6

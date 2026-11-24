@@ -85,24 +85,46 @@ static func _fill(main: Control, grid: GridContainer, all: Array) -> void:
 			return x < y if x != y else a < b)
 		"new": list.reverse()
 	if list.is_empty(): grid.add_child(Kit.label("Nothing here.", 20, Kit.MUTE)); return
-	for k in list: grid.add_child(_tile(main, k))
+	var turn: int = grid.get_meta("turn", 0) + 1; grid.set_meta("turn", turn)
+	filling = true
+	for i in list.size():
+		if i >= 30 and i % 12 == 0:
+			await main.get_tree().process_frame
+			if not is_instance_valid(grid): filling = false; return
+			if grid.get_meta("turn") != turn: return   # another filter or search took over
+		grid.add_child(_tile(main, list[i]))
+	filling = false
 
 
+static func _fit(f: Font, t: String, w: float) -> String:
+	if f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x <= w: return t
+	while t.length() > 1 and f.get_string_size(t + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x > w: t = t.left(-1)
+	return t + "…"
+
+
+static var _looks: Dictionary = {}
+static var filling := false      ## the list is still coming in
 ## a word as a little index card: the Korean big, your note under it, a stripe in its color
 static func _tile(main: Control, k: String) -> Button:
 	var st := _st(k); var col := Color("#" + Kit.STATUS_COLORS[st])
 	var b := Button.new(); b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.custom_minimum_size = Vector2(0, 86)
-	var sb := Kit.box(10, Kit.PAPER_LIGHT, Kit.LINE, 1, 10); sb.border_width_left = 8; sb.border_color = col
-	var sp := sb.duplicate(); sp.bg_color = Kit.PAPER_LIGHT.darkened(0.08)
-	for s in ["normal", "hover", "focus"]: b.add_theme_stylebox_override(s, sb)
-	b.add_theme_stylebox_override("pressed", sp)
-	var v := VBoxContainer.new(); v.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	v.offset_left = 18; v.offset_top = 8; v.offset_right = -8; v.add_theme_constant_override("separation", 0); b.add_child(v)
-	var kw := Kit.label(k, 28, col.darkened(0.15)); kw.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(kw)
+	if not _looks.has(st):
+		var sb := Kit.box(10, Kit.PAPER_LIGHT, Kit.LINE, 1, 10); sb.border_width_left = 8; sb.border_color = col
+		var sp := sb.duplicate(); sp.bg_color = Kit.PAPER_LIGHT.darkened(0.08); _looks[st] = [sb, sp]
+	for s in ["normal", "hover", "focus"]: b.add_theme_stylebox_override(s, _looks[st][0])
+	b.add_theme_stylebox_override("pressed", _looks[st][1])
 	var note: String = Game.words[k].note.strip_edges()
-	var nl := Kit.label(note if note != "" else "—", 17, Kit.PAPER_INK if note != "" else Kit.MUTE); nl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	nl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; nl.clip_text = true; v.add_child(nl)
-	b.pressed.connect(func(): Game.sound.emit("tap"); _page(main, k))
+	b.draw.connect(func():   # drawn, not built out of labels: there are hundreds of these
+		var f := b.get_theme_default_font(); var w := b.size.x - 28
+		b.draw_string(f, Vector2(20, 40), k, HORIZONTAL_ALIGNMENT_LEFT, w, 28, col.darkened(0.15))
+		b.draw_string(f, Vector2(20, 70), _fit(f, note if note != "" else "—", w), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Kit.PAPER_INK if note != "" else Kit.MUTE))
+	b.pressed.connect(func():
+		Game.sound.emit("tap"); var pg := _page(main, k)
+		pg.get_meta("overlay").tree_exited.connect(func():   # back in the list: what you just wrote shows on its card
+			if not is_instance_valid(b) or not b.is_inside_tree() or b.is_queued_for_deletion(): return
+			(func():
+				if not is_instance_valid(b) or not b.is_inside_tree() or b.is_queued_for_deletion(): return
+				var g := b.get_parent(); var nb := _tile(main, k); g.add_child(nb); g.move_child(nb, b.get_index()); b.queue_free()).call_deferred()))
 	return b
 
 
@@ -135,15 +157,19 @@ static func _patterns(main: Control, inner: VBoxContainer) -> void:
 	var pats: Array = Game.world.get("patterns", [])
 	var open: Array = pats.filter(func(p): return Game.pattern_open(p))
 	for p in open:
-		inner.add_child(Kit.label(p.title, 26))
-		inner.add_child(Kit.label(p.note, 19, Kit.MUTE, true))
-		for pr in p.pairs:
-			if p.when.is_empty() and not (Game.words.has(pr[1]) and not Game.words[pr[1]].ctx.is_empty()): continue
-			var r := Kit.rich(26); r.text = "%s  [color=#8a7d66]→[/color]  %s" % [Kit.esc(pr[0]), Kit.ko("{%s}" % pr[1]) if Game.world.words.has(pr[1]) else Kit.esc(pr[1])]
-			r.meta_clicked.connect(func(x): main._word(str(x))); inner.add_child(r)
-		inner.add_child(HSeparator.new())
+		var b := Kit.wide(p.title, false, 24); b.custom_minimum_size.y = 60; b.pressed.connect(func(): Game.sound.emit("tap"); _pattern(main, p)); inner.add_child(b)
 	var left := pats.size() - open.size()
 	if left > 0: inner.add_child(Kit.label(("%d more to spot." % left if not open.is_empty() else "Nothing yet.") + " Keep listening to how people say things.", 19, Kit.MUTE, true))
+
+
+static func _pattern(main: Control, p: Dictionary) -> void:
+	var inner := Kit.sheet(main, "패턴", 0.7)
+	inner.add_child(Kit.label(p.title, 28, Kit.PAPER_INK, true))
+	inner.add_child(Kit.label(p.note, 20, Kit.MUTE, true))
+	for pr in p.pairs:
+		if p.when.is_empty() and not (Game.words.has(pr[1]) and not Game.words[pr[1]].ctx.is_empty()): continue
+		var r := Kit.rich(26); r.text = "%s  [color=#8a7d66]→[/color]  %s" % [Kit.esc(pr[0]), Kit.ko("{%s}" % pr[1]) if Game.world.words.has(pr[1]) else Kit.esc(pr[1])]
+		r.meta_clicked.connect(func(y): main._word(str(y))); inner.add_child(r)
 
 
 ## ---------- numbers: Korean has two sets; this page shows both, brighter where you've heard them
@@ -188,7 +214,7 @@ static func _key(inner: VBoxContainer) -> void:
 		inner.add_child(Kit.label("·  " + t, 19, Kit.PAPER_INK, true))
 
 
-static func _page(main: Control, w: String) -> void:
+static func _page(main: Control, w: String) -> VBoxContainer:
 	Game.note("  opened word: " + w)
 	var r: Dictionary = Game.word(w)
 	main.voice.say("{%s}" % w, "word")
@@ -210,7 +236,7 @@ static func _page(main: Control, w: String) -> void:
 	if Game.world.words.get(w, {}).get("g", false):
 		badge.text = "GRAMMAR PIECE"
 		inner.add_child(Kit.label(Game.world.grammar.get(w, ""), 21, Kit.PAPER_INK, true))
-		_seen_in(inner, w, r); return
+		_seen_in(inner, w, r); return inner
 	inner.add_child(Kit.label("What you think it means", 16, Kit.MUTE))
 	var note := LineEdit.new(); note.text = r.note; note.placeholder_text = "Your own words"; note.add_theme_font_size_override("font_size", 24)
 	note.custom_minimum_size.y = 56
@@ -220,7 +246,7 @@ static func _page(main: Control, w: String) -> void:
 	note.add_theme_color_override("font_color", Kit.PAPER_INK); note.add_theme_color_override("font_placeholder_color", Kit.MUTE); note.add_theme_color_override("caret_color", Kit.PAPER_INK)
 	inner.add_child(note)
 	var sure := CheckBox.new(); sure.text = "I'm sure about this"; sure.button_pressed = r.sure; sure.disabled = r.note.strip_edges() == ""
-	sure.add_theme_font_size_override("font_size", 20)
+	sure.add_theme_font_size_override("font_size", 20); sure.custom_minimum_size.y = 56
 	for c in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color"]: sure.add_theme_color_override(c, Kit.PAPER_INK)
 	sure.add_theme_color_override("font_disabled_color", Kit.MUTE)
 	inner.add_child(sure)
@@ -233,6 +259,7 @@ static func _page(main: Control, w: String) -> void:
 	sure.toggled.connect(func(on): r.sure = on; Game.save_words(); upd.call(); Game.sound.emit("solve" if on else "tap"); Game.note("  %s sure about %s" % ["is" if on else "isn't", w]))
 	_seen_in(inner, w, r)
 	_family(main, inner, w)
+	return inner
 
 
 ## the same word in its other forms (갔어요 · 가요 · 가: they share a picture in world.story), and where you met each,

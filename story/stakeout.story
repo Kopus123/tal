@@ -17,13 +17,13 @@ flashlight | Flashlight | light | Your flashlight. |
 
 === hints
 if !so_heard: Somebody's talking behind the right-hand wall. Get up there, near them, and listen.
-if so_spooked&!st_h_where: They've gone in, and they said something you never caught. They won't be back tonight: start the stakeout again (menu > Chapters).
-if so_spooked&!st_h_who: They've gone in, and they said something you never caught. They won't be back tonight: start the stakeout again (menu > Chapters).
+if so_spooked&!st_h_where: They've gone in, and they said something you never caught. They won't be back tonight: try the night again (the button, or ☰ > Restart).
+if so_spooked&!st_h_who: They've gone in, and they said something you never caught. They won't be back tonight: try the night again (the button, or ☰ > Restart).
 if !st_h_where: There's more to hear. Stay up there, near them, and keep listening.
 if !st_h_who: There's more to hear. Stay up there, near them, and keep listening.
 if !solved_k1: You have sounds on your case board. Play them again: which one answers which question?
 if !solved_k2: You have sounds on your case board. Play them again: which one answers which question?
-if so_spooked&!solved_k3: A sound isn't proof of who was there. A picture is. (No good picture of them? They won't be back tonight: start again from menu > Chapters.)
+if so_spooked&!solved_k3: A sound isn't proof of who was there. A picture is. (No good picture of them? They won't be back tonight: try the night again, the button or ☰ > Restart.)
 if !solved_k3: A sound isn't proof of who was there. A picture is.
 You have it all. Look at your case board once more.
 

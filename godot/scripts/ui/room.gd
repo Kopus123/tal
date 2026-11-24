@@ -290,8 +290,13 @@ func _scene3d(name: String) -> void:
 		climb_btn.pressed.connect(func(): if set3: Game.sound.emit("tap"); set3.climb(not set3.up))
 	climb_btn.visible = false
 	if turn_btn == null:
-		turn_btn = _icon_btn("↺", func(): if set3: Game.sound.emit("tap"); set3.turn_around())
-	turn_btn.visible = set3.has_method("turn_around")
+		turn_btn = _icon_btn("", func(): if set3: Game.sound.emit("tap"); set3.turn_around())
+		turn_btn.draw.connect(func():   # drawn, not typed: a letter never sits quite in the middle of its circle
+			var c := turn_btn.size / 2; var w := Color(1, 1, 1, 0.92); var k := 17.0
+			turn_btn.draw_arc(c, k, deg_to_rad(-35), deg_to_rad(230), 40, w, 4.0, true)
+			var e := c + Vector2.from_angle(deg_to_rad(-35)) * k; var t := Vector2.from_angle(deg_to_rad(-132)); var n := t.orthogonal()
+			turn_btn.draw_colored_polygon(PackedVector2Array([e + t * 17, e + n * 8.5 - t, e - n * 8.5 - t]), w))
+	turn_btn.visible = set3.has_method("turn_around"); _place_stick()
 	if set3.has_signal("climb_changed"): set3.climb_changed.connect(_on_climb)
 	if set3.has_signal("overheard"):
 		set3.overheard.connect(func(w, k, c): overheard.emit(w, k, c))
@@ -305,6 +310,7 @@ func _scene3d(name: String) -> void:
 		for id in Game.ST.nodes:
 			if (id == sc or id.begins_with(sc + ".")) and Game.ST.nodes[id].has("ko"): lines.append({"who": Game.ST.nodes[id].who, "ko": Game.ST.nodes[id].ko})
 		set3.set_talk(lines)
+	if Game.F.has("so_spooked") and set3.has_method("spook"): set3.spook()
 
 
 func _place_stick() -> void:
@@ -439,7 +445,8 @@ func _frame_size(k: float, keep_center: bool) -> void:
 
 
 func _aim(p: Vector2) -> void:
-	if set3:   # in a 3D place: the beam goes where you point
+	if set3:   # in a 3D place: the beam goes where you point (with the light off, it stays where you left it in your view)
+		if not bool(Game.F.get("lit", 0)): return
 		set3.aim((p.x / size.x - 0.5) * 2.0, (p.y / size.y - 0.5) * 2.0)
 		return
 	torch.position = cam.get_screen_center_position() + (p / size - Vector2(0.5, 0.5)) * Vector2(ART_W, ART_H) / cam.zoom

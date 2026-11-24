@@ -47,5 +47,6 @@ func _draw() -> void:
 	var c := size / 2
 	draw_circle(c, R + 6, Color(0, 0, 0, 0.28))
 	draw_arc(c, R + 6, 0, TAU, 48, Color(1, 1, 1, 0.35), 2.0, true)
-	draw_circle(c + _knob, 30, Color(1, 1, 1, 0.5 if _finger != -2 else 0.32))
+	var run := _knob.length() > R * 0.9   # out at the rim you run (and you can be heard)
+	draw_circle(c + _knob, 30, Color(1.0, 0.78, 0.4, 0.75) if run else Color(1, 1, 1, 0.5 if _finger != -2 else 0.32))
 	draw_arc(c + _knob, 30, 0, TAU, 32, Color(1, 1, 1, 0.75), 2.0, true)

@@ -52,6 +52,6 @@ static func chapters(main: Control) -> void:
 		var b := Kit.wide(label + ("" if unlocked else "  🔒"), false, 22); b.disabled = not unlocked
 		b.pressed.connect(func(): Kit.close(inner); Game.start_chapter(c.id, not started))
 		inner.add_child(b)
-		if started and not c.free and not c.dev:
+		if started and not c.free:
 			var r := Kit.button("    ↺ start %s over" % c.t, false, 17)
-			r.pressed.connect(func(): Kit.close(inner); Game.start_chapter(c.id, true)); inner.add_child(r)
+			r.pressed.connect(func(): Kit.close(inner); main.start_over(c.id)); inner.add_child(r)

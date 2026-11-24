@@ -24,7 +24,7 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 		if cmd == "pocket" and main.room.set3 and Game.F.get("lit", 0):   # a 3D place: hold the light at the right edge
 			main.room.set3.hold(true); main.room.set3.aim(0.95, 0.1); await _wait(1.4); await shot("light_at_edge"); main.room.set3.hold(false)
 			main.room.set3.aim(0, 0); main.room.set3.drag(Vector2(-10, 0)); main.room.set3.drag(Vector2(0.0, 0.0))
-			main.room.set3._look = Vector2.ZERO; main.room.set3._apply_look()
+			main.room.set3._yaw = 0.0; main.room.set3._pitch = -3.0; main.room.set3._apply_look()
 			main.room.stick.moved.emit(Vector2(0, -0.6)); await _wait(5.0)   # a soft walk (running would be heard); main.room.stick.moved.emit(Vector2.ZERO); await _wait(0.3); await shot("walked_forward")
 			var s3 = main.room.set3
 			if s3.has_method("climb"):
@@ -77,6 +77,19 @@ func run(m: Control, out_dir: String, route := "shed", stop := "") -> void:
 	for what in ["board", "phone"]:
 		if what == "phone" and not Game.has_phone(): continue
 		main._open(what); await _wait(0.4); await shot("open_" + what); _close_sheets()
+	if Game.S.ch == "stakeout" and main.room.set3:   # chased off, the paper offers another go; then start it over
+		main.board_view = false; Game.F["so_spooked"] = 1; main.room.set3.spook(); main._refresh(); await _wait(0.4); await shot("chased_off")
+		main._menu(); await _wait(0.4); await shot("menu_restart"); _close_sheets()
+		main.start_over("stakeout"); await _wait(0.6)
+		if Game.node != "": Game.next()
+		await _wait(0.8); await shot("started_over")
+		var s4 = main.room.set3
+		print("ERROR: not started over") if s4._spooked or not s4._people[0].visible or Game.F.has("so_spooked") or s4._talk.size() != 5 else print("restart ok")
+		# light off, look away, light on: the beam is where you left it in your view
+		Game.F["lit"] = 1; s4.set_torch(true); main.room._aim(main.room.size * Vector2(0.7, 0.4)); await _wait(0.3); await shot("light_before"); var was: Basis = s4.torch.basis
+		Game.F["lit"] = 0; s4.set_torch(false); main.room._aim(main.room.size * Vector2(0.1, 0.9)); s4.drag(Vector2(0.4, 0))
+		Game.F["lit"] = 1; s4.set_torch(true); await _wait(0.3); await shot("light_after")
+		print("light ok") if s4.torch.basis.is_equal_approx(was) else print("ERROR: the light moved")
 	print("shots: %d saved in %s%s" % [n, dir, "" if ok else "  (the route failed: see FAILED_here)"])
 	main.get_tree().quit()
 

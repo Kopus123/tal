@@ -11,7 +11,6 @@ const ARCHES := [-5.5, -12.5, -19.5]
 
 var cam: Camera3D
 var torch: SpotLight3D  ## your flashlight
-var _base_rot := Vector3(-3, 0, 0)
 var _lanterns: Array = []
 
 
@@ -28,7 +27,7 @@ func _ready() -> void:
 	_puddles()
 	var probe := ReflectionProbe.new(); probe.size = Vector3(W + 2, H + 2, L); probe.position = Vector3(0, H / 2, -L / 2 + 2)
 	probe.box_projection = true; probe.update_mode = ReflectionProbe.UPDATE_ONCE; probe.intensity = 1.0; add_child(probe)   # what the wet stone reflects
-	cam = Camera3D.new(); cam.position = Vector3(0, 1.55, 1.2); cam.rotation_degrees = _base_rot; cam.fov = 62; add_child(cam); cam.current = true
+	cam = Camera3D.new(); cam.position = Vector3(0, 1.55, 1.2); cam.rotation_degrees = Vector3(-3, 0, 0); cam.fov = FOV; add_child(cam); cam.current = true
 	torch = SpotLight3D.new(); torch.light_color = Color(1.0, 0.94, 0.82); torch.light_energy = 9.0; torch.spot_range = 26; torch.spot_angle = 20
 	torch.spot_attenuation = 0.8; torch.shadow_enabled = true; torch.light_volumetric_fog_energy = 1.4; torch.visible = false; cam.add_child(torch)
 
@@ -61,13 +60,11 @@ func climb(on: bool) -> void:
 		var top := Vector3(W / 2 + 0.4, H + 0.68, cam.position.z)   # head and shoulders over the top, leaning out
 		t.tween_property(cam, "position", Vector3(cam.position.x, H * 0.55, cam.position.z), 0.6)   # hands on the wall, pulling up
 		t.chain().tween_property(cam, "position", top, 0.55)
-		_base_rot = Vector3(-15, -75, 0); _look = Vector2.ZERO
-		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 1.0)
+		_down_yaw = _yaw; _face(-75.0, -15.0, 1.0); _up_yaw = _face_to
 	else:
 		t.tween_property(cam, "position", Vector3(_down_at.x, H * 0.5, _down_at.z), 0.5)
 		t.chain().tween_property(cam, "position", _down_at, 0.4)
-		_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
-		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 0.8)
+		_face(_down_yaw, -3.0, 0.8)   # the way you were facing
 	t.chain().tween_callback(func():
 		_busy = false; up = on
 		if on: _got_up()
@@ -90,14 +87,15 @@ func clarity() -> float:
 	return clampf(1.0 - (d - 4.0) / 7.0, 0.0, 1.0)   # within about 4 m of them, every word
 
 func _talk_tick(dt: float) -> void:
+	for pl in _voices: pl.bus = _yard_bus() if up or _chase else _wall_bus()   # through a brick wall, only a mumble
 	if _talk.is_empty() or _alarm > 0.0 or _glancing > 0.0: return
 	_next -= dt
 	if _next > 0: return
 	var l: Dictionary = _talk[_line]
 	var v: AudioStreamPlayer3D = _voices[0 if l.who == "stranger" else 1]
 	var s := Voice.stream_for(l.ko, l.who)
-	v.volume_db = lerpf(-4.0, 7.0, clarity()) if up else -4.0   # near them, as loud as anyone talking to you
-	v.attenuation_filter_cutoff_hz = lerpf(1200, 7000, clarity()) if up else 700.0   # through a brick wall, it's all low murmur
+	v.volume_db = lerpf(-4.0, 7.0, clarity()) if up else 4.0   # near them, as loud as anyone talking to you
+	v.attenuation_filter_cutoff_hz = lerpf(1200, 7000, clarity()) if up else 2000.0
 	if s: v.stream = s; v.play()
 	overheard.emit(l.who, l.ko, clarity())
 	_line += 1
@@ -111,6 +109,16 @@ func _yard_bus() -> String:
 		AudioServer.add_bus(); var i := AudioServer.bus_count - 1; AudioServer.set_bus_name(i, "Yard")
 		var l := AudioEffectHardLimiter.new(); l.pre_gain_db = 9.0; l.ceiling_db = -1.0; l.release = 0.15; AudioServer.add_bus_effect(i, l)
 	return "Yard"
+
+
+## through the wall: everything that makes words out is gone, and what's left booms about a bit
+func _wall_bus() -> String:
+	if AudioServer.get_bus_index("Wall") < 0:
+		AudioServer.add_bus(); var i := AudioServer.bus_count - 1; AudioServer.set_bus_name(i, "Wall")
+		var f := AudioEffectLowPassFilter.new(); f.cutoff_hz = 480.0; f.resonance = 0.5; f.db = AudioEffectFilter.FILTER_24DB; AudioServer.add_bus_effect(i, f)
+		var rv := AudioEffectReverb.new(); rv.room_size = 0.45; rv.damping = 0.8; rv.wet = 0.35; rv.dry = 0.7; AudioServer.add_bus_effect(i, rv)
+		var l := AudioEffectHardLimiter.new(); l.pre_gain_db = 11.0; l.ceiling_db = -3.0; AudioServer.add_bus_effect(i, l)
+	return "Wall"
 
 
 ## ---------- photos: what's in the frame (a secret the board keeps), and the click of the shutter
@@ -198,8 +206,7 @@ func _seen() -> void:
 	if up or _busy:
 		_busy = true; var t := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		var land := Vector3(W / 2 - 0.45, EYE, cam.position.z)
-		t.tween_property(cam, "position", land, 0.35); _base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
-		t.parallel().tween_property(cam, "rotation_degrees", _base_rot, 0.35)
+		t.tween_property(cam, "position", land, 0.35); _face(0.0, -3.0, 0.35)
 		t.tween_callback(func(): _busy = false; up = false; climb_changed.emit(false, false))
 	_chase = true; _chase_wait = 1.3
 	for g in _people: g.visible = false   # they head for the gate
@@ -210,7 +217,7 @@ func _seen() -> void:
 ## with a flashlight. Get out of the alley (back past the entrance) before one reaches you, and they're too spooked to
 ## stay: they go inside. Grabbed: start over.
 const GATE_Z := -17.5        ## the gate from the courtyard into the alley (a little past where they stand)
-const CHASERS := [[0.0, 2.25, 1.72], [1.1, 2.0, 1.6]]   ## each: [seconds after the gate opens, speed, height]
+const CHASERS := [[0.0, 4.9, 1.72], [0.7, 4.6, 1.6]]   ## each: [seconds after the gate opens, speed, height]
 var _chase := false
 var _chase_wait := 0.0       ## the moment before the gate opens
 var _chase_t := 0.0          ## since the gate opened
@@ -238,7 +245,7 @@ func _chase_tick(dt: float) -> void:
 	if _chase_wait > 0.0:
 		_chase_wait -= dt
 		if _chase_wait <= 0.0:   # the gate bangs open
-			var cr := AudioStreamPlayer3D.new(); cr.stream = load("res://sfx/creak.wav"); cr.position = Vector3(W / 2, 1.2, GATE_Z); add_child(cr); cr.play()
+			var cr := AudioStreamPlayer3D.new(); cr.stream = load("res://sfx/gate.wav"); cr.unit_size = 5.0; cr.position = Vector3(W / 2, 1.2, GATE_Z); add_child(cr); cr.play()
 			create_tween().tween_property(_gate, "rotation_degrees:y", -105.0, 0.45).set_trans(Tween.TRANS_BACK)
 		return
 	_chase_t += dt
@@ -262,11 +269,12 @@ func _chase_tick(dt: float) -> void:
 		n.position = p
 		n.rotation.y = atan2(-to.x, -to.z)
 		var before: float = c.stride
-		c.stride += dt * 9.5
+		c.stride += dt * 12.0; n.position.y = absf(sin(c.stride)) * 0.07   # running, not strolling
 		if int(before / PI) != int(c.stride / PI): c.step.pitch_scale = randf_range(0.9, 1.05); c.step.play()
 	if cam.position.z > 1.0:   # out of the alley
 		_end_chase(); _spooked = true; _talk = []
 		for g in _people: g.visible = false   # they've gone inside
+		_face(0.0, -3.0, 1.0)   # you look back
 		got_away.emit()
 
 func _end_chase() -> void:
@@ -277,11 +285,25 @@ func _end_chase() -> void:
 	_chasers.clear()
 	if _gate: _gate.rotation_degrees.y = 0.0
 
-## turn right round (a button: you can't drag that far)
+## turn right round (a button, for when there's no time to drag)
 func turn_around() -> void:
-	if up or _busy: return
-	var from := _base_rot; var to := _base_rot + Vector3(0, 180, 0)
-	create_tween().tween_method(func(v: Vector3): _base_rot = v; _apply_look(), from, to, 0.35).set_trans(Tween.TRANS_SINE)
+	if up or _busy or (_turning and _turning.is_running()): return
+	_face(_yaw + 180.0, _pitch, 0.3)
+
+## swing the view round to face that way
+var _turning: Tween
+var _face_to := 0.0
+func _face(yaw: float, pitch: float, secs: float) -> void:
+	if _turning: _turning.kill()
+	var y0 := _yaw; var y1 := _yaw + wrapf(yaw - _yaw, -180.0, 180.0); var p0 := _pitch; _face_to = y1
+	_turning = create_tween()
+	_turning.tween_method(func(k: float): _yaw = lerpf(y0, y1, k); _pitch = lerpf(p0, pitch, k); _apply_look(), 0.0, 1.0, secs).set_trans(Tween.TRANS_SINE)
+
+
+## they've already gone inside (you came back to a night where you got chased off)
+func spook() -> void:
+	_spooked = true; _talk = []
+	for g in _people: g.visible = false
 
 
 ## back to the entrance, down off the wall, as if it never happened
@@ -290,40 +312,51 @@ func reset() -> void:
 	if not _spooked:
 		for g in _people: g.visible = true
 	up = false; _busy = false; _move = Vector2.ZERO; _alarm = 0.0; _glancing = 0.0; _glance_in = 10.0; _been_up = false; _lit_up = 0.0; _exposed = 0.0; _set_wary("")
-	_base_rot = Vector3(-3, 0, 0); _look = Vector2.ZERO
-	cam.position = Vector3(0, EYE, 1.2); cam.rotation_degrees = _base_rot
+	if _turning: _turning.kill()
+	_yaw = 0.0; _pitch = -3.0; _apply_look(); _vel = Vector3.ZERO
+	cam.position = Vector3(0, EYE, 1.2)
 	for g in _people: _turn(g, false, 0.1)
 	_can = false; climb_changed.emit(false, false)
 
 
 ## ---------- walking: the stick pushes you the way you're facing; walls and the arches' pillars stop you
-const SPEED := 1.6          ## metres a second, stick all the way
+const WALK := 2.4           ## metres a second with the stick most of the way: quiet
+const RUN := 4.3            ## stick all the way: fast, and they can hear it
+const RUN_AT := 0.9
 const EYE := 1.55
+const FOV := 62.0
 var _move := Vector2.ZERO
+var _vel := Vector3.ZERO
 var _stride := 0.0
 
 func set_move(v: Vector2) -> void: _move = v
 
 func _walk(dt: float) -> void:
-	if up or _busy: return
+	var m := _move.length(); var running := m > RUN_AT and not up and not _busy
+	cam.fov = lerpf(cam.fov, FOV + (7.0 if running else 0.0), 1.0 - exp(-dt * 5.0))   # the view widens a little as you run
+	if up or _busy: _vel = Vector3.ZERO; return
 	var c := can_climb()
 	if c != _can: _can = c; climb_changed.emit(c, up)
-	if _move.length() < 0.08: cam.position.y = lerpf(cam.position.y, EYE, dt * 6.0); return
-	var yaw := cam.rotation.y
-	var fwd := Vector3(-sin(yaw), 0, -cos(yaw)); var right := Vector3(cos(yaw), 0, -sin(yaw))
-	var p := cam.position + (fwd * -_move.y + right * _move.x) * SPEED * dt
+	var want := Vector3.ZERO
+	if m >= 0.08:
+		var yaw := cam.rotation.y
+		var dir := (Vector3(-sin(yaw), 0, -cos(yaw)) * -_move.y + Vector3(cos(yaw), 0, -sin(yaw)) * _move.x) / m
+		want = dir * (RUN if running else WALK * minf(m / 0.85, 1.0))
+	_vel = _vel.lerp(want, 1.0 - exp(-dt * 9.0))   # you get going, and stop, over a step or so
+	var speed := _vel.length()
+	if speed < 0.05: cam.position.y = lerpf(cam.position.y, EYE, dt * 6.0); return
+	var p := cam.position + _vel * dt
 	var half := W / 2 - 0.35
 	for z in ARCHES:   # through an archway you have to fit through the opening
 		if absf(p.z - z) < 0.55: half = minf(half, (W - 0.9) / 2 - 0.3)
 	p.x = clampf(p.x, -half, half); p.z = clampf(p.z, -L + 3.0, 2.4 if _chase else 1.6)
 	var before := _stride
-	_stride += _move.length() * dt * 9.0
+	_stride += speed * 2.6 * dt
 	if int(before / PI) != int(_stride / PI):   # a foot comes down
-		var running := _move.length() > 0.9
 		if _steps == null: _steps = AudioStreamPlayer.new(); _steps.stream = load("res://sfx/step.wav"); add_child(_steps)
 		_steps.volume_db = -20.0 if running else -32.0; _steps.pitch_scale = randf_range(0.9, 1.1); _steps.play()
-		if running: _heard_you()
-	p.y = EYE + sin(_stride) * 0.03 * minf(1.0, _move.length())   # a little bob as you walk
+		if running and not _chase: _heard_you()
+	p.y = EYE + sin(_stride) * (0.05 if running else 0.025) * minf(1.0, speed / WALK)   # a bob as you go
 	cam.position = p
 
 
@@ -335,7 +368,7 @@ func _process(dt: float) -> void:   # the lantern flames breathe a little; a lig
 		for k in 2:
 			var a: float = _aim[k]
 			if absf(a) > EDGE: push[k] = signf(a) * (absf(a) - EDGE) / (1.0 - EDGE)
-		if push != Vector2.ZERO: _look = (_look + push * dt * Vector2(1.1, 1.6)).clamp(Vector2(-1, -1), Vector2(1, 1)); _apply_look()   # up/down a bit quicker (less room there)
+		if push != Vector2.ZERO: _look_by(-push.x * 75.0 * dt, -push.y * 45.0 * dt)
 	var t := Time.get_ticks_msec() / 1000.0
 	for i in _lanterns.size():
 		var l: OmniLight3D = _lanterns[i]
@@ -344,22 +377,30 @@ func _process(dt: float) -> void:   # the lantern flames breathe a little; a lig
 
 ## look around (drag with no light), and point the flashlight; hold the light near an edge and the view turns that way
 const EDGE := 0.6           ## how far toward the edge (of -1..1) before the view starts to turn
-var _look := Vector2.ZERO   ## where you're looking, -1..1 each way
+var _yaw := 0.0             ## which way you're facing, in degrees (any: you can turn all the way round)
+var _pitch := -3.0          ## up/down
+var _down_yaw := 0.0        ## the way you were facing before you climbed
+var _up_yaw := -75.0        ## facing straight into the courtyard, up on the wall
 var _aim := Vector2.ZERO    ## where the light points on the screen, -1..1
 var _held := false          ## a finger is on the picture
 
-func drag(d: Vector2) -> void:   ## move the view by a drag (in -1..1 units)
-	_look = (_look + d).clamp(Vector2(-1, -1), Vector2(1, 1)); _apply_look()
+func drag(d: Vector2) -> void:   ## move the view by a drag (in -1..1 units): the picture follows your finger
+	_look_by(-d.x * 42.0, -d.y * 30.0)
 
-func _apply_look() -> void:
-	cam.rotation_degrees = _base_rot + Vector3(-_look.y * 11.0, -_look.x * 20.0, 0)
+func _look_by(dyaw: float, dpitch: float) -> void:
+	_yaw += dyaw; _pitch = clampf(_pitch + dpitch, -40.0, 12.0 if up else 35.0)
+	if up: _yaw = clampf(_yaw, _up_yaw - 50.0, _up_yaw + 50.0)   # leaning over the wall, you can't look behind you
+	_apply_look()
+
+func _apply_look() -> void: cam.rotation_degrees = Vector3(_pitch, _yaw, 0)
 
 func hold(on: bool) -> void: _held = on
 
 func aim(nx: float, ny: float) -> void:
 	nx = clampf(nx, -1.0, 1.0); ny = clampf(ny, -1.0, 1.0)   # a finger past the picture's edge counts as at the edge
 	_aim = Vector2(nx, ny)
-	torch.rotation_degrees = Vector3(-ny * 20.0, -nx * 28.0, 0)
+	var v := tan(deg_to_rad(FOV / 2.0)); var vs := get_viewport().get_visible_rect().size   # right under your finger
+	torch.basis = Basis.looking_at(Vector3(nx * v * vs.x / maxf(1.0, vs.y), -ny * v, -1.0))
 
 func set_torch(on: bool) -> void: torch.visible = on
 

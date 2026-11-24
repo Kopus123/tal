@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.5.3"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.5.4"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -201,6 +201,8 @@ func _looking() -> void:
 	if room.set3 and _chased:
 		_text("[color=#b3241c][b]They've seen you.[/b][/color] Get out of the alley, the way you came in. Now.", 24)
 		return
+	if room.set3 and Game.F.has("so_spooked") and Game.S.ch == "stakeout":
+		_act("↺  Try the night again", func(): start_over(Game.S.ch), true)
 	if room.set3 and _wary != "":
 		var up: bool = room.set3.up
 		_text("[color=#b3241c][b]" + {"look": "One of them's turning round. Get down!" if up else "One of them's looking at the wall. Stay down.",
@@ -564,10 +566,22 @@ func _menu() -> void:
 	var inner := Kit.sheet(self, "메뉴", 0.5)
 	var hint := Kit.label("", 20, Kit.PAPER_INK, true)
 	var b1 := Kit.button("💡  Think (a nudge)"); b1.pressed.connect(func(): hint.text = Game.hint(); Game.note("  HINT: " + hint.text)); inner.add_child(b1); inner.add_child(hint)
+	var here: Dictionary = {}
+	for c in Game.world_st.chapters:
+		if c.id == Game.S.ch: here = c
+	if here.get("dev", false):   # a test area: straight back to its beginning, nothing else touched
+		var b0 := Kit.button("↺  Restart: %s" % here.sub); b0.pressed.connect(func(): Kit.close(inner); start_over(here.id)); inner.add_child(b0)
 	var b2 := Kit.button("📖  Chapters"); b2.pressed.connect(func(): Kit.close(inner); load("res://scripts/ui/places.gd").chapters(self)); inner.add_child(b2)
 	var b3 := Kit.button("⌨  Korean keyboard test"); b3.pressed.connect(func(): Kit.close(inner); _keyboard_test()); inner.add_child(b3)
 	var b5 := Kit.button("💬  What was said"); b5.pressed.connect(func(): Kit.close(inner); _log_sheet()); inner.add_child(b5)
 	var b4 := Kit.button("⚙  Settings"); b4.pressed.connect(func(): Kit.close(inner); _settings()); inner.add_child(b4)
+
+
+## this chapter from the top (your other chapters, words and money stay as they are)
+func start_over(id: String) -> void:
+	_chased = false; _wary = ""; _heard_clear = 0.0; _heard_ever = false; _heard_lines = {}; board_view = false; card_sel = ""
+	room._scene3d("")   # built again from nothing: everyone back where they started
+	Game.start_chapter(id, true)
 
 
 ## 기록: every line so far in this chapter, newest at the bottom; tap ▶ to hear one again

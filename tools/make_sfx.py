@@ -51,6 +51,25 @@ def creak(buf, t0, dur, vol):
         t += 1.0 / max(8, rate)
 
 
+def hinge(buf, t0, dur, vol):
+    """a heavy door on a dry hinge: the pin sticks and slips a few hundred times a second, the rate gliding up and
+    back down as the door swings (that glide is the creak), heard through the wood and iron it shakes"""
+    n0, n = int(t0 * RATE), int(dur * RATE); src = [0.0] * n; ph = 0.0; hold = 0
+    for i in range(n):
+        k = i / n
+        f = (135 + 190 * math.sin(math.pi * min(1.0, k * 1.15)) ** 1.5) * (1 + 0.05 * math.sin(k * 47))
+        ph += f / RATE * random.uniform(0.93, 1.07)
+        if hold > 0: hold -= 1; continue
+        if ph >= 1.0:
+            ph -= 1.0; src[i] = (0.4 + 0.6 * math.sin(math.pi * k)) * random.uniform(0.7, 1.0)
+            if random.random() < 0.012: hold = int(RATE * random.uniform(0.008, 0.02)); ph = 0.0   # it sticks for a moment
+    for f, q, a in [(290, 5, .12), (610, 8, .45), (1080, 12, 1.0), (1720, 14, 1.5), (2650, 16, 1.6)]:
+        w = 2 * math.pi * f / RATE; rr = math.exp(-w / (2 * q)); c1 = 2 * rr * math.cos(w); c2 = -rr * rr; y1 = y2 = 0.0
+        for i in range(n):
+            y = src[i] + c1 * y1 + c2 * y2; y2 = y1; y1 = y
+            buf[n0 + i] += y * a * vol * 0.35
+
+
 def save(name, buf):
     peak = max(1e-6, max(abs(x) for x in buf)); k = 0.9 / peak if peak > 0.9 else 1.0
     with wave.open(str(OUT / f"{name}.wav"), "wb") as w:
@@ -72,6 +91,10 @@ def main():
     b = blank(.15); noise(b, 0, .1, .1, 900); save("open", b)
     b = blank(1.6); tone(b, 0, 1.5, 110, .06, "sine", 105); noise(b, 0, 1.6, .05, 400); save("wind", b)
     b = blank(.22); noise(b, 0, .09, .22, 420); tone(b, 0, .06, 70, .18); save("step", b)   # a soft shoe on stone
+    # the courtyard gate thrown open: the iron latch, the hinge, and the planks hitting the wall
+    b = blank(1.25); noise(b, 0, .03, .5, 3000); tone(b, 0, .05, 1900, .25); tone(b, .035, .06, 1450, .2); noise(b, .035, .03, .35, 2400)
+    hinge(b, .08, .5, .42)
+    noise(b, .52, .28, .4, 260); tone(b, .52, .3, 68, .4); tone(b, .53, .16, 118, .25); noise(b, .525, .05, .35, 1500); noise(b, .68, .05, .12, 900); noise(b, .8, .04, .07, 900); save("gate", b)
     print("ok:", ", ".join(sorted(p.stem for p in OUT.glob("*.wav"))))
 
 

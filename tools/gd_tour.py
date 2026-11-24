@@ -12,5 +12,5 @@ try:
     txt = r.stdout + r.stderr
 except subprocess.TimeoutExpired as e:
     txt = "TIMED OUT (the window was closed)"
-print("\n".join(l for l in txt.splitlines() if "shots:" in l or "FAIL" in l or "SCRIPT ERROR" in l or "TIMED" in l or "ERROR" in l)[:3000])
+print("\n".join(l for l in txt.splitlines() if "shots:" in l or " ok" in l[-4:] or "FAIL" in l or "SCRIPT ERROR" in l or "TIMED" in l or "ERROR" in l)[:3000])
 print("\n".join(sorted(p.name for p in out.glob("*.png"))))

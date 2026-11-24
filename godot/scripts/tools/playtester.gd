@@ -1449,17 +1449,24 @@ func _bug_button() -> void:
 	_tried["bugbtn"] = 1
 	var d: String = bb.get_script().folder
 	bb.get_script().folder = "user://bugs_test_%d" % OS.get_process_id()
-	await tap_at(rect_of(bb.btn).get_center())
 	var f: String = bb.get_script().folder + "/bug_001"
-	var j = JSON.parse_string(FileAccess.get_file_as_string(f + ".json"))
-	if not (j is Dictionary) or j.get("place", "") != g.S.loc: bug("dead", "the bug button didn't keep a report")
-	await settle()
+	var count := func(): return DirAccess.get_files_at(bb.get_script().folder).size() if DirAccess.dir_exists_absolute(bb.get_script().folder) else 0
+	await tap_at(rect_of(bb.btn).get_center())
+	if not is_instance_valid(bb.strip): bug("dead", "the bug button opens nothing")
+	await tap_at(rect_of(bb.btn).get_center())
+	if is_instance_valid(bb.strip): bug("dead", "tapping the bug again doesn't close it")
+	if count.call() > 0: bug("dead", "the bug button keeps a report without a choice being picked")
+	await tap_at(rect_of(bb.btn).get_center())
 	var b: BaseButton = find_btn("Confusing", bb.strip) if is_instance_valid(bb.strip) else null
 	if b == null: bug("missing", "the bug button doesn't ask what kind it was")
 	else:
+		for x in buttons(bb.strip):
+			if not screen().encloses(rect_of(x)): bug("offscreen", "the bug choice \"%s\" is off the screen" % x.text, x)
 		await tap_at(rect_of(b).get_center())
-		j = JSON.parse_string(FileAccess.get_file_as_string(f + ".json"))
-		if not (j is Dictionary) or j.get("kind", "") != "Confusing": bug("dead", "saying what kind of bug it was isn't kept")
+		var j = JSON.parse_string(FileAccess.get_file_as_string(f + ".json"))
+		if not (j is Dictionary) or j.get("kind", "") != "Confusing" or j.get("place", "") != g.S.loc: bug("dead", "picking a kind of bug doesn't keep the report")
+		if is_instance_valid(bb.strip): bug("dead", "the bug choices stay open after picking one")
+		if not FileAccess.file_exists(f + ".jpg"): bug("dead", "the bug report has no picture")
 	for x in [".json", ".jpg"]: DirAccess.remove_absolute(f + x)
 	DirAccess.remove_absolute(bb.get_script().folder); bb.get_script().folder = d
 

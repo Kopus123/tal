@@ -41,7 +41,10 @@ func go(m: Control, dir_: String) -> void:
 		DirAccess.remove_absolute(dir + "/cmd.json")
 		if not (d is Dictionary): continue
 		var out := ""
-		for c in d.cmds: out += await _do(str(c).strip_edges())
+		for c in d.cmds:
+			var r = await _do(str(c).strip_edges())
+			out += str(r) if r != null else "(that went wrong)
+"
 		_write("out_%s.txt" % d.id, out + "\n" + _describe())
 		if _over: await main.get_tree().create_timer(4).timeout; main.get_tree().quit(); return
 
@@ -177,7 +180,9 @@ func _do(c: String) -> String:
 		"tap":
 			var b: BaseButton = null
 			if arg.is_valid_int():
-				if int(arg) >= 1 and int(arg) <= _list.size(): b = _list[int(arg) - 1]
+				if int(arg) >= 1 and int(arg) <= _list.size() and is_instance_valid(_list[int(arg) - 1]): b = _list[int(arg) - 1]
+				else: return "Button %s isn't there any more (the screen changed): use the new list.
+" % arg
 			else:
 				for x in buttons():
 					if x.text.strip_edges() == arg: b = x; break

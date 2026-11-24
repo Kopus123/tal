@@ -15,17 +15,17 @@ end-text 할머니 is safe, for now. But someone followed you up the mountain in
 if !sawFake: Look closely at the mask on the courtyard floor.
 if !read_threat: 할머니's phone just buzzed. Tap the phone icon in the top-right corner.
 if !showed: 수진 should see what came in on 할머니's phone. Talk to her and show her.
-if sawWall&sawFake&!st_s_sujin: Someone came in through the back door. Ask 수진 where she was last night.
-if talkedOwner&st_s_ownercall&!clearedOwner&marketDone: The owner was on the phone when you walked in. Who was he talking to? Ask him.
-if doubtMuseum&!gotCard: The museum woman isn't so sure anymore. Talk to her at the front desk.
-if !talkedOwner: Two 김밥. Who was the second one for? The restaurant owner might remember.
-if !marketDone&!paid: The restaurant owner said the woman at the market knows. The bus stops at the market. Maybe buy something from her first.
-if !marketDone: She's ready to talk now. Ask her about 할머니.
-if !metGramps: The woman at the market told you where to find him. Try the path behind the bus stop.
-if metGramps&!caughtGramps: He says he doesn't know. Open your statements: who told you they saw him with 할머니?
+if sawWall&sawFake&!st_s_sujin&!toldMountain: Someone came in through the back door. Ask 수진 where she was last night.
+if talkedOwner&st_s_ownercall&!clearedOwner&marketDone&!toldMountain: The owner was on the phone when you walked in. Who was he talking to? Ask him.
+if doubtMuseum&!gotCard&!toldMountain: The museum woman isn't so sure anymore. Talk to her at the front desk.
+if !talkedOwner&!toldMountain: Two 김밥. Who was the second one for? The restaurant owner might remember.
+if !marketDone&!paid&!toldMountain: The restaurant owner said the woman at the market knows. The bus stops at the market. Maybe buy something from her first.
+if !marketDone&!toldMountain: She's ready to talk now. Ask her about 할머니.
+if !metGramps&!toldMountain: The woman at the market told you where to find him. Try the path behind the bus stop.
+if metGramps&!caughtGramps&!toldMountain: He says he doesn't know. Who told you they saw him with 할머니? Say so to his face.
 if misheard&!toldMountain: Go back to the river and ask him again. Listen closely this time.
 if !toldMountain: He won't talk. Maybe something you could show him would change his mind.
-if !metHalmeoni: 할아버지 told you where she is. Up the mountain path, and keep climbing.
+if !metHalmeoni: 할아버지 told you where she is. The left path in the alley goes up the mountain: keep climbing.
 if !hidden: Someone with a light is coming. Don't let them see you, and don't let them find her.
 if !solved_d9: The pink questions on your case board are yours to work out, whenever you like. Or leave it here for now.
 Chapter 1 is done. At the temple, "Leave it here for now" takes you back to the village. Look back through your notebook while you wait for Chapter 2.
@@ -291,7 +291,7 @@ detail strap 12 51 7 | The strap is brand-new cord, bright and stiff. Old masks 
 === examine bridgemud
 art mud
 prompt Mud, reeds, footprints. What do you notice?
-detail tread 45 53 10 key | A deep bootprint with a sharp zigzag tread. New hiking boots, much bigger than yours. ! give bootprint
+detail tread 43 48 22 key | A deep bootprint with a sharp zigzag tread. New hiking boots, much bigger than yours. ! give bootprint
 detail ring 72 37 8 key | A perfect ring pressed into the mud: a heavy flashlight, stood on its end while someone waited.
 detail ticket 76 77 8 | Half-buried in the reeds: a train ticket from {서울}, dated yesterday. ! give ticket
 

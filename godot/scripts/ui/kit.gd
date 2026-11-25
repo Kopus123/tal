@@ -52,6 +52,22 @@ static func sure(b: Button, ask: String, f: Callable) -> void:
 		if is_instance_valid(b): b.remove_meta("asked"); b.text = was)
 
 
+## ▶: hear this sentence (nothing if there's no recording of it). Put it in a row before the words.
+static func hear(main: Control, ko: String, who := "sign") -> Button:
+	if not main.voice.has_clip(ko, who): return null
+	var b := button("▶", false, 18); b.custom_minimum_size = Vector2(56, 56); b.alignment = HORIZONTAL_ALIGNMENT_CENTER; b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.set_meta("hear", ko); b.pressed.connect(func(): main.voice.say(ko, who)); return b
+
+
+## words with their play button in front
+static func heard_row(main: Control, what: Control, ko: String, who := "sign") -> Control:
+	var h := hear(main, ko, who)
+	if h == null: return what
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if what is RichTextLabel: what.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(h); what.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(what); return row
+
+
 ## a full-width button whose text wraps onto more lines (choices, cards)
 static func wide(t: String, dark := false, sz := 22) -> Button:
 	var b := button(t, dark, sz); b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL

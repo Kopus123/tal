@@ -54,9 +54,23 @@ func key(text: String, who: String) -> String:
 	return v + "|" + norm(text)
 
 
+## a recording of this sentence by anyone ("" = there is none)
+var _by_text: Dictionary = {}
+func _any(text: String) -> String:
+	if _by_text.is_empty():
+		for k in _index:
+			var t: String = k.substr(k.find("|") + 1)
+			if not _by_text.has(t) or k.begins_with("sign|"): _by_text[t] = _index[k]
+	return _by_text.get(norm(text), "")
+
+
+func has_clip(text: String, who := "sign") -> bool: return _index.has(key(text, who)) or _any(text) != ""
+
+
 func say(text: String, who: String) -> void:
 	if not on or text == "": return
 	var f: String = _index.get(key(text, who), "")
+	if f == "": f = _any(text)
 	if f == "": return
 	var s := load("res://voice/" + f) as AudioStream
 	if s: _player.stream = s; _player.play()

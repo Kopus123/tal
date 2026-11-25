@@ -67,6 +67,10 @@ def collect():
             elif sec == "evidence":
                 parts = [x.strip() for x in line.split("|")]
                 if len(parts) >= 5 and parts[4]: add("sign", "|".join(parts[4:]))
+                if len(sp := split_bar(line)) > 1 and re.search("[가-힣]", sp[1]): add("sign", sp[1])
+                if len(sp) > 4 and sp[4]: add("sign", sp[4])
+            elif sec == "questions":
+                if len(sp := split_bar(line)) > 1: add("sign", sp[1])
             elif sec == "phone":
                 m = re.match(r"^(them|me)(?:@\S+)?\s+\S+\s+(.+)", line)
                 if m: add("sign", m.group(2))

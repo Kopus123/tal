@@ -6,7 +6,7 @@ extends Control
 ## Pop-ups live in their own files: board.gd (case board), phone.gd, notebook.gd, places.gd (map, notice board, chapters).
 ##   godot --path godot -- --shots OUT_DIR     screenshot tour (scripts/tools/shot_tour.gd)
 
-const BUILD := "4.8.2"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
+const BUILD := "4.9.0"   ## MAJOR.FEATURE.FIX: major = a big new part of the game; feature = a new feature in it; fix = bug fixes and small changes
 
 var room: Control
 var paper: PanelContainer
@@ -339,8 +339,10 @@ func _lab() -> void:
 			"heard": ko = "소리 %d · a sound you heard" % cd.n
 		var r := Kit.rich(28); r.text = Kit.ko(ko); r.meta_clicked.connect(func(w): _word(str(w))); body.add_child(r)
 		if cd.kind == "note" and cd.get("en", "") != "": body.add_child(Kit.label("(your note: " + cd.en + ")", 20, Kit.MUTE, true))
-		if cd.kind in ["say", "heard"]:
-			var hb := Kit.button("▶ Hear it", false, 20); hb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN; hb.pressed.connect(func(): voice.say(cd.ko, cd.who)); body.add_child(hb)
+		var said: String = cd.ko if cd.get("ko", "") != "" else cd.get("label", "")
+		if cd.kind in ["say", "heard", "thing", "note", "time", "place"] and voice.has_clip(said, cd.get("who", "sign")):
+			var hb := Kit.button("▶ Hear it", false, 20); hb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN; hb.custom_minimum_size.y = 56; hb.set_meta("hear", said)
+			hb.pressed.connect(func(): voice.say(said, cd.get("who", "sign"))); body.add_child(hb)
 		var pinned: bool = Game.is_pinned(id)
 		if not pinned:
 			_text("Loose: not pinned up yet.", 20, Kit.MUTE)
@@ -386,6 +388,10 @@ func card_big(id: String) -> void:
 	var x := Kit.button("✕", true, 28); x.custom_minimum_size = Vector2(72, 72); o.add_child(x)
 	x.position = Vector2(size.x - 92, 20)
 	x.pressed.connect(func(): o.queue_free())
+	var cd: Dictionary = Game.card(id)
+	if cd.kind != "photo":
+		var h := Kit.hear(self, cd.ko if cd.get("ko", "") != "" else cd.get("label", ""), cd.get("who", "sign"))
+		if h: h.text = "▶  Hear it"; h.custom_minimum_size = Vector2(150, 64); h.position = Vector2(80, 20); o.add_child(h)
 	o.gui_input.connect(func(e): if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed: Game.sound.emit("tap"); o.queue_free())
 
 
@@ -405,6 +411,9 @@ func _fill_box(inner: VBoxContainer) -> void:
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(pic)
 		var l := Kit.label(("● " if Game.board().cards[id].get("new", false) else "") + Game.card_label(cd), 20, Kit.PAPER_INK, true)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(l)
+		if cd.kind != "photo":
+			var h := Kit.hear(self, cd.ko if cd.get("ko", "") != "" else cd.get("label", ""), cd.get("who", "sign"))
+			if h: row.add_child(h)
 		var b := Kit.button("Put it up", true, 18); row.add_child(b)
 		b.pressed.connect(func(): Game.board_unbox(id); cork.refresh(); Kit.refill(inner, _fill_box.bind(inner)))
 	Game.box_seen(); cork.refresh()
@@ -449,7 +458,7 @@ func _say_beat(b: Dictionary) -> void:
 		if not Game.cond(o.c): continue
 		shown += 1
 		var t: String = ("“%s”" % Game.plain(o.ko)) if o.has("ko") else o.get("en", "")
-		var btn := _act(t, func(): pass)
+		var btn := Kit.wide(t); acts.add_child(Kit.heard_row(self, btn, o.ko, "you") if o.has("ko") else btn)
 		btn.pressed.connect(func():
 			if _too_soon(): return
 			if o.has("ko"): _speak(btn, o.ko, func(): Game.choose(o))
@@ -563,6 +572,8 @@ func _type_beat(b: Dictionary) -> void:
 	_text(Kit.esc(b.en))
 	if not _reply.is_empty():
 		_text("[b]%s[/b]" % Kit.ko(_reply[0]), 26); _text(Kit.esc(_reply[1]), 18, Kit.MUTE)
+		var rh := Kit.hear(self, _reply[0], b.get("to", "sign"))
+		if rh: body.add_child(rh)
 	if not Game.typed_close.is_empty():
 		var df := _diff(Game.typed_close.yours, Game.typed_close.correct)
 		_text("[color=#8a7d66]Close enough! Watch the marked letters.[/color]\nYou wrote:  %s\nRight:  %s" % [df[0], df[1]], 24)
@@ -589,7 +600,9 @@ func _cards(items: Array, pick: Callable, picked: Array = []) -> void:
 		else:
 			b.icon = Kit.icon("#" + e.icon); b.text = "%s · %s" % [Game.plain(e.label), e.desc]
 		b.expand_icon = false; b.add_theme_constant_override("icon_max_width", 48)
-		b.pressed.connect(func(): pick.call(e.id)); acts.add_child(b)
+		b.pressed.connect(func(): pick.call(e.id))
+		if is_st: acts.add_child(Kit.heard_row(self, b, Game.ST.nodes[e.node].ko, Game.ST.nodes[e.node].who))
+		else: acts.add_child(Kit.heard_row(self, b, e.ko if e.ko != "" else e.label))
 
 
 func _present_beat(b: Dictionary) -> void:

@@ -237,7 +237,7 @@ static func _page(main: Control, w: String) -> VBoxContainer:
 	if Game.world.words.get(w, {}).get("g", false):
 		badge.text = "GRAMMAR PIECE"
 		inner.add_child(Kit.label(Game.world.grammar.get(w, ""), 21, Kit.PAPER_INK, true))
-		_seen_in(inner, w, r); return inner
+		_seen_in(main, inner, w, r); return inner
 	inner.add_child(Kit.label("What you think it means", 16, Kit.MUTE))
 	var note := LineEdit.new(); note.text = r.note; note.placeholder_text = "Your own words"; note.add_theme_font_size_override("font_size", 24)
 	note.custom_minimum_size.y = 56
@@ -258,7 +258,7 @@ static func _page(main: Control, w: String) -> VBoxContainer:
 		sure.disabled = t.strip_edges() == ""; Game.save_words(); upd.call())
 	note.text_submitted.connect(func(_t): note.release_focus(); Game.note("  wrote for %s: %s" % [w, r.note]))
 	sure.toggled.connect(func(on): r.sure = on; Game.save_words(); upd.call(); Game.sound.emit("solve" if on else "tap"); Game.note("  %s sure about %s" % ["is" if on else "isn't", w]))
-	_seen_in(inner, w, r)
+	_seen_in(main, inner, w, r)
 	_family(main, inner, w)
 	return inner
 
@@ -275,14 +275,14 @@ static func _family(main: Control, inner: VBoxContainer, w: String) -> void:
 		var b := Kit.button(k, false, 24); b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		b.pressed.connect(func(): Kit.close(inner); _page(main, k)); inner.add_child(b)
 		for line in Game.words[k].ctx.slice(0, 2):
-			var c := Kit.rich(20); c.text = "   " + Kit.esc(line).replace(k, "[bgcolor=#%s]%s[/bgcolor]" % [Kit.HILITE.to_html(false), k]); inner.add_child(c)
+			var c := Kit.rich(20); inner.add_child(Kit.heard_row(main, c, line)); c.text = Kit.esc(line).replace(k, "[bgcolor=#%s]%s[/bgcolor]" % [Kit.HILITE.to_html(false), k])
 
 
-static func _seen_in(inner: VBoxContainer, w: String, r: Dictionary) -> void:
+static func _seen_in(main: Control, inner: VBoxContainer, w: String, r: Dictionary) -> void:
 	inner.add_child(Kit.label("Where you've seen it", 16, Kit.MUTE))
 	if r.ctx.is_empty(): inner.add_child(Kit.label("Not seen anywhere yet.", 20, Kit.MUTE))
 	for line in r.ctx:
-		var c := Kit.rich(22); c.text = Kit.esc(line).replace(w, "[bgcolor=#%s]%s[/bgcolor]" % [Kit.HILITE.to_html(false), w]); inner.add_child(c)
+		var c := Kit.rich(22); inner.add_child(Kit.heard_row(main, c, line)); c.text = Kit.esc(line).replace(w, "[bgcolor=#%s]%s[/bgcolor]" % [Kit.HILITE.to_html(false), w])
 
 
 ## a name (수진) or a sound (아이고): not a word to learn, but you can still look

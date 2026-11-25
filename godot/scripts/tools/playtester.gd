@@ -38,6 +38,7 @@ var _t0 := 0
 var _depth := 0               ## inside a side trip (a choice tried and taken back)
 var errors: Catcher
 var _from_line := 0
+var _hear_todo: Button
 
 
 ## errors from the engine and the scripts, as they happen
@@ -269,6 +270,14 @@ func inspect() -> void:
 		_expected()
 	_check_buttons(sc, bs)
 	_check_text(sc)
+	if is_instance_valid(_hear_todo):
+		_tried["hear|" + page_name()] = 1
+		var h: Button = _hear_todo; _hear_todo = null
+		main.voice._player.stream = null; var was: String = g.S.node
+		await press(h)
+		if main.voice._player.stream == null: bug("dead", "%s: the play button plays nothing" % page_name())
+		if g.S.node != was: bug("dead", "%s: the play button also answers" % page_name())
+	_hear_todo = null
 	_ti += Time.get_ticks_usec() - t
 	await _check_scrolls(sc)
 	var sk := "shot|%s|%s|%s" % [page_name(), g.S.loc, g.S.node.get_slice(".", 0) if page_name() != "say" else ""]
@@ -437,6 +446,15 @@ func _expected() -> void:
 				for o in ch: need.append(g.plain(o.ko) if o.has("ko") else o.get("en", ""))
 				if ch.is_empty(): need.append("Continue" if (b.has("next") or b.has("rewind")) else "Look around")
 				if b.get("who", "narr") != "narr": need.append("▶")
+	var plays: Array = buttons(main).filter(func(x): return x.has_meta("hear")).map(func(x): return g.plain(x.get_meta("hear")))
+	var lines: Array = []
+	if t == "contradict": lines = g.owned_statements().map(func(x): return g.ST.nodes[x.node].ko)
+	if t in ["contradict", "present"]: lines += g.owned().filter(func(e): return e.ko != "").map(func(e): return e.ko)
+	lines += b.get("ch", []).filter(func(o): return o.has("ko") and g.cond(o.c)).map(func(o): return o.ko)
+	for l in lines:
+		if main.voice.has_clip(l) and not g.plain(l) in plays: bug("missing", "%s: no way to hear \"%s\"" % [page_name(), g.plain(l)])
+	for x in buttons(main):
+		if x.has_meta("hear") and not _tried.has("hear|" + page_name()): _hear_todo = x
 	var have: Array = buttons(main).map(func(x): return x.text)
 	for n in need:
 		if not have.any(func(h): return h.contains(n)): bug("missing", "%s: \"%s\" isn't there" % [page_name(), n])
@@ -700,7 +718,7 @@ func _try_all() -> void:
 			await _branch(here + ">leave", func(): await press_text("Never mind", main.paper))
 		"contradict":
 			await _branch(here + ">wrong", func():
-				var cs: Array = buttons(main.acts).slice(0, 3).map(func(x): return x.text)
+				var cs: Array = buttons(main.acts).filter(func(x): return not x.has_meta("hear")).slice(0, 3).map(func(x): return x.text)
 				for c in cs: await press_text(c, main.acts, true)
 				await press_text("can't both be true", main.paper))
 			await _branch(here + ">leave", func(): await press_text("Never mind", main.paper))

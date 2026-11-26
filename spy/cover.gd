@@ -184,7 +184,8 @@ func _screen() -> void:
 	end_ui.custom_minimum_size = Vector2(620, 0); end_ui.position = Vector2(-310, -150); root.add_child(end_ui)
 	var eb := VBoxContainer.new(); eb.add_theme_constant_override("separation", 22); end_ui.add_child(eb)
 	end_text = _label(30); end_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; end_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; eb.add_child(end_text)
-	var again := _btn("Again", 32, Vector2(0, 90)); eb.add_child(again); again.pressed.connect(_start)
+	var go := _btn("Go in", 34, Vector2(0, 100)); eb.add_child(go); go.pressed.connect(_go_in)
+	var again := _btn("Again", 24, Vector2(0, 64)); eb.add_child(again); again.pressed.connect(_start)
 	end_ui.visible = false
 
 
@@ -459,8 +460,12 @@ func _finish(n: int) -> void:
 	state = "done"; sub.text = ""
 	var t := "You're Daniel Park.\nRehearsal: %d of 3 clean." % clean
 	if phone_checks > 0: t += "\nYou checked your phone mid-answer %d time%s." % [phone_checks, "" if phone_checks == 1 else "s"]
-	end_text.text = t + "\n\n(The party is the next build.)"
+	end_text.text = t
 	end_ui.visible = true
+
+
+func _go_in() -> void:   # out of the car and up to the party
+	get_tree().change_scene_to_file("res://gala.tscn")
 
 
 # ---------------------------------------------------------------- 3. the phone: always there, never free

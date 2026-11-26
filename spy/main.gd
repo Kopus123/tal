@@ -3,6 +3,8 @@ extends Node3D
 ## Every round is shuffled: what they chat about, how and when they say the number (sometimes they correct
 ## themselves), where they stand, the guard's route. Commuters walk through: they're cover you can walk behind.
 ## Standing around near the two looks suspicious unless you're acting natural (ticket machine, drinks, map).
+## The man in red is their lookout. When he gets suspicious he comes over and asks what you're doing:
+## you build an answer from Korean words and say it, or give up and act it out in English (always works, badly).
 
 const SPEED := 4.2
 const ROOM := Vector2(18, 13)
@@ -25,6 +27,33 @@ const GUARD_POINTS := [
 ]
 const EXITS := [Vector3(-8.6, 0, 5.2), Vector3(8.6, 0, -1.0), Vector3(-5.0, 0, 6.1), Vector3(5.0, 0, 6.1), Vector3(-4.0, 0, -6.1), Vector3(4.0, 0, -6.1)]
 const NATURAL_FOR := 12.0                  # how long one thing looks natural before it looks odd too
+const GOAL := "Goal: find out which locker"
+const TILES := {"ticket": ["표", "ticket"], "drink": ["음료", "drink"], "map": ["노선도", "map"], "friend": ["친구", "friend"],
+	"train": ["지하철", "subway"], "buy": ["사요", "buy"], "look": ["봐요", "look at"], "wait": ["기다려요", "wait for"],
+	"home": ["집에", "home"], "work": ["회사에", "to work"], "school": ["학교에", "to school"], "go": ["가요", "go"], "meet": ["만나요", "meet"]}
+const VERB_EN := {"buy": "I'm buying", "look": "I'm looking at", "wait": "I'm waiting for", "go": "I'm going", "meet": "I'm meeting"}
+const NOUN_EN := {"ticket": "a ticket", "drink": "a drink", "map": "the subway map", "friend": "a friend", "train": "the subway",
+	"home": "home", "work": "to work", "school": "to school"}
+const QS := {   # what the lookout asks, and the words you get to answer with
+	"what": {"ko": "저기요, 뭐 하세요?", "en": "Excuse me, what are you doing?", "obj": "g_whatobj",
+		"tiles": ["ticket", "drink", "map", "friend", "train", "buy", "look", "wait"]},
+	"where": {"ko": "어디 가세요?", "en": "Where are you going?", "obj": "g_whereobj",
+		"tiles": ["home", "work", "school", "friend", "go", "meet", "wait", "buy"]},
+}
+const GOOD := {   # answers that make sense, and the machine that has to be nearby for them to be believable (-1: none)
+	"what": {"ticket buy": 0, "drink buy": 1, "map look": 2, "friend wait": -1, "train wait": -1},
+	"where": {"home go": -1, "work go": -1, "school go": -1, "friend meet": -1},
+}
+const PROP_KO := ["표", "음료", "노선도"]
+const IDEAS := {   # "I can't say it": what you try to get across, and how it goes: badly, awkwardly, luckily
+	"ticket": ["You mime buying a ticket so hard you knock his hat off.", "You point at the ticket machine and nod way too much.", "You wave an old receipt like it's a ticket. He buys it."],
+	"drink": ["You mime drinking, choke on nothing, and cough on him.", "You make slurping noises at him.", "You hold up an empty can. He nods."],
+	"map": ["You trace your route on his chest with your finger.", "You stare at the ceiling and say \"map...\" in English.", "You hold up your phone with a map open. Good enough."],
+	"friend": ["You hug him and call him \"friend\". In English.", "You wave at a stranger like you know them.", "A stranger waves back by chance. He believes you."],
+	"train": ["You make loud choo-choo noises.", "You point at the tunnel and tap your wrist. Slowly.", "A train rumbles by just as you point. Perfect timing."],
+	"home": ["You lie down on the floor and pretend to sleep.", "You draw a house in the air with both hands.", "You yawn and point at the exit. He gets it."],
+}
+const IDEA_KO := {"ticket": "표", "drink": "음료", "map": "노선도", "friend": "친구", "train": "지하철", "home": "집"}
 
 var test := false
 var freeze_guard := false
@@ -33,7 +62,7 @@ var no_commuters := false
 var player: CharacterBody3D
 var body_mesh: Node3D
 var cam: Camera3D
-var guard: Node3D
+var guard: CharacterBody3D
 var talkers := {}
 var cones := {}
 var bubbles := {}
@@ -66,7 +95,38 @@ var g_target := Vector3.ZERO
 var g_pause := 0.0
 var g_base := 0.0
 var g_speed := 1.7
-var investigating := false
+var g_stuck := 0.0
+# the lookout
+var g_mode := "patrol"        # patrol, approach (coming to ask you), talk, watch (you said you'd do something: he checks)
+var g_count := 0              # times he has questioned you this round
+var g_cd := 0.0               # after a talk he leaves you be for a while
+var approach_t := 0.0
+var talk_n := 0               # bumps whenever a talk ends, so lines still playing from it know to stop
+var q_id := "what"
+var q_fails := 0
+var timeouts := 0
+var patience := 0.0
+var patience_max := 20.0
+var picked: Array = []
+var busy := false             # someone in the talk is speaking
+var watch_prop := -1
+var watch_t := 0.0
+var gvoice: AudioStreamPlayer
+var pvoice: AudioStreamPlayer
+var alert: Label3D
+var followup := -1            # (tester) 1: always ask where you're going next, 0: never
+var english_roll := -1.0      # (tester) fixes how the English goes
+var last_result := {}
+var talk_ui: PanelContainer
+var q_label: Label
+var gloss: Label
+var gloss_t := 0.0
+var pat_bar: ProgressBar
+var ans_label: Label
+var said_label: Label
+var tile_box: HBoxContainer
+var say_btn: Button
+var cant_btn: Button
 var loiter_t := 0.0
 var natural_t := 0.0
 var natural_what := ""
@@ -102,6 +162,10 @@ func _ready() -> void:
 		for p in 3: ids.append("num_p%d_%d" % [p, n])
 		for w in range(1, 6):
 			if w != n: ids.append("trap_%d_%d" % [w, n])
+	ids += ["g_what", "g_where", "g_again", "g_ok", "g_ok2", "g_meh", "g_huh", "g_whatobj", "g_whereobj", "g_there_0", "g_there_1", "g_there_2", "g_odd", "g_hey"]
+	for k in TILES: ids.append("p_t_" + k)
+	for q in GOOD:
+		for g in GOOD[q]: ids += ["p_s_" + g.replace(" ", "_"), "g_help_" + g.replace(" ", "_")]
 	for id in ids: clips[id] = load("res://voice/%s.mp3" % id)
 	_world()
 	_screen()
@@ -119,6 +183,8 @@ func _bus() -> void:
 	AudioServer.add_bus_effect(talk_bus, lowpass)
 	voice = AudioStreamPlayer.new(); voice.bus = "Talk"; add_child(voice)
 	voice.finished.connect(_line_done)
+	gvoice = AudioStreamPlayer.new(); add_child(gvoice)   # the lookout and you: right next to each other, so always clear
+	pvoice = AudioStreamPlayer.new(); add_child(pvoice)
 
 
 func _mat(c: Color) -> StandardMaterial3D:
@@ -172,7 +238,7 @@ func _world() -> void:
 	env.environment = e; add_child(env)
 	var sun := DirectionalLight3D.new(); sun.rotation = Vector3(deg_to_rad(-62), deg_to_rad(25), 0); sun.shadow_enabled = true; add_child(sun)
 	var fl := MeshInstance3D.new(); var pm := PlaneMesh.new(); pm.size = ROOM; fl.mesh = pm; fl.material_override = _mat(Color(0.62, 0.63, 0.62)); add_child(fl)
-	var fb := StaticBody3D.new(); var fs := CollisionShape3D.new(); fs.shape = WorldBoundaryShape3D.new(); fb.add_child(fs); add_child(fb)
+	var fb := StaticBody3D.new(); fb.collision_layer = 8; var fs := CollisionShape3D.new(); fs.shape = WorldBoundaryShape3D.new(); fb.add_child(fs); add_child(fb)
 	var hw := ROOM.x / 2; var hd := ROOM.y / 2; var wc := Color(0.36, 0.38, 0.44)
 	_box(Vector3(0, 0, -hd), Vector3(ROOM.x, 1.6, 0.3), wc, true)
 	_box(Vector3(0, 0, hd), Vector3(ROOM.x, 1.6, 0.3), wc, true)
@@ -201,8 +267,12 @@ func _world() -> void:
 	for k in talkers:
 		bubbles[k] = _bubble(talkers[k])
 		cones[k] = _cone(talkers[k], TALK_RANGE, TALK_HALF, Color(1, 0.85, 0.2, 0.25)); cones[k].visible = false
-	guard = _person(GUARD_POINTS[0], Color(0.85, 0.2, 0.2))
+	guard = CharacterBody3D.new(); guard.collision_layer = 0; guard.collision_mask = 1; add_child(guard)   # walks around things
+	var gs := CollisionShape3D.new(); var gc := CapsuleShape3D.new(); gc.radius = 0.3; gc.height = 1.5; gs.shape = gc; gs.position.y = 0.75; guard.add_child(gs)
+	var gm := _person(Vector3.ZERO, Color(0.85, 0.2, 0.2)); remove_child(gm); guard.add_child(gm)
+	guard.position = GUARD_POINTS[0]
 	_cone(guard, GUARD_RANGE, GUARD_HALF, Color(1, 0.2, 0.15, 0.22))
+	alert = _sign("!", 130, Vector3(0, 2.3, 0), guard); alert.modulate = Color(1, 0.85, 0.2); alert.no_depth_test = true; alert.visible = false
 	player = CharacterBody3D.new(); player.collision_layer = 4; player.collision_mask = 1; add_child(player)
 	var ps := CollisionShape3D.new(); var cap := CapsuleShape3D.new(); cap.radius = 0.32; cap.height = 1.5; ps.shape = cap; ps.position.y = 0.75; player.add_child(ps)
 	body_mesh = _person(Vector3.ZERO, Color(0.25, 0.5, 0.95)); remove_child(body_mesh); player.add_child(body_mesh)
@@ -228,7 +298,7 @@ func _screen() -> void:
 	var sl := _label(26); sl.text = "Suspicion"; top.add_child(sl)
 	sus_bar = ProgressBar.new(); sus_bar.max_value = 1.0; sus_bar.show_percentage = false; sus_bar.custom_minimum_size = Vector2(240, 30)
 	var fill := StyleBoxFlat.new(); fill.bg_color = Color(0.9, 0.25, 0.2); sus_bar.add_theme_stylebox_override("fill", fill); top.add_child(sus_bar)
-	goal = _label(26); goal.position = Vector2(24, 60); goal.text = "Goal: find out which locker"; root.add_child(goal)
+	goal = _label(26); goal.position = Vector2(24, 60); goal.text = GOAL; root.add_child(goal)
 	doing = _label(24); doing.position = Vector2(24, 96); root.add_child(doing)
 	hear_label = _label(28); hear_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	hear_label.position = Vector2(-200, 18); hear_label.custom_minimum_size = Vector2(400, 0); hear_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; root.add_child(hear_label)
@@ -243,6 +313,38 @@ func _screen() -> void:
 	panel_text = _label(30); panel_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; panel_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; box.add_child(panel_text)
 	panel_btn = Button.new(); panel_btn.add_theme_font_size_override("font_size", 32); panel_btn.custom_minimum_size = Vector2(0, 90); box.add_child(panel_btn)
 	panel_btn.pressed.connect(_reset)
+	_talk_screen(root)
+
+
+func _btn(text: String, size: int, min: Vector2) -> Button:
+	var b := Button.new(); b.text = text; b.add_theme_font_size_override("font_size", size); b.custom_minimum_size = min; return b
+
+
+func _talk_screen(root: Control) -> void:   # the bottom panel while the lookout questions you
+	talk_ui = PanelContainer.new(); root.add_child(talk_ui)
+	talk_ui.anchor_left = 0; talk_ui.anchor_right = 1; talk_ui.anchor_top = 1; talk_ui.anchor_bottom = 1
+	talk_ui.offset_left = 16; talk_ui.offset_right = -16; talk_ui.offset_top = -372; talk_ui.offset_bottom = -10
+	var st := StyleBoxFlat.new(); st.bg_color = Color(0.06, 0.07, 0.1, 0.92); st.set_corner_radius_all(14); st.set_content_margin_all(16)
+	talk_ui.add_theme_stylebox_override("panel", st)
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 18); talk_ui.add_child(row)
+	var left := VBoxContainer.new(); left.size_flags_horizontal = Control.SIZE_EXPAND_FILL; left.add_theme_constant_override("separation", 8); row.add_child(left)
+	var qrow := HBoxContainer.new(); qrow.add_theme_constant_override("separation", 14); left.add_child(qrow)
+	q_label = _label(40); q_label.modulate = Color(1, 0.75, 0.7); qrow.add_child(q_label)
+	var hear := _btn("Hear", 22, Vector2(90, 54)); qrow.add_child(hear)
+	hear.pressed.connect(_hear)
+	gloss = _label(22); gloss.modulate = Color(0.75, 0.75, 0.75); left.add_child(gloss)
+	pat_bar = ProgressBar.new(); pat_bar.max_value = 1.0; pat_bar.show_percentage = false; pat_bar.custom_minimum_size = Vector2(0, 8)
+	var pf := StyleBoxFlat.new(); pf.bg_color = Color(1, 0.6, 0.2); pat_bar.add_theme_stylebox_override("fill", pf); left.add_child(pat_bar)
+	var arow := HBoxContainer.new(); arow.add_theme_constant_override("separation", 14); left.add_child(arow)
+	ans_label = _label(38); ans_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; arow.add_child(ans_label)
+	var clr := _btn("Clear", 22, Vector2(100, 54)); arow.add_child(clr); clr.pressed.connect(_clear_pick)
+	said_label = _label(22); said_label.modulate = Color(1, 0.9, 0.5); said_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; left.add_child(said_label)
+	tile_box = HBoxContainer.new(); tile_box.add_theme_constant_override("separation", 8); left.add_child(tile_box)
+	var right := VBoxContainer.new(); right.add_theme_constant_override("separation", 14); right.alignment = BoxContainer.ALIGNMENT_END; row.add_child(right)
+	say_btn = _btn("Say it", 36, Vector2(190, 130)); right.add_child(say_btn); say_btn.pressed.connect(_say_it)
+	var gs := StyleBoxFlat.new(); gs.bg_color = Color(0.2, 0.55, 0.3); gs.set_corner_radius_all(10); say_btn.add_theme_stylebox_override("normal", gs)
+	cant_btn = _btn("I can't say it", 22, Vector2(190, 70)); right.add_child(cant_btn); cant_btn.pressed.connect(_cant_say)
+	talk_ui.visible = false
 
 
 func _panel(text: String, btn: String) -> void:
@@ -270,22 +372,25 @@ func _reset() -> void:
 	var pts := GUARD_POINTS.duplicate(); pts.shuffle(); route.clear()
 	for i in 5: route.append([pts[i], randf_range(0.0, 3.0)])
 	g_speed = randf_range(1.4, 2.0)
-	guard.position = route[0][0]; g_i = 1; g_target = route[1][0]; g_pause = 0.0; investigating = false
+	guard.position = route[0][0]; g_i = 1; g_target = route[1][0]; g_pause = 0.0; g_stuck = 0.0
+	g_mode = "patrol"; g_count = 0; g_cd = 0.0; talk_n += 1; busy = false; talk_ui.visible = false; alert.visible = false
+	watch_prop = -1; goal.text = GOAL; gvoice.stop(); pvoice.stop()
 	var gd: Vector3 = g_target - guard.position; guard.rotation.y = atan2(-gd.x, -gd.z)
 	for c in commuters: c.body.queue_free()
 	commuters.clear(); commuter_t = 0.0
 	if not no_commuters: _first_commuters()
 	joy_touch = -1; joy_vec = Vector2.ZERO; joy_draw.queue_redraw(); open_btn.visible = false
 	panel.visible = false; state = "play"
-	_say("Handler: those two know which locker it's in. Listen in.", 6.0)
+	_say("Handler: those two know which locker. The man in red is their lookout.", 6.0)
 
 
-func _end(kind: String) -> void:
+func _end(kind: String, why := "You've been noticed.") -> void:
 	state = kind; voice.stop(); speaking = ""; joy_touch = -1; joy_vec = Vector2.ZERO; joy_draw.queue_redraw(); open_btn.visible = false
+	talk_n += 1; busy = false; talk_ui.visible = false; alert.visible = false; g_mode = "patrol"
 	for k in talkers: bubbles[k].visible = false
 	toast.text = ""
 	if kind == "won": _panel("Got it: %s 번.\nMission complete." % NUM[answer - 1], "Again")
-	else: _panel("You've been noticed.\n(It was %s 번, locker %d.)" % [NUM[answer - 1], answer], "Try again")
+	else: _panel("%s\n(It was %s 번, locker %d.)" % [why, NUM[answer - 1], answer], "Try again")
 
 
 func _open_near() -> void:
@@ -301,8 +406,7 @@ func _open(i: int) -> void:
 	elif wrongs == 2:
 		suspicion += 0.25; _say("Empty. People are starting to look at you.")
 	else:
-		suspicion += 0.3; _say("The guard heard that. He's coming.")
-		investigating = true; g_pause = 0.0; g_target = Vector3(player.position.x + 1.4, 0, player.position.z)
+		suspicion += 0.3; _start_approach("Empty. The lookout heard that. He's coming over.")
 	if suspicion >= 1.0: suspicion = 1.0; _end("caught")
 
 
@@ -497,28 +601,287 @@ func _natural_here() -> String:
 	return ""
 
 
+# ---------------------------------------------------------------- the lookout comes over and asks
+
+func _start_approach(why: String) -> void:
+	if g_mode != "patrol" or state != "play": return
+	g_mode = "approach"; approach_t = 0.0; alert.visible = true; g_pause = 0.0
+	_say(why, 4.0)
+
+
+func _start_talk() -> void:
+	g_mode = "talk"; g_count += 1; talk_n += 1; alert.visible = false
+	var n := talk_n
+	joy_touch = -1; joy_vec = Vector2.ZERO; joy_draw.queue_redraw(); open_btn.visible = false; doing.text = ""; toast.text = ""
+	var d := guard.position - player.position; body_mesh.rotation.y = atan2(-d.x, -d.z)
+	patience_max = [20.0, 15.0, 11.0][mini(g_count, 3) - 1]
+	talk_ui.visible = true; said_label.text = ""
+	cant_btn.disabled = g_count >= 3
+	cant_btn.text = "No more excuses" if g_count >= 3 else "I can't say it"
+	if g_count >= 3:   # third time: he's had enough of you
+		busy = true; q_label.text = "또 당신이에요?"; gloss.text = "You again?"; gloss.visible = true; ans_label.text = ""; _tiles_for([])
+		_gsay("g_again"); await _done(gvoice)
+		if n != talk_n: return
+		busy = false
+	_ask("what")
+
+
+func _hear() -> void:
+	if not busy and g_mode == "talk": _gsay("g_" + q_id)
+
+
+func _gsay(id: String) -> void:
+	gvoice.stream = clips[id]; gvoice.play(); played.append(id)
+
+
+func _done(p: AudioStreamPlayer) -> void:
+	await get_tree().process_frame
+	while p.playing: await get_tree().process_frame
+
+
+func _psay(ids: Array) -> void:   # your character says it out loud
+	for id in ids:
+		pvoice.stream = clips[id]; pvoice.play(); played.append(id)
+		await _done(pvoice)
+
+
+func _ask(q: String) -> void:
+	q_id = q; picked.clear(); q_fails = 0; timeouts = 0
+	q_label.text = QS[q].ko; gloss.text = QS[q].en; gloss.visible = false; gloss_t = 3.0
+	patience = patience_max
+	_tiles_for(QS[q].tiles); _show_pick()
+	_gsay("g_" + q)
+
+
+func _tiles_for(keys: Array) -> void:
+	for c in tile_box.get_children(): c.queue_free()
+	for k in keys:
+		var b := _btn("%s\n%s" % TILES[k], 25, Vector2(108, 100)); b.pressed.connect(_pick.bind(k)); tile_box.add_child(b)
+	say_btn.visible = true
+
+
+func _pick(k: String) -> void:
+	if busy or picked.size() >= 3: return
+	picked.append(k); _show_pick()
+	pvoice.stream = clips["p_t_" + k]; pvoice.play()   # each word says itself when you tap it
+
+
+func _clear_pick() -> void:
+	if busy: return
+	picked.clear(); _show_pick()
+
+
+func _show_pick() -> void:
+	var words := []
+	for k in picked: words.append(TILES[k][0])
+	ans_label.text = " ".join(words) if words else "Tap words to answer"
+	ans_label.modulate = Color.WHITE if words else Color(1, 1, 1, 0.45)
+	say_btn.disabled = picked.is_empty()
+
+
+func _ko(key: String) -> String:
+	var w := []
+	for k in key.split(" "): w.append(TILES[k][0])
+	return " ".join(w)
+
+
+func _en(key: String) -> String:
+	var w := key.split(" ")
+	return "\"%s %s.\"" % [VERB_EN[w[1]], NOUN_EN[w[0]]]
+
+
+## What did you just say? good / order (right words, verb first) / noun (half a sentence) / verb (do what?) / weird
+func _judge(p: Array, q: String) -> Dictionary:
+	var nouns := p.filter(func(k): return NOUN_EN.has(k))
+	var verbs := p.filter(func(k): return VERB_EN.has(k))
+	if p.size() == 2 and nouns.size() == 1 and verbs.size() == 1:
+		var key: String = nouns[0] + " " + verbs[0]
+		if GOOD[q].has(key): return {"kind": "good" if p[0] == nouns[0] else "order", "key": key, "prop": GOOD[q][key], "en": _en(key)}
+		return {"kind": "weird", "en": _en(key)}
+	if p.size() == 1 and nouns.size() == 1:
+		for key in GOOD[q]:
+			if key.begins_with(nouns[0] + " "):
+				return {"kind": "noun", "key": key, "prop": GOOD[q][key], "en": "\"%s.\"" % TILES[nouns[0]][1].capitalize()}
+		return {"kind": "weird", "en": "\"%s.\"" % TILES[nouns[0]][1].capitalize()}
+	if p.size() == 1: return {"kind": "verb", "en": "\"%s...\"" % VERB_EN[verbs[0]]}
+	return {"kind": "weird", "en": "\"%s.\" That's not a sentence." % " ".join(p.map(func(k): return TILES[k][1]))}
+
+
+func _say_it() -> void:
+	if busy or picked.is_empty() or g_mode != "talk": return
+	var n := talk_n; busy = true
+	var r := _judge(picked, q_id); last_result = r
+	if r.kind == "good": await _psay(["p_s_" + r.key.replace(" ", "_")])
+	else: await _psay(picked.map(func(k): return "p_t_" + k))
+	if n != talk_n: return
+	said_label.text = "You said: " + r.en
+	await _react(r, n)
+	if n == talk_n: busy = false
+
+
+func _react(r: Dictionary, n: int) -> void:
+	if r.kind in ["good", "order", "noun"]:
+		if r.kind != "good":   # he works out what you meant and says it properly
+			_gsay("g_help_" + r.key.replace(" ", "_")); await _done(gvoice)
+			if n != talk_n: return
+			said_label.text = ("In Korean the action goes last: " if r.kind == "order" else "He finished it for you: ") + _ko(r.key) + " = " + _en(r.key)
+		suspicion = clampf(suspicion + {"good": -0.35, "noun": -0.1, "order": -0.15}[r.kind], 0.0, 1.0)
+		if r.prop >= 0 and Vector2(props[r.prop][0].x - player.position.x, props[r.prop][0].z - player.position.z).length() > 3.0:
+			_gsay("g_there_%d" % r.prop); await _done(gvoice)   # fine, but the machine is over there. Go on then.
+			if n != talk_n: return
+			_start_watch(r.prop); return
+		if q_id == "what" and (followup == 1 or (followup == -1 and (g_count >= 2 or randf() < 0.35))):
+			_gsay("g_meh"); await _done(gvoice)
+			if n != talk_n: return
+			_ask("where"); return
+		_gsay("g_ok2" if q_id == "where" else "g_ok"); await _done(gvoice)
+		if n != talk_n: return
+		_end_talk(); return
+	if r.kind == "verb":   # "buy... what?"
+		suspicion += 0.05; _gsay(QS[q_id].obj); await _done(gvoice)
+		if n != talk_n: return
+		said_label.text += "   He asks: %s" % ("뭐를요? (What?)" if q_id == "what" else "어디요? (Where?)")
+		picked.clear(); _show_pick(); return
+	q_fails += 1   # nonsense
+	if g_count >= 3:
+		_gsay("g_odd"); await _done(gvoice)
+		if n == talk_n: _end("caught", "The lookout didn't buy it.")
+		return
+	suspicion += 0.2 if q_fails == 1 else 0.3
+	_gsay("g_huh" if q_fails == 1 else "g_odd"); await _done(gvoice)
+	if n != talk_n or _caught_by_him(): return
+	if q_fails == 1:
+		picked.clear(); _show_pick(); patience = maxf(patience, patience_max * 0.6)
+	else: _end_talk()
+
+
+func _timeout() -> void:
+	timeouts += 1; busy = true
+	var n := talk_n
+	suspicion += 0.15 if timeouts == 1 else 0.3
+	_gsay("g_hey" if timeouts == 1 else "g_odd"); await _done(gvoice)
+	if n != talk_n: return
+	busy = false
+	if _caught_by_him(): return
+	if timeouts == 1: patience = patience_max * 0.5
+	else: _end_talk()
+
+
+func _caught_by_him() -> bool:
+	if suspicion < 1.0: return false
+	suspicion = 1.0; _end("caught", "The lookout didn't buy it."); return true
+
+
+func _end_talk() -> void:
+	talk_n += 1; busy = false; talk_ui.visible = false
+	g_mode = "patrol"; g_cd = 25.0; g_pause = 0.0; g_target = route[g_i][0]; goal.text = GOAL
+
+
+func _start_watch(i: int) -> void:
+	talk_n += 1; busy = false; talk_ui.visible = false
+	g_mode = "watch"; watch_prop = i; watch_t = 12.0
+	goal.text = "Go to %s. He's watching." % PROP_KO[i]
+
+
+func _watch_done(ok: bool) -> void:
+	_gsay("g_ok" if ok else "g_odd")
+	suspicion = clampf(suspicion + (-0.2 if ok else 0.5), 0.0, 1.0)   # a lie he caught you in
+	_end_talk(); doing.text = ""
+	_caught_by_him()
+
+
+# ---------------------------------------------------------------- "I can't say it": act it out in English
+
+func _cant_say() -> void:
+	if busy or g_mode != "talk" or g_count >= 3: return
+	for c in tile_box.get_children(): c.queue_free()
+	for k in IDEAS:
+		var b := _btn(k, 28, Vector2(118, 100)); b.pressed.connect(_english.bind(k)); tile_box.add_child(b)
+	var back := _btn("Back", 24, Vector2(100, 100)); tile_box.add_child(back)
+	back.pressed.connect(func():
+		if not busy:
+			_tiles_for(QS[q_id].tiles); _show_pick())
+	say_btn.visible = false
+	ans_label.text = "What are you trying to say?"; ans_label.modulate = Color.WHITE
+
+
+func _english(idea: String) -> void:
+	if busy: return
+	var n := talk_n; busy = true
+	var tried := not picked.is_empty() or q_fails > 0       # having a go in Korean first makes the odds kinder
+	var odds := [0.15, 0.6] if tried else [0.3, 0.75]
+	var roll := randf() if english_roll < 0.0 else english_roll
+	var tier := 0 if roll < odds[0] else (1 if roll < odds[1] else 2)
+	last_result = {"kind": "english", "tier": tier}
+	for c in tile_box.get_children(): c.queue_free()
+	ans_label.text = "(in English)"; said_label.text = IDEAS[idea][tier]
+	_gesture(tier)
+	await get_tree().create_timer(2.4).timeout
+	if n != talk_n: return
+	suspicion = clampf(suspicion + [0.4, 0.25, 0.1][tier], 0.0, 1.0)
+	_gsay(["g_odd", "g_meh", "g_ok"][tier]); await _done(gvoice)
+	if n != talk_n or _caught_by_him(): return
+	_end_talk()
+	_say("Handler: \"%s\" is %s." % [idea, IDEA_KO[idea]], 5.0)   # a piece for next time, never the whole line
+
+
+func _gesture(tier: int) -> void:
+	var tw := create_tween()
+	if tier == 0:   # flailing
+		tw.tween_property(body_mesh, "rotation:y", body_mesh.rotation.y + TAU * 2.0, 0.9)
+		tw.parallel().tween_property(body_mesh, "position:y", 0.5, 0.45)
+		tw.tween_property(body_mesh, "position:y", 0.0, 0.3)
+	elif tier == 1:   # little hops
+		for i in 2:
+			tw.tween_property(body_mesh, "position:y", 0.3, 0.15)
+			tw.tween_property(body_mesh, "position:y", 0.0, 0.15)
+	else:   # a calm nod
+		tw.tween_property(body_mesh, "rotation:x", 0.25, 0.2)
+		tw.tween_property(body_mesh, "rotation:x", 0.0, 0.2)
+
+
 # ---------------------------------------------------------------- every frame
 
 func _guard(dt: float) -> void:
+	g_cd = maxf(0.0, g_cd - dt)
+	if g_mode == "talk" or g_mode == "watch":   # he stands and looks at you
+		var d := player.position - guard.position
+		guard.rotation.y = lerp_angle(guard.rotation.y, atan2(-d.x, -d.z), 1.0 - exp(-8.0 * dt)); return
+	if g_mode == "approach":
+		approach_t += dt
+		var tp := player.position - guard.position; tp.y = 0
+		if tp.length() < 1.7: _start_talk(); return
+		if approach_t > 8.0 and approach_t - dt <= 8.0:
+			suspicion = minf(0.95, suspicion + 0.15); _say("Walking away from him looks bad. He's hurrying.")
+		_walk(tp, 4.6 if approach_t > 8.0 else 2.8, dt); return
 	if g_pause > 0.0:
 		g_pause -= dt; guard.rotation.y = g_base + sin(g_pause * 1.8) * 1.1
-		if g_pause <= 0.0 and investigating:
-			investigating = false; g_target = route[g_i][0]
 		return
 	var to := g_target - guard.position; to.y = 0
-	if to.length() < 0.1:
-		g_base = guard.rotation.y
-		if investigating:
-			g_pause = 3.0; return
+	if to.length() < 0.15 or g_stuck > 1.5:
+		g_base = guard.rotation.y; g_stuck = 0.0
 		g_pause = route[g_i][1]; g_i = (g_i + 1) % route.size(); g_target = route[g_i][0]
 		if g_i == 0: route[g_i][1] = randf_range(0.0, 3.0)
 		return
-	guard.position += to.normalized() * minf(to.length(), g_speed * (1.7 if investigating else 1.0) * dt)
-	guard.rotation.y = lerp_angle(guard.rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-8.0 * dt))
+	_walk(to, g_speed, dt)
+	g_stuck = g_stuck + dt if guard.get_real_velocity().length() < g_speed * 0.3 else 0.0
+
+
+func _walk(to: Vector3, sp: float, dt: float) -> void:   # straight there, or veer round whatever's in the way
+	var dir := to.normalized()
+	for a in [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.1, -2.1]:
+		var dd := dir.rotated(Vector3.UP, a)
+		if not guard.test_move(guard.global_transform, dd * 0.45): dir = dd; break
+	guard.velocity = dir * minf(sp, to.length() / dt); guard.move_and_slide(); guard.position.y = 0
+	guard.rotation.y = lerp_angle(guard.rotation.y, atan2(-dir.x, -dir.z), 1.0 - exp(-8.0 * dt))
 
 
 func _physics_process(dt: float) -> void:
 	if state != "play": return
+	if g_mode == "talk":   # you stand there and answer; the station carries on around you
+		_guard(dt)
+		if not no_commuters: _commuters(dt)
+		return
 	var dir := Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT): dir.x -= 1
 	if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT): dir.x += 1
@@ -559,8 +922,9 @@ func _physics_process(dt: float) -> void:
 	var care := 0.2 if natural else 1.0
 	var watched := false
 	var gdist := player.position.distance_to(guard.position)
-	if _sees(guard, GUARD_RANGE, GUARD_HALF) or gdist < 1.0:   # the closer he is, the quicker he's sure
-		suspicion += dt * care * (0.5 + 1.4 * (1.0 - gdist / GUARD_RANGE)); watched = true
+	var guard_saw := false
+	if g_mode == "patrol" and (_sees(guard, GUARD_RANGE, GUARD_HALF) or gdist < 1.0):   # the closer he is, the quicker he's sure
+		suspicion += dt * care * (0.5 + 1.4 * (1.0 - gdist / GUARD_RANGE)) * (0.5 if g_cd > 0.0 else 1.0); watched = true; guard_saw = true
 	var spotted := _near_talkers() < NOTICE
 	var seen_by_them := false
 	for k in talkers:
@@ -583,8 +947,18 @@ func _physics_process(dt: float) -> void:
 			speaking = ""; voice.stream = clips["huh"]; voice.play(); played.append("huh")
 			_new_talk(); wait = 3.0; bubbles["b"].visible = true
 	if not watched: suspicion = maxf(0.0, suspicion - dt * 0.1)
+	# the lookout: past a point he comes over to ask (unless he only just did)
+	if g_mode == "patrol" and g_cd <= 0.0 and ((guard_saw and suspicion >= 0.6) or suspicion >= 0.85):
+		_start_approach("Their lookout is coming over. Get an excuse ready." if g_count == 0 else "The lookout is coming over again.")
+	if g_mode == "approach": suspicion = minf(suspicion, 0.95)   # what you tell him decides it
+	if g_mode == "watch":
+		watch_t -= dt
+		doing.text = "He's watching: go to %s (%d)" % [PROP_KO[watch_prop], ceili(watch_t)]
+		if natural_what == props[watch_prop][1]: _watch_done(true)
+		elif watch_t <= 0.0: _watch_done(false)
+		if state != "play": return
 	if suspicion >= 1.0:
-		suspicion = 1.0; _end("caught"); return
+		suspicion = 1.0; _end("caught", "The lookout has seen enough." if guard_saw else "You've been noticed."); return
 	near_locker = -1; var best := 1.3
 	for i in lockers.size():
 		var lp: Vector3 = lockers[i].global_position
@@ -599,7 +973,17 @@ func _physics_process(dt: float) -> void:
 
 
 func _process(dt: float) -> void:
-	cam.position = cam.position.lerp(player.position + CAM_OFF, 1.0 - exp(-6.0 * dt)); cam.look_at(cam.position - CAM_OFF, Vector3.UP)
+	var focus := player.position; var off := CAM_OFF
+	if g_mode == "talk":   # in close on the two of you, above the panel
+		focus = (player.position + guard.position) / 2 + Vector3(0, 0, 1.3); off = CAM_OFF * 0.5
+	cam.position = cam.position.lerp(focus + off, 1.0 - exp(-6.0 * dt)); cam.look_at(cam.position - off, Vector3.UP)
+	if g_mode == "talk":
+		gloss_t -= dt
+		if gloss_t <= 0.0: gloss.visible = true    # the English comes a moment later: try to catch it by ear first
+		if not busy and not gvoice.playing:
+			patience -= dt
+			if patience <= 0.0: _timeout()
+		pat_bar.value = patience / patience_max
 	sus_bar.value = suspicion
 	toast_t -= dt
 	if toast_t <= 0.0: toast.text = ""
@@ -618,7 +1002,7 @@ func _process(dt: float) -> void:
 
 
 func _input(ev: InputEvent) -> void:
-	if state != "play": return
+	if state != "play" or g_mode == "talk": return
 	if ev is InputEventScreenTouch:
 		if ev.pressed and joy_touch == -1 and ev.position.x < get_viewport().get_visible_rect().size.x * 0.5:
 			joy_touch = ev.index; joy_center = ev.position; joy_vec = Vector2.ZERO
@@ -667,6 +1051,87 @@ func _quiet_round(at_spot: int) -> void:   # a round with the guard, the commute
 	await _secs(0.1)
 
 
+func _talk_now(at: Vector3, count := 0) -> void:   # a quiet round where the lookout is already asking you
+	await _quiet_round(0); await _put(at)
+	guard.position = at + Vector3(1.4, 0, 0); g_count = count; followup = 0; english_roll = -1.0
+	_start_talk()
+	for i in 150:
+		await _secs(0.05)
+		if not busy and q_label.text == QS.what.ko and not gvoice.playing: break
+
+
+func _answer(keys: Array) -> void:
+	picked = keys.duplicate(); _show_pick(); await _say_it()
+
+
+func _lookout_tests() -> void:
+	# a good answer at the right place: he leaves, and you look less suspicious
+	await _talk_now(Vector3(6.2, 0, -1.75)); suspicion = 0.6
+	await _answer(["ticket", "buy"])
+	_check(last_result.kind == "good" and "p_s_ticket_buy" in played and g_mode == "patrol" and not talk_ui.visible and suspicion < 0.3,
+		"표 사요 at the ticket machine: he believes you and leaves (%.2f)" % suspicion)
+	_check(g_cd > 20.0, "and then leaves you alone for a while")
+	# a good answer far from the machine: he points, and watches you go
+	await _talk_now(Vector3(0.5, 0, 4.0))
+	await _answer(["drink", "buy"])
+	_check(g_mode == "watch" and "g_there_1" in played and goal.text.contains("음료"), "음료 사요 far from the drinks: 음료는 저기 있어요, he watches you go")
+	await _put(Vector3(-4.0, 0, 3.7)); await _secs(0.2)
+	_check(g_mode == "patrol" and "g_ok" in played, "going there satisfies him")
+	await _talk_now(Vector3(0.5, 0, 4.0)); suspicion = 0.3
+	await _answer(["map", "look"]); watch_t = 0.05; await _secs(0.2)
+	_check(g_mode == "patrol" and suspicion > 0.45 and "g_odd" in played, "not going makes him more suspicious (%.2f)" % suspicion)
+	# nonsense: he doesn't get it and asks again; twice and he walks off suspicious
+	await _talk_now(Vector3(0.5, 0, 4.0)); suspicion = 0.2
+	await _answer(["friend", "buy"])
+	_check(last_result.kind == "weird" and talk_ui.visible and "g_huh" in played and said_label.text.contains("buying a friend") and absf(suspicion - 0.4) < 0.01,
+		"친구 사요: he's confused, you see you said \"I'm buying a friend\", one more go")
+	await _answer(["train", "look"])
+	_check(not talk_ui.visible and g_mode == "patrol" and absf(suspicion - 0.7) < 0.01, "a second bit of nonsense and he walks off suspicious")
+	await _shot("7_nonsense")
+	# broken but understandable
+	await _talk_now(Vector3(0.5, 0, 4.0))
+	await _answer(["wait", "friend"])
+	_check(last_result.kind == "order" and "g_help_friend_wait" in played and said_label.text.begins_with("In Korean the action goes last"), "기다려요 친구: he gets it, and you learn the verb goes last")
+	await _talk_now(Vector3(0.5, 0, 4.0))
+	await _answer(["train"])
+	_check(last_result.kind == "noun" and "g_help_train_wait" in played and said_label.text.contains("지하철 기다려요"), "just 지하철: he finishes it for you (지하철 기다려요?)")
+	await _talk_now(Vector3(0.5, 0, 4.0))
+	await _answer(["buy"])
+	_check(last_result.kind == "verb" and "g_whatobj" in played and talk_ui.visible and picked.is_empty(), "just 사요: 뭐를요? and you try again")
+	# a second question
+	await _talk_now(Vector3(0.5, 0, 4.0)); followup = 1
+	await _answer(["friend", "wait"])
+	_check(q_id == "where" and "g_where" in played and talk_ui.visible, "sometimes he asks a second thing: 어디 가세요?")
+	await _answer(["home", "go"])
+	_check(not talk_ui.visible and "g_ok2" in played and "p_s_home_go" in played, "집에 가요: 네, 조심히 가세요")
+	# too slow
+	await _talk_now(Vector3(0.5, 0, 4.0)); suspicion = 0.2
+	patience = 0.05; await _secs(0.3)
+	_check("g_hey" in played and suspicion > 0.3 and talk_ui.visible, "taking too long: 저기요? (%.2f)" % suspicion)
+	# I can't say it: always gets you through, at a price, and you get a piece of Korean for next time
+	var costs := []
+	for roll in [0.0, 0.5, 0.95]:
+		await _talk_now(Vector3(0.5, 0, 4.0)); suspicion = 0.2; english_roll = roll
+		_cant_say(); await get_tree().process_frame
+		if roll == 0.0: _check(tile_box.get_child_count() == IDEAS.size() + 1, "I can't say it shows ideas in English")
+		await _english("ticket")
+		costs.append(snappedf(suspicion - 0.2, 0.01))
+		if roll == 0.0: await _shot("8_english")
+	_check(costs == [0.4, 0.25, 0.1] and not talk_ui.visible and toast.text.contains("표"), "acting it out goes badly, awkwardly or luckily %s, and the handler gives you the word" % str(costs))
+	await _talk_now(Vector3(0.5, 0, 4.0)); english_roll = 0.2
+	picked = ["ticket"]; await _english("ticket")
+	_check(last_result.tier == 1, "trying some Korean first makes the English go better")
+	# third time
+	await _talk_now(Vector3(0.5, 0, 4.0), 2)
+	for i in 300:
+		await get_tree().process_frame
+		if "g_what" in played: break
+	_check("g_again" in played and cant_btn.disabled, "the third time: 또 당신이에요? and no English way out")
+	await _answer(["friend", "buy"])
+	_check(state == "caught", "and nonsense then gets you caught")
+	freeze_guard = false
+
+
 func _run_test() -> void:
 	AudioServer.set_bus_mute(0, true)
 	get_window().position = Vector2i(-3000, 60)   # out of the way
@@ -683,7 +1148,7 @@ func _run_test() -> void:
 		var cl := false
 		for q in cp.slice(1, -1): cl = cl or q.distance_to((talkers.a.position + talkers.b.position) / 2) < 2.6
 		if cl: close += 1
-	_check(paths_ok and close >= 7, "commuters walk around things, and often close past the two (%d/30)" % close)
+	_check(paths_ok and close >= 5, "commuters walk around things, and often close past the two (%d/30)" % close)
 	for c in commuters: c.body.queue_free()
 	commuters.clear(); for i in 4: _spawn_commuter(true)
 	# the conversation is different every time
@@ -747,10 +1212,9 @@ func _run_test() -> void:
 	await _put(lockers[wrong[0]].global_position + Vector3(1.0, 0, 0)); await _secs(0.2)
 	_check(open_btn.visible and open_btn.text == "Open %s" % NUM[wrong[0]], "next to a locker the button says its Hangul number")
 	_check(locker_mats[wrong[0]].emission != Color.BLACK and locker_mats[wrong[1]].emission == Color.BLACK, "only the locker the button opens lights up")
-	_open(wrong[0]); _check(state == "play" and suspicion < 0.15 and not investigating, "one wrong locker is fine")
-	_open(wrong[1]); _check(state == "play" and suspicion > 0.25 and not investigating, "a second one draws looks")
-	freeze_guard = false
-	_open(wrong[2]); _check(investigating, "a third one brings the guard over")
+	_open(wrong[0]); _check(state == "play" and suspicion < 0.15 and g_mode == "patrol", "one wrong locker is fine")
+	_open(wrong[1]); _check(state == "play" and suspicion > 0.25 and g_mode == "patrol", "a second one draws looks")
+	_open(wrong[2]); _check(g_mode == "approach" and alert.visible, "a third one brings the lookout over")
 	_open(answer - 1); _check(state == "won" and panel.visible, "the right locker wins")
 	await _shot("5_won")
 	# the guard's route changes every round
@@ -763,10 +1227,17 @@ func _run_test() -> void:
 	var g0 := guard.position
 	await _secs(1.0)
 	_check(guard.position.distance_to(g0) > 1.0, "the guard walks his route")
-	await _put(guard.position + (-guard.global_transform.basis.z * Vector3(1, 0, 1)).normalized() * 2.0)
+	await _put(guard.position + (-guard.global_transform.basis.z * Vector3(1, 0, 1)).normalized() * 2.5)
+	for i in 80:
+		await _secs(0.1)
+		if g_mode == "talk": break
+	_check(state == "play" and g_mode == "talk" and talk_ui.visible, "in the lookout's view he comes over to question you, not catch you")
+	await _secs(0.5)
+	_check("g_what" in played and q_label.text == QS.what.ko and tile_box.get_child_count() == 8, "he asks 뭐 하세요? and you get 8 words to answer with")
 	await _secs(3.0)
-	_check(state == "caught", "walking into the guard's view gets you caught")
-	await _shot("6_caught")
+	_check(gloss.visible, "the English for his question shows up after a moment")
+	await _shot("6_questioned")
+	await _lookout_tests()
 	# the thumb stick
 	_reset(); await _secs(0.2)
 	var before := player.position

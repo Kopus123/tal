@@ -10,8 +10,8 @@ const SPEED := 3.6
 const CAM_OFF := Vector3(0, 15.0, 9.5)
 const ROOM := Vector2(20, 14)
 const READ := 1.6                # right beside them: you can make out the words (Korean only, never English)
-const NOTICE := 2.0              # stand this close to a group for a moment and they notice you
-const LINGER := 2.0
+const NOTICE := 2.5              # stand this close to a group for a moment and they notice you
+const LINGER := 1.0
 const TAG_RANGE := 2.6
 const START := Vector3(-6.0, 0, 5.4)
 const ELEVATOR := Vector3(-6.0, 0, 6.2)
@@ -250,7 +250,7 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 	var tag := _sign("", 30, Vector3(0, -0.15, 0), b); tag.modulate = Color(1, 0.85, 0.3); tag.visible = false
 	var role := id if id in ROLES else "guest"
 	var p := {"id": id, "role": role, "body": b, "look": look, "audio": au, "ko": ko, "tag": tag, "spot": "", "slot": -1,
-		"timer": randf_range(2.0, 12.0), "busy": false, "leaving": false, "gone": false, "glance": 0.0,
+		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
 		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false}}   # their picture of you
 	people.append(p)
 	if late:
@@ -338,9 +338,17 @@ func _walk(p: Dictionary, dt: float) -> void:   # straight there, or veer round 
 		if d.length() > 0.1: b.rotation.y = lerp_angle(b.rotation.y, atan2(-d.x, -d.z), 1.0 - exp(-5.0 * dt))
 		return
 	var dir := to.normalized()
-	for a in [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.1, -2.1]:
+	p.veer_t = p.get("veer_t", 0.0) - dt
+	var tries: Array = [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.1, -2.1]
+	if p.veer_t > 0.0: tries.push_front(p.veer)   # keep going round the same side, don't flip back and forth
+	var found := false
+	for a in tries:
 		var dd := dir.rotated(Vector3.UP, a)
-		if not b.test_move(b.global_transform, dd * 0.4): dir = dd; break
+		if not b.test_move(b.global_transform, dd * 0.4):
+			dir = dd; found = true
+			if a != 0.0 and (p.veer_t <= 0.0 or a != p.veer): p.veer = a; p.veer_t = 0.8
+			break
+	if not found: b.velocity = Vector3.ZERO; return   # boxed in: wait a moment
 	b.velocity = dir * minf(1.4, to.length() / dt); b.move_and_slide(); b.position.y = 0
 	b.rotation.y = lerp_angle(b.rotation.y, atan2(-dir.x, -dir.z), 1.0 - exp(-8.0 * dt))
 
@@ -357,7 +365,7 @@ func _people(dt: float) -> void:
 		if p.timer <= 0.0:
 			var sp := _pick_spot(p)
 			if sp != p.spot: _go(p, sp)
-			p.timer = {"host": randf_range(16, 26), "broker": randf_range(28, 42), "assistant": 3.0, "security": randf_range(18, 30)}.get(p.role, randf_range(22, 40))
+			p.timer = {"host": randf_range(16, 26), "broker": randf_range(28, 42), "assistant": 3.0, "security": randf_range(18, 30)}.get(p.role, randf_range(10, 18))
 	for a in arrivals.duplicate():   # late arrivals step out of the lift, and the host goes to greet them
 		if clock >= a[0]:
 			arrivals.erase(a); var np := _spawn(a[1], get_meta("looks")[a[1]], true)
@@ -716,11 +724,11 @@ func _react(spot: String) -> void:
 		reactions.append("cold"); return
 	var fresh := m.filter(func(o): return not o.pic.met and o.id in ASKERS and not o.busy)
 	var r := randf()
-	if fresh and r < 0.45:
+	if fresh and r < 0.65:
 		var who: Dictionary = fresh.pick_random()
 		if who.pic.second and randf() < 0.6: _ask(who, m, who.pic.second.pick_random()); reactions.append("check"); return
 		_ask(who, m); reactions.append("ask"); return
-	if fresh.is_empty() or r < 0.8:   # a look (or a nod, if they've met you), then back to their talk
+	if fresh.is_empty() or r < 0.85:   # a look (or a nod, if they've met you), then back to their talk
 		var lookers := m.filter(func(o): return not o.busy); lookers.shuffle()
 		for o in lookers.slice(0, randi_range(1, 2)): o.glance = randf_range(1.2, 2.2)
 		reactions.append("glance"); return

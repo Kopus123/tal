@@ -44,7 +44,7 @@ const SUBS := {   # what the handler says, as quiet subtitles
 	"h_style": "Daniel is confident. Short answers. Steer back to business.", "h_dodge": "If they ask something you don't know, dodge it.",
 	"h_phone": "It's all on your phone. But checking it while someone waits for an answer looks bad.",
 	"h_practice": "Let's practice. Nobody asks the same way twice. Use the pieces. Yes or no is up to you.", "h_good": "Good.", "h_good2": "That's it.", "h_close": "Close. Listen.",
-	"h_listen": "Now the people you're here for. Listen for what they're called.", "h_t_host": "The host is Kim. People call him...",
+	"h_listen": "Now the people you're here for. We have their titles, not their faces. Listen for what they're called.", "h_t_host": "The host is Kim. People call him...",
 	"h_t_broker": "The broker is Choi. His people call him...", "h_t_assistant": "His assistant is Yoon. He calls her...",
 	"h_t_security": "The head of security gets called...", "h_t_bartender": "And the bartender is the one behind the bar.",
 	"h_no": "No. It's this.", "h_noticed": "Fine in here. At the party, someone waiting would notice that.", "h_done": "We're here. Be Daniel.",

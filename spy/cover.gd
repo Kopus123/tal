@@ -3,37 +3,47 @@ extends Node3D
 ## tonight (Daniel Park) while the facts appear. Then a rehearsal: three questions in Korean, answered with word
 ## pieces. Everything stays on your phone, but checking it costs: once there are people, someone waiting notices.
 
-const FACTS := [   # what you might be asked, and your answer in pieces ("~" = joins onto the word before it)
-	{"k": "name", "group": "core", "q": "이름이 뭐예요?", "qe": "What's your name?", "ko": "다니엘 박이에요.", "en": "I'm Daniel Park.",
-		"chunks": [["다니엘 박", "Daniel Park"], ["~이에요", "I am"]]},
-	{"k": "from", "group": "core", "q": "어디에서 왔어요?", "qe": "Where are you from?", "ko": "LA에서 왔어요.", "en": "I'm from LA.",
-		"chunks": [["LA에서", "from LA"], ["왔어요", "came"]]},
-	{"k": "job", "group": "core", "q": "무슨 일 하세요?", "qe": "What do you do?", "ko": "투자자예요.", "en": "I'm an investor.",
-		"chunks": [["투자자", "investor"], ["~예요", "I am"]]},
-	{"k": "stay", "group": "core", "q": "한국에 얼마나 있어요?", "qe": "How long are you in Korea?", "ko": "일주일 있어요.", "en": "I'm here for a week.",
-		"chunks": [["일주일", "a week"], ["있어요", "am here"]]},
-	{"k": "invited", "group": "core", "q": "누가 초대했어요?", "qe": "Who invited you?", "ko": "김 대표님이 초대했어요.", "en": "CEO Kim invited me.",
-		"chunks": [["김 대표님이", "CEO Kim"], ["초대했어요", "invited"]]},
-	{"k": "parents", "group": "background", "q": "부모님은 어디 분이세요?", "qe": "Where are your parents from?", "ko": "부모님이 부산 사람이에요.", "en": "My parents are from Busan.",
-		"chunks": [["부모님이", "my parents"], ["부산 사람", "Busan people"], ["~이에요", "are"]]},
-	{"k": "korean", "group": "background", "q": "한국어 잘하세요?", "qe": "Is your Korean good?", "ko": "한국어 잘 못해요.", "en": "My Korean isn't good.",
-		"chunks": [["한국어", "Korean"], ["잘 못해요", "not good at"]], "opt": [["twice", 0]]},   # 아니요 in front is fine
-	{"k": "twice", "group": "background", "q": "한국에 처음 왔어요?", "qe": "Is this your first time in Korea?", "ko": "아니요, 두 번 왔어요.", "en": "No, I've been twice.",
-		"chunks": [["아니요", "no"], ["두 번", "twice"], ["왔어요", "came"]]},
+const FACTS := [   # pieces of who you are, not answers to set questions ("~" = joins onto the word before it)
+	# qs: the different ways someone might ask. "yn": a yes/no question, so 아니요 in front fits
+	{"k": "name", "group": "core", "ko": "다니엘 박입니다.", "en": "I'm Daniel Park.",
+		"qs": [["성함이 어떻게 되세요?", "May I ask your name?"], ["처음 뵙겠습니다. 누구세요?", "We haven't met. Who are you?"]],
+		"chunks": [["다니엘 박", "Daniel Park"], ["~입니다", "I am"]]},
+	{"k": "from", "group": "core", "ko": "LA에서 왔습니다.", "en": "I'm from LA.",
+		"qs": [["어디에서 오셨어요?", "Where are you from?"], ["어디 사세요?", "Where do you live?"]],
+		"chunks": [["LA에서", "from LA"], ["왔습니다", "came"]]},
+	{"k": "job", "group": "core", "ko": "투자자입니다.", "en": "I'm an investor.",
+		"qs": [["무슨 일 하세요?", "What do you do?"], ["어떤 일을 하세요?", "What line of work are you in?"]],
+		"chunks": [["투자자", "investor"], ["~입니다", "I am"]]},
+	{"k": "stay", "group": "core", "ko": "일주일 있습니다.", "en": "I'm here for a week.",
+		"qs": [["한국에 얼마나 계세요?", "How long are you in Korea?"], ["언제까지 계세요?", "Until when are you here?"]],
+		"chunks": [["일주일", "a week"], ["있습니다", "am here"]]},
+	{"k": "invited", "group": "core", "ko": "김 대표님이 초대하셨습니다.", "en": "CEO Kim invited me.",
+		"qs": [["누가 초대했어요?", "Who invited you?"], ["대표님하고 어떻게 아세요?", "How do you know the CEO?"]],
+		"chunks": [["김 대표님이", "CEO Kim"], ["초대하셨습니다", "invited (me)"]]},
+	{"k": "parents", "group": "background", "ko": "부모님은 부산 분이십니다.", "en": "My parents are from Busan.",
+		"qs": [["부모님은 어디 분이세요?", "Where are your parents from?"], ["한국 분이세요?", "Are you Korean?"]],
+		"chunks": [["부모님은", "my parents"], ["부산 분", "Busan people"], ["~이십니다", "are"]]},
+	{"k": "korean", "group": "background", "yn": true, "ko": "한국어 잘 못합니다.", "en": "My Korean isn't good.",
+		"qs": [["한국어 잘하세요?", "Is your Korean good?"], ["한국말 편하세요?", "Are you comfortable in Korean?"]],
+		"chunks": [["한국어", "Korean"], ["잘 못합니다", "not good at"]]},
+	{"k": "twice", "group": "background", "yn": true, "ko": "두 번 왔습니다.", "en": "I've been twice.",
+		"qs": [["한국에 처음 오셨어요?", "Is this your first time in Korea?"], ["한국 자주 오세요?", "Do you come to Korea often?"]],
+		"chunks": [["두 번", "twice"], ["왔습니다", "came"]]},
 ]
+const YN := {"k": "yn", "chunks": [["네", "yes"], ["아니요", "no"]]}   # always yours to add in front, or not
 const TITLES := [   # who you're there for, and what people call them: the words to listen for at the party
 	["host", "김 대표님", "CEO Kim, the host"], ["broker", "사장님", "boss: the broker"],
 	["assistant", "윤 비서", "Secretary Yoon, his assistant"], ["security", "팀장님", "team leader: head of security"],
 ]
-const DODGES := [["d_work", "일 얘기는 나중에 해요.", "Let's talk work later."], ["d_secret", "비밀이에요.", "That's a secret."], ["d_well", "글쎄요...", "Well..."]]
+const DODGES := [["d_work", "일 얘기는 나중에 하시죠.", "Let's talk work later."], ["d_secret", "비밀입니다.", "That's a secret."], ["d_well", "글쎄요...", "Well..."]]
 const SUBS := {   # what the handler says, as quiet subtitles
-	"h_intro": "Tonight you're Daniel Park. Learn him on the way.", "h_name": "Your name. Say it like this.", "h_from": "You're from L.A.",
+	"h_intro": "Tonight you're Daniel Park. Learn him on the way.", "h_name": "Your name. These are pieces, not a script.", "h_from": "You're from L.A.",
 	"h_job": "You're an investor. You run money for a fund.", "h_stay": "You're in Seoul for a week.",
 	"h_invited": "Kim, the host, invited you. Call him 김 대표님.", "h_parents": "You grew up in Koreatown. Your parents are from Busan.",
 	"h_korean": "That's why your Korean is rough. Own it.", "h_twice": "And you've been to Seoul twice before.",
 	"h_style": "Daniel is confident. Short answers. Steer back to business.", "h_dodge": "If they ask something you don't know, dodge it.",
 	"h_phone": "It's all on your phone. But checking it while someone waits for an answer looks bad.",
-	"h_practice": "Let's practice. I ask, you answer.", "h_good": "Good.", "h_good2": "That's it.", "h_close": "Close. Listen.",
+	"h_practice": "Let's practice. Nobody asks the same way twice. Use the pieces. Yes or no is up to you.", "h_good": "Good.", "h_good2": "That's it.", "h_close": "Close. Listen.",
 	"h_listen": "Now the people you're here for. Listen for what they're called.", "h_t_host": "The host is Kim. People call him...",
 	"h_t_broker": "The broker is Choi. His people call him...", "h_t_assistant": "His assistant is Yoon. He calls her...",
 	"h_t_security": "The head of security gets called...", "h_t_bartender": "And the bartender is the one behind the bar.",
@@ -52,6 +62,8 @@ var shown := 0                  # facts shown on the cards so far
 var titles_shown := 0
 var questions: Array = []       # the rehearsal: three facts
 var q_i := 0
+var q_n := 0                    # which way the question is asked this time
+var most_cards := 0             # the most lines on screen at once in the briefing (tester)
 var picked: Array = []          # [fact key, chunk index]
 var busy := false
 var clean := 0
@@ -90,8 +102,10 @@ func _ready() -> void:
 		"h_phone", "h_practice", "h_good", "h_good2", "h_close", "h_no", "h_noticed", "h_done", "d_work", "d_secret", "d_well", "h_listen", "h_t_bartender"]
 	for t in TITLES: ids += ["h_t_" + t[0], "k_t_" + t[0]]
 	for f in FACTS:
-		ids += ["q_" + f.k, "a_" + f.k]
+		ids.append("a_" + f.k)
+		for i in f.qs.size(): ids.append("q_%s_%d" % [f.k, i])
 		for i in f.chunks.size(): ids.append("t_%s_%d" % [f.k, i])
+	ids += ["t_yn_0", "t_yn_1"]
 	for id in ids: clips[id] = load("res://voice/cover/%s.mp3" % id)
 	_car()
 	_screen()
@@ -299,11 +313,12 @@ func _card(ko: String, en: String) -> void:
 	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 12)
 	var k := _label(28); k.text = ko; row.add_child(k)
 	var e := _label(19); e.text = en; e.modulate = Color(0.78, 0.78, 0.78); e.size_flags_vertical = Control.SIZE_SHRINK_CENTER; row.add_child(e)
-	cards.add_child(row)
+	cards.add_child(row); most_cards = maxi(most_cards, cards.get_child_count())
 	row.modulate.a = 0.0; create_tween().tween_property(row, "modulate:a", 1.0, 0.35)
 
 
-func _heading(t: String) -> void:
+func _heading(t: String) -> void:   # a new section: the last one leaves the screen (it's on your phone)
+	for c in cards.get_children(): cards.remove_child(c); c.queue_free()
 	var h := _label(20); h.text = t; h.modulate = Color(1, 0.8, 0.4); cards.add_child(h)
 
 
@@ -364,13 +379,14 @@ func _ask(n: int) -> void:
 	if n != run_n: return
 	var f: Dictionary = questions[q_i]
 	talk_ui.visible = true; said_label.text = ""; picked.clear()
-	q_label.text = f.q; gloss.text = f.qe; gloss.visible = false; gloss_t = 3.0
+	q_n = randi() % f.qs.size()
+	q_label.text = f.qs[q_n][0]; gloss.text = f.qs[q_n][1]; gloss.visible = false; gloss_t = 3.0
 	# the pieces: this answer's, mixed with pieces of two others
 	var tiles := []
 	for i in f.chunks.size(): tiles.append([f.k, i])
-	for o in f.get("opt", []): tiles.append(o)
+	tiles += [["yn", 0], ["yn", 1]]   # yes and no: yours to put in front, or not
 	var others := FACTS.filter(func(o): return o.k != f.k); others.shuffle()
-	for o in others.slice(0, 2):
+	for o in others.slice(0, 1):   # one other answer's pieces: with yes and no, at most 8 tiles, one row
 		for i in o.chunks.size(): tiles.append([o.k, i])
 	var seen_text := {}; var deck := []
 	for t in tiles:
@@ -383,11 +399,12 @@ func _ask(n: int) -> void:
 		var b := _btn("%s\n%s" % [ch[0], ch[1]], 24, Vector2(112, 96)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
 	_show_pick()
 	busy = true
-	await _speak("q_" + f.k, n)
+	await _speak("q_%s_%d" % [f.k, q_n], n)
 	if n == run_n: busy = false
 
 
 func _fact(k: String) -> Dictionary:
+	if k == "yn": return YN
 	for f in FACTS:
 		if f.k == k: return f
 	return {}
@@ -398,7 +415,7 @@ func _chunk(t: Array) -> Array:
 
 
 func _hear_q() -> void:
-	if state == "rehearse" and not busy: _play("q_" + questions[q_i].k)
+	if state == "rehearse" and not busy: _play("q_%s_%d" % [questions[q_i].k, q_n])
 
 
 func _pick(t: Array) -> void:
@@ -433,9 +450,7 @@ func _judge(p: Array, f: Dictionary) -> String:
 	var want := []
 	for i in f.chunks.size(): want.append(_chunk([f.k, i])[0])
 	var got := p.map(func(t): return _chunk(t)[0])
-	var opt: Array = f.get("opt", []).map(func(t): return _chunk(t)[0])
-	if got.size() > 1 and got[0] in opt: got = got.slice(1)           # "아니요, 한국어 잘 못해요" is fine too
-	if want[0] == "아니요" and got.size() > 0 and got[0] != "아니요": want = want.slice(1)   # and "두 번 왔어요" without it
+	if got.size() > 1 and (got[0] == "네" or (got[0] == "아니요" and f.get("yn", false))): got = got.slice(1)   # yes/no in front: your call
 	if got == want: return "good"
 	if got.size() == want.size() and got.all(func(w): return w in want) and want.all(func(w): return w in got): return "order"
 	if got.all(func(w): return w in want): return "part"
@@ -448,7 +463,7 @@ func _say_it() -> void:
 	var f: Dictionary = questions[q_i]
 	var r := _judge(picked, f); last_result = r
 	if r == "good":
-		var lead := p_lead(f)
+		var lead: String = p_lead(f) if picked[0][0] == "yn" else ""
 		if lead != "" and not await _speak(lead, n): return
 		if not await _speak("a_" + f.k, n): return
 	else:
@@ -468,9 +483,8 @@ func _say_it() -> void:
 	else: _finish(n)
 
 
-func p_lead(f: Dictionary) -> String:   # an allowed extra word you put in front (아니요): say it too
-	for o in f.get("opt", []):
-		if picked.size() > 0 and picked[0] == o: return "t_%s_%d" % o
+func p_lead(_f: Dictionary) -> String:   # 네 or 아니요 you put in front: say it too
+	if picked.size() > 1 and picked[0][0] == "yn": return "t_yn_%d" % picked[0][1]
 	return ""
 
 
@@ -565,9 +579,9 @@ func _run_test() -> void:
 	_skip(); await _secs(0.2)
 	_check(state == "rehearse" and cards.get_child_count() == 0 and _seen(), "skip goes to the rehearsal, the card clears (memory or phone now)")
 	await _idle()
-	_check(talk_ui.visible and q_label.text == questions[0].q and "q_" + questions[0].k in clips, "the handler asks the first question in Korean")
+	_check(talk_ui.visible and q_label.text == questions[0].qs[q_n][0] and clips.has("q_%s_%d" % [questions[0].k, q_n]), "the handler asks the first question in Korean")
 	var n_tiles := tile_box.get_child_count()
-	_check(n_tiles >= questions[0].chunks.size() + 2 and n_tiles <= 9, "the pieces mix this answer with others (%d)" % n_tiles)
+	_check(n_tiles >= questions[0].chunks.size() + 2 and n_tiles <= 11, "the pieces mix this answer with others (%d)" % n_tiles)
 	await _secs(3.0)
 	_check(gloss.visible, "the English for the question comes after a moment")
 	await _shot("c2_rehearsal")
@@ -598,10 +612,13 @@ func _run_test() -> void:
 	var other: Dictionary = FACTS[0] if f2.k != FACTS[0].k else FACTS[1]
 	_check(_judge([[other.k, 0]], f2) == "wrong", "another answer's piece is wrong")
 	var kor: Dictionary = _fact("korean"); var tw: Dictionary = _fact("twice")
-	_check(_judge([["twice", 0], ["korean", 0], ["korean", 1]], kor) == "good" and _judge([["korean", 0], ["korean", 1]], kor) == "good", "아니요, 한국어 잘 못해요 counts, with or without 아니요")
-	_check(_judge([["twice", 1], ["twice", 2]], tw) == "good" and _judge([["twice", 0], ["twice", 1], ["twice", 2]], tw) == "good", "두 번 왔어요 counts, with or without 아니요")
+	var nm: Dictionary = _fact("name")
+	_check(_judge([["yn", 1], ["korean", 0], ["korean", 1]], kor) == "good" and _judge([["korean", 0], ["korean", 1]], kor) == "good", "아니요, 한국어 잘 못합니다 counts, with or without 아니요")
+	_check(_judge([["twice", 0], ["twice", 1]], tw) == "good" and _judge([["yn", 1], ["twice", 0], ["twice", 1]], tw) == "good", "두 번 왔습니다 counts, with or without 아니요")
+	_check(_judge([["yn", 0], ["name", 0], ["name", 1]], nm) == "good" and _judge([["yn", 1], ["name", 0], ["name", 1]], nm) == "wrong", "네 fits in front of anything; 아니요 only answers a yes/no question")
+	_check(FACTS.all(func(x): return x.qs.size() >= 2 and not x.ko.begins_with("아니요") and (x.ko.ends_with("니다.") or x.ko.ends_with("습니다."))), "every line is formal, has 2+ ways to be asked, and none starts with 아니요")
 	_check(_judge([["korean", 1], ["korean", 0]], kor) == "order", "and the wrong order is still caught")
-	_check(_joined([["name", 0], ["name", 1]]) == "다니엘 박이에요" and _joined([["parents", 0], ["parents", 1], ["parents", 2]]) == "부모님이 부산 사람이에요", "pieces join like real Korean (이에요 sticks to the word before)")
+	_check(_joined([["name", 0], ["name", 1]]) == "다니엘 박입니다" and _joined([["parents", 0], ["parents", 1], ["parents", 2]]) == "부모님은 부산 분이십니다", "pieces join like real Korean (입니다 sticks to the word before)")
 	await _answer([[other.k, 0]])
 	_check(last_result == "wrong" and said_label.text.begins_with(f2.ko), "a wrong answer: the handler gives you the right line")
 	for i in 200:
@@ -618,12 +635,13 @@ func _run_test() -> void:
 		_start()
 	_check(qs.size() >= 5, "the rehearsal questions change each run (%d different in 8)" % qs.size())
 	# the whole briefing, start to end, once
-	_start()
+	_start(); most_cards = 0
 	var saw_titles := 0
 	for i in 3000:
 		await _secs(0.05)
 		saw_titles = maxi(saw_titles, titles_shown)
 		if state == "rehearse": break
 	_check(state == "rehearse" and saw_titles == 4 and shown == FACTS.size(), "the full briefing plays through: %d facts, %d titles, then the rehearsal" % [shown, saw_titles])
+	_check(most_cards <= 6, "the briefing never has more than 6 lines on screen (%d), so nothing runs off the bottom" % most_cards)
 	print("DONE %d failed" % _fails)
 	get_tree().quit(1 if _fails else 0)

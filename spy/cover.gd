@@ -21,6 +21,10 @@ const FACTS := [   # what you might be asked, and your answer in pieces ("~" = j
 	{"k": "twice", "group": "background", "q": "한국에 처음 왔어요?", "qe": "Is this your first time in Korea?", "ko": "아니요, 두 번 왔어요.", "en": "No, I've been twice.",
 		"chunks": [["아니요", "no"], ["두 번", "twice"], ["왔어요", "came"]]},
 ]
+const TITLES := [   # who you're there for, and what people call them: the words to listen for at the party
+	["host", "김 대표님", "CEO Kim, the host"], ["broker", "사장님", "boss: the broker"],
+	["assistant", "윤 비서", "Secretary Yoon, his assistant"], ["security", "팀장님", "team leader: head of security"],
+]
 const DODGES := [["d_work", "일 얘기는 나중에 해요.", "Let's talk work later."], ["d_secret", "비밀이에요.", "That's a secret."], ["d_well", "글쎄요...", "Well..."]]
 const SUBS := {   # what the handler says, as quiet subtitles
 	"h_intro": "Tonight you're Daniel Park. Learn him on the way.", "h_name": "Your name. Say it like this.", "h_from": "You're from L.A.",
@@ -30,6 +34,9 @@ const SUBS := {   # what the handler says, as quiet subtitles
 	"h_style": "Daniel is confident. Short answers. Steer back to business.", "h_dodge": "If they ask something you don't know, dodge it.",
 	"h_phone": "It's all on your phone. But checking it while someone waits for an answer looks bad.",
 	"h_practice": "Let's practice. I ask, you answer.", "h_good": "Good.", "h_good2": "That's it.", "h_close": "Close. Listen.",
+	"h_listen": "Now the people you're here for. Listen for what they're called.", "h_t_host": "The host is Kim. People call him...",
+	"h_t_broker": "The broker is Choi. His people call him...", "h_t_assistant": "His assistant is Yoon. He calls her...",
+	"h_t_security": "The head of security gets called...", "h_t_bartender": "And the bartender is the one behind the bar.",
 	"h_no": "No. It's this.", "h_noticed": "Fine in here. At the party, someone waiting would notice that.", "h_done": "We're here. Be Daniel.",
 }
 const STYLE := "Confident. Short answers. Steer back to business."
@@ -42,6 +49,7 @@ var side: AudioStreamPlayer      # lines you play yourself (phone, pieces): the 
 var state := "brief"            # brief, rehearse, done
 var run_n := 0                  # bumps on every restart, so a briefing still playing knows to stop
 var shown := 0                  # facts shown on the cards so far
+var titles_shown := 0
 var questions: Array = []       # the rehearsal: three facts
 var q_i := 0
 var picked: Array = []          # [fact key, chunk index]
@@ -79,7 +87,8 @@ func _ready() -> void:
 	side = AudioStreamPlayer.new(); add_child(side)
 	side.finished.connect(func(): voice.stream_paused = false)
 	var ids := ["h_intro", "h_name", "h_from", "h_job", "h_stay", "h_invited", "h_parents", "h_korean", "h_twice", "h_style", "h_dodge",
-		"h_phone", "h_practice", "h_good", "h_good2", "h_close", "h_no", "h_noticed", "h_done", "d_work", "d_secret", "d_well"]
+		"h_phone", "h_practice", "h_good", "h_good2", "h_close", "h_no", "h_noticed", "h_done", "d_work", "d_secret", "d_well", "h_listen", "h_t_bartender"]
+	for t in TITLES: ids += ["h_t_" + t[0], "k_t_" + t[0]]
 	for f in FACTS:
 		ids += ["q_" + f.k, "a_" + f.k]
 		for i in f.chunks.size(): ids.append("t_%s_%d" % [f.k, i])
@@ -203,6 +212,8 @@ func _phone_screen(root: Control) -> void:   # your cover, all of it, with a Hea
 			if f.group == group: box.add_child(_phone_line("a_" + f.k, f.ko, f.en))
 	var hd := _label(22); hd.text = "When you don't know: dodge"; hd.modulate = Color(1, 0.8, 0.4); box.add_child(hd)
 	for d in DODGES: box.add_child(_phone_line(d[0], d[1], d[2]))
+	var ht := _label(22); ht.text = "Who to listen for"; ht.modulate = Color(1, 0.8, 0.4); box.add_child(ht)
+	for tt in TITLES: box.add_child(_phone_line("k_t_" + tt[0], tt[1], tt[2]))
 	phone_ui.visible = false
 
 
@@ -276,7 +287,7 @@ func _sub_at(top: bool) -> void:   # subtitles sit low, or above the answer pane
 
 func _start() -> void:
 	_sub_at(false)
-	run_n += 1; state = "brief"; shown = 0; clean = 0; phone_checks = 0; noticed_said = false; busy = false
+	run_n += 1; state = "brief"; shown = 0; titles_shown = 0; clean = 0; phone_checks = 0; noticed_said = false; busy = false
 	for c in cards.get_children(): c.queue_free()
 	end_ui.visible = false; talk_ui.visible = false; sub.text = ""; voice.stop()
 	_set_phone(false)
@@ -311,6 +322,15 @@ func _brief(n: int) -> void:
 	for d in DODGES:
 		_card(d[1], d[2])
 		if not await _speak(d[0], n): return
+	# who you're there for: the titles to listen for (said in English, then in Korean)
+	if not await _speak("h_listen", n): return
+	_heading("Who to listen for")
+	for t in TITLES:
+		if not await _speak("h_t_" + t[0], n): return
+		_card(t[1], t[2]); titles_shown += 1
+		if not await _speak("k_t_" + t[0], n): return
+		await get_tree().create_timer(0.3).timeout
+	if not await _speak("h_t_bartender", n): return
 	if not await _speak("h_phone", n): return
 	_mark_seen()
 	_rehearse(n)
@@ -537,6 +557,11 @@ func _run_test() -> void:
 	while side.playing: await _secs(0.05)
 	await _secs(0.1)
 	_check(not voice.stream_paused and shown == before_shown, "he resumes the same line after (nothing skipped)")
+	_check(TITLES.size() == 4 and TITLES.all(func(t): return clips.has("h_t_" + t[0]) and clips.has("k_t_" + t[0])), "the briefing has who to listen for: 4 titles, said in English then Korean")
+	var phone_titles := 0
+	for c in phone_ui.get_child(0).get_child(0).get_children():
+		if c is HBoxContainer and c.get_child(1).get_child(0).text in ["김 대표님", "사장님", "윤 비서", "팀장님"]: phone_titles += 1
+	_check(phone_titles == 4, "your phone lists the titles too, with Hear buttons")
 	_skip(); await _secs(0.2)
 	_check(state == "rehearse" and cards.get_child_count() == 0 and _seen(), "skip goes to the rehearsal, the card clears (memory or phone now)")
 	await _idle()
@@ -592,5 +617,13 @@ func _run_test() -> void:
 		qs[questions[0].k + questions[1].k + questions[2].k] = 1
 		_start()
 	_check(qs.size() >= 5, "the rehearsal questions change each run (%d different in 8)" % qs.size())
+	# the whole briefing, start to end, once
+	_start()
+	var saw_titles := 0
+	for i in 3000:
+		await _secs(0.05)
+		saw_titles = maxi(saw_titles, titles_shown)
+		if state == "rehearse": break
+	_check(state == "rehearse" and saw_titles == 4 and shown == FACTS.size(), "the full briefing plays through: %d facts, %d titles, then the rehearsal" % [shown, saw_titles])
 	print("DONE %d failed" % _fails)
 	get_tree().quit(1 if _fails else 0)

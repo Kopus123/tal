@@ -17,7 +17,7 @@ const FACTS := [   # what you might be asked, and your answer in pieces ("~" = j
 	{"k": "parents", "group": "background", "q": "부모님은 어디 분이세요?", "qe": "Where are your parents from?", "ko": "부모님이 부산 사람이에요.", "en": "My parents are from Busan.",
 		"chunks": [["부모님이", "my parents"], ["부산 사람", "Busan people"], ["~이에요", "are"]]},
 	{"k": "korean", "group": "background", "q": "한국어 잘하세요?", "qe": "Is your Korean good?", "ko": "한국어 잘 못해요.", "en": "My Korean isn't good.",
-		"chunks": [["한국어", "Korean"], ["잘 못해요", "not good at"]]},
+		"chunks": [["한국어", "Korean"], ["잘 못해요", "not good at"]], "opt": [["twice", 0]]},   # 아니요 in front is fine
 	{"k": "twice", "group": "background", "q": "한국에 처음 왔어요?", "qe": "Is this your first time in Korea?", "ko": "아니요, 두 번 왔어요.", "en": "No, I've been twice.",
 		"chunks": [["아니요", "no"], ["두 번", "twice"], ["왔어요", "came"]]},
 ]
@@ -38,6 +38,7 @@ const SEEN_FILE := "user://cover_seen"
 var test := false
 var clips := {}
 var voice: AudioStreamPlayer
+var side: AudioStreamPlayer      # lines you play yourself (phone, pieces): the handler waits for them
 var state := "brief"            # brief, rehearse, done
 var run_n := 0                  # bumps on every restart, so a briefing still playing knows to stop
 var shown := 0                  # facts shown on the cards so far
@@ -75,6 +76,8 @@ func _ready() -> void:
 	test = "--test" in OS.get_cmdline_user_args()
 	randomize()
 	voice = AudioStreamPlayer.new(); add_child(voice)
+	side = AudioStreamPlayer.new(); add_child(side)
+	side.finished.connect(func(): voice.stream_paused = false)
 	var ids := ["h_intro", "h_name", "h_from", "h_job", "h_stay", "h_invited", "h_parents", "h_korean", "h_twice", "h_style", "h_dodge",
 		"h_phone", "h_practice", "h_good", "h_good2", "h_close", "h_no", "h_noticed", "h_done", "d_work", "d_secret", "d_well"]
 	for f in FACTS:
@@ -204,7 +207,7 @@ func _phone_screen(root: Control) -> void:   # your cover, all of it, with a Hea
 
 func _phone_line(clip: String, ko: String, en: String) -> HBoxContainer:
 	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 10)
-	var hear := _btn("Hear", 18, Vector2(70, 44)); hear.pressed.connect(_play.bind(clip)); row.add_child(hear)
+	var hear := _btn("Hear", 18, Vector2(70, 44)); hear.pressed.connect(_aside.bind(clip)); row.add_child(hear)
 	var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 0); row.add_child(col)
 	var k := _label(24); k.text = ko; col.add_child(k)
 	var e := _label(17); e.text = en; e.modulate = Color(0.75, 0.75, 0.75); col.add_child(e)
@@ -238,12 +241,19 @@ func _play(id: String) -> void:
 	if SUBS.has(id): sub.text = SUBS[id]
 
 
+func _aside(id: String) -> void:   # you play a line: the handler pauses mid-sentence and picks up after
+	if voice.playing: voice.stream_paused = true
+	side.stream = clips[id]; side.play()
+
+
 func _done() -> void:
 	await get_tree().process_frame
-	while voice.playing: await get_tree().process_frame
+	while voice.playing or voice.stream_paused or side.playing: await get_tree().process_frame
 
 
 func _speak(id: String, n: int) -> bool:   # say a line and wait; false if the run moved on meanwhile
+	if n != run_n: return false
+	while side.playing: await get_tree().process_frame   # let your own line finish first
 	if n != run_n: return false
 	_play(id); await _done()
 	return n == run_n
@@ -337,6 +347,7 @@ func _ask(n: int) -> void:
 	# the pieces: this answer's, mixed with pieces of two others
 	var tiles := []
 	for i in f.chunks.size(): tiles.append([f.k, i])
+	for o in f.get("opt", []): tiles.append(o)
 	var others := FACTS.filter(func(o): return o.k != f.k); others.shuffle()
 	for o in others.slice(0, 2):
 		for i in o.chunks.size(): tiles.append([o.k, i])
@@ -372,7 +383,7 @@ func _hear_q() -> void:
 func _pick(t: Array) -> void:
 	if busy or picked.size() >= 4: return
 	picked.append(t); _show_pick()
-	voice.stream = clips["t_%s_%d" % t]; voice.play()
+	_aside("t_%s_%d" % t)
 
 
 func _clear_pick() -> void:
@@ -401,6 +412,9 @@ func _judge(p: Array, f: Dictionary) -> String:
 	var want := []
 	for i in f.chunks.size(): want.append(_chunk([f.k, i])[0])
 	var got := p.map(func(t): return _chunk(t)[0])
+	var opt: Array = f.get("opt", []).map(func(t): return _chunk(t)[0])
+	if got.size() > 1 and got[0] in opt: got = got.slice(1)           # "아니요, 한국어 잘 못해요" is fine too
+	if want[0] == "아니요" and got.size() > 0 and got[0] != "아니요": want = want.slice(1)   # and "두 번 왔어요" without it
 	if got == want: return "good"
 	if got.size() == want.size() and got.all(func(w): return w in want) and want.all(func(w): return w in got): return "order"
 	if got.all(func(w): return w in want): return "part"
@@ -413,6 +427,8 @@ func _say_it() -> void:
 	var f: Dictionary = questions[q_i]
 	var r := _judge(picked, f); last_result = r
 	if r == "good":
+		var lead := p_lead(f)
+		if lead != "" and not await _speak(lead, n): return
 		if not await _speak("a_" + f.k, n): return
 	else:
 		for t in picked:
@@ -429,6 +445,12 @@ func _say_it() -> void:
 	busy = false; q_i += 1
 	if q_i < questions.size(): _ask(n)
 	else: _finish(n)
+
+
+func p_lead(f: Dictionary) -> String:   # an allowed extra word you put in front (아니요): say it too
+	for o in f.get("opt", []):
+		if picked.size() > 0 and picked[0] == o: return "t_%s_%d" % o
+	return ""
 
 
 func _finish(n: int) -> void:
@@ -503,6 +525,13 @@ func _run_test() -> void:
 		if shown >= 2: break
 	_check(shown >= 2 and cards.get_child_count() >= 3 and _seen() == false, "facts appear on the card as they're said")
 	await _secs(1.0); await _shot("c1_briefing")
+	# playing a line from the phone pauses the handler, and he picks up where he was
+	var before_shown := shown
+	_aside("a_name"); await _secs(0.1)
+	_check(side.playing and (voice.stream_paused or not voice.playing), "playing a line yourself pauses the handler")
+	while side.playing: await _secs(0.05)
+	await _secs(0.1)
+	_check(not voice.stream_paused and shown == before_shown, "he resumes the same line after (nothing skipped)")
 	_skip(); await _secs(0.2)
 	_check(state == "rehearse" and cards.get_child_count() == 0 and _seen(), "skip goes to the rehearsal, the card clears (memory or phone now)")
 	await _idle()
@@ -538,6 +567,10 @@ func _run_test() -> void:
 	_check(_judge([[f2.k, 0]], f2) == "part", "half the answer counts as close")
 	var other: Dictionary = FACTS[0] if f2.k != FACTS[0].k else FACTS[1]
 	_check(_judge([[other.k, 0]], f2) == "wrong", "another answer's piece is wrong")
+	var kor: Dictionary = _fact("korean"); var tw: Dictionary = _fact("twice")
+	_check(_judge([["twice", 0], ["korean", 0], ["korean", 1]], kor) == "good" and _judge([["korean", 0], ["korean", 1]], kor) == "good", "아니요, 한국어 잘 못해요 counts, with or without 아니요")
+	_check(_judge([["twice", 1], ["twice", 2]], tw) == "good" and _judge([["twice", 0], ["twice", 1], ["twice", 2]], tw) == "good", "두 번 왔어요 counts, with or without 아니요")
+	_check(_judge([["korean", 1], ["korean", 0]], kor) == "order", "and the wrong order is still caught")
 	_check(_joined([["name", 0], ["name", 1]]) == "다니엘 박이에요" and _joined([["parents", 0], ["parents", 1], ["parents", 2]]) == "부모님이 부산 사람이에요", "pieces join like real Korean (이에요 sticks to the word before)")
 	await _answer([[other.k, 0]])
 	_check(last_result == "wrong" and said_label.text.begins_with(f2.ko), "a wrong answer: the handler gives you the right line")

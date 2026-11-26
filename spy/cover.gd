@@ -193,7 +193,7 @@ func _panel_style(a := 0.92) -> StyleBoxFlat:
 func _screen() -> void:
 	var ui := CanvasLayer.new(); add_child(ui)
 	var root := Control.new(); root.set_anchors_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; ui.add_child(root)
-	cards = VBoxContainer.new(); cards.position = Vector2(24, 22); cards.add_theme_constant_override("separation", 2); root.add_child(cards)
+	cards = VBoxContainer.new(); cards.mouse_filter = Control.MOUSE_FILTER_IGNORE; cards.position = Vector2(24, 22); cards.add_theme_constant_override("separation", 2); root.add_child(cards)
 	sub = _label(26); sub.set_anchors_preset(Control.PRESET_CENTER_BOTTOM); sub.position = Vector2(-460, -70)
 	sub.custom_minimum_size = Vector2(920, 0); sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; sub.modulate = Color(1, 1, 1, 0.85)
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(sub)
@@ -283,6 +283,15 @@ func _speak(id: String, n: int) -> bool:   # say a line and wait; false if the r
 	if n != run_n: return false
 	_play(id); await _done()
 	return n == run_n
+
+
+func _unhandled_input(e: InputEvent) -> void:   # tap the screen (not a button): skip the line he's on
+	if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT: _skip_line()
+
+
+func _skip_line() -> void:
+	if side.playing: side.stop(); voice.stream_paused = false
+	elif voice.playing or voice.stream_paused: voice.stream_paused = false; voice.stop()
 
 
 func _seen() -> bool:
@@ -571,6 +580,16 @@ func _run_test() -> void:
 	while side.playing: await _secs(0.05)
 	await _secs(0.1)
 	_check(not voice.stream_paused and shown == before_shown, "he resumes the same line after (nothing skipped)")
+	while not voice.playing: await _secs(0.05)
+	var line_was: Object = voice.stream
+	var tap := InputEventMouseButton.new(); tap.button_index = MOUSE_BUTTON_LEFT; tap.pressed = true; tap.position = Vector2(640, 300)
+	get_viewport().push_input(tap); await _secs(0.05)
+	var cut := not voice.playing or voice.stream != line_was
+	for i in 30:
+		if voice.playing and voice.stream != line_was: break
+		await _secs(0.05)
+	print("  (tap: cut=%s, now=%s)" % [cut, voice.stream.resource_path.get_file() if voice.stream else "-"])
+	_check(cut and voice.stream != line_was and voice.playing, "tapping the screen skips the line he's on, and he goes on to the next")
 	_check(TITLES.size() == 4 and TITLES.all(func(t): return clips.has("h_t_" + t[0]) and clips.has("k_t_" + t[0])), "the briefing has who to listen for: 4 titles, said in English then Korean")
 	var phone_titles := 0
 	for c in phone_ui.get_child(0).get_child(0).get_children():

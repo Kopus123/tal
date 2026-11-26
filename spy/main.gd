@@ -273,8 +273,7 @@ func _reset() -> void:
 	var gd: Vector3 = g_target - guard.position; guard.rotation.y = atan2(-gd.x, -gd.z)
 	for c in commuters: c.body.queue_free()
 	commuters.clear(); commuter_t = 0.0
-	if not no_commuters:
-		for i in 4: _spawn_commuter(true)
+	if not no_commuters: _first_commuters()
 	joy_touch = -1; joy_vec = Vector2.ZERO; joy_draw.queue_redraw(); open_btn.visible = false
 	panel.visible = false; state = "play"
 	_say("Handler: those two know which locker it's in. Listen in.", 6.0)
@@ -403,10 +402,46 @@ func _move_spot() -> void:
 
 # ---------------------------------------------------------------- commuters: moving cover
 
-func _spawn_commuter(anywhere := false) -> void:
-	var ex := EXITS.duplicate(); ex.shuffle()
-	var mid := Vector3(randf_range(-5.5, 5.5), 0, randf_range(-1.5, 3.5))
-	var path := [ex[0], mid, ex[1]]
+func _first_commuters() -> void:
+	await get_tree().physics_frame   # the walls have to be in the physics world before paths can be checked
+	for i in 4: _spawn_commuter(true)
+
+
+func _clear(a: Vector3, b: Vector3, skip_a: bool, skip_b: bool) -> bool:   # room for a person to walk from a to b?
+	var ss := get_world_3d().direct_space_state
+	var q := PhysicsShapeQueryParameters3D.new(); var sp := SphereShape3D.new(); sp.radius = 0.5
+	q.shape = sp; q.collision_mask = 1
+	var n := maxi(1, int(a.distance_to(b) / 0.3))
+	for j in n + 1:
+		var pt := a.lerp(b, float(j) / n)
+		if (skip_a and pt.distance_to(a) < 0.8) or (skip_b and pt.distance_to(b) < 0.8): continue   # the exits sit in the wall
+		for k in talkers:
+			if Vector2(pt.x - talkers[k].position.x, pt.z - talkers[k].position.z).length() < 1.0: return false
+		q.transform = Transform3D(Basis(), pt + Vector3(0, 0.85, 0))
+		if not ss.intersect_shape(q, 1).is_empty(): return false
+	return true
+
+
+func _spawn_commuter(anywhere := false) -> bool:
+	var path := []
+	var ctr: Vector3 = (talkers.a.position + talkers.b.position) / 2
+	var go_near := randf() < 0.6
+	for tries in 150:   # a path that goes around things, often past the two
+		var ex := EXITS.duplicate(); ex.shuffle()
+		var mid := Vector3(randf_range(-6.5, 6.5), 0, randf_range(-4.5, 4.5))
+		var near := tries % 4 != 3 if go_near else tries % 4 == 0
+		if near: mid = ctr + Vector3.FORWARD.rotated(Vector3.UP, randf() * TAU) * randf_range(1.4, 2.5)
+		if absf(mid.x) > 7.8 or absf(mid.z) > 5.6: continue
+		var p := [ex[0], mid, ex[1]]
+		if tries >= 30:   # no straight way: add a turn on one side
+			var turn := Vector3(randf_range(-7.0, 7.0), 0, randf_range(-5.0, 5.0))
+			if randf() < 0.5: p.insert(1, turn)
+			else: p.insert(2, turn)
+		var ok := true
+		for j in p.size() - 1:
+			if not _clear(p[j], p[j + 1], j == 0, j == p.size() - 2): ok = false; break
+		if ok: path = p; break
+	if path.is_empty(): return false
 	var b := StaticBody3D.new(); b.collision_layer = 2; b.collision_mask = 0   # blocks sight, not you
 	var s := CollisionShape3D.new(); var cap := CapsuleShape3D.new(); cap.radius = 0.45; cap.height = 1.6; s.shape = cap; s.position.y = 0.8; b.add_child(s)
 	var look := _person(Vector3.ZERO, Color(0.55, 0.55, 0.6)); remove_child(look); b.add_child(look)
@@ -414,7 +449,7 @@ func _spawn_commuter(anywhere := false) -> void:
 	var c := {"body": b, "path": path, "i": 1, "speed": randf_range(1.2, 1.9)}
 	b.position = path[0]
 	if anywhere: b.position = path[0].lerp(path[1], randf());
-	commuters.append(c)
+	commuters.append(c); return true
 
 
 func _commuters(dt: float) -> void:
@@ -547,10 +582,15 @@ func _physics_process(dt: float) -> void:
 	if not watched: suspicion = maxf(0.0, suspicion - dt * 0.1)
 	if suspicion >= 1.0:
 		suspicion = 1.0; _end("caught"); return
-	near_locker = -1
+	near_locker = -1; var best := 1.3
 	for i in lockers.size():
 		var lp: Vector3 = lockers[i].global_position
-		if Vector2(lp.x - player.position.x, lp.z - player.position.z).length() < 1.25 and not opened.has(i): near_locker = i
+		var d := Vector2(lp.x - player.position.x, lp.z - player.position.z).length()
+		if d < best and not opened.has(i): near_locker = i; best = d
+	for i in lockers.size():   # the one the button opens lights up
+		var m: StandardMaterial3D = locker_mats[i]
+		m.albedo_color = Color(0.18, 0.22, 0.28) if opened.has(i) else (Color(1.0, 0.82, 0.25) if i == near_locker else Color(0.3, 0.45, 0.62))
+		m.emission_enabled = i == near_locker; m.emission = Color(0.6, 0.45, 0.05)
 	open_btn.visible = near_locker >= 0
 	if near_locker >= 0: open_btn.text = "Open %s" % NUM[near_locker]
 
@@ -629,6 +669,20 @@ func _run_test() -> void:
 	get_window().position = Vector2i(-3000, 60)   # out of the way
 	await _secs(0.8); await _shot("1_start")
 	_check(state == "play" and toast.text.begins_with("Handler") and commuters.size() == 4, "it starts right away, with commuters walking about")
+	var paths_ok := true; var close := 0
+	for i in 30:
+		for c in commuters: c.body.queue_free()
+		commuters.clear()
+		while not _spawn_commuter(): pass
+		var cp: Array = commuters[-1].path
+		for j in cp.size() - 1:
+			if not _clear(cp[j], cp[j + 1], j == 0, j == cp.size() - 2): paths_ok = false
+		var cl := false
+		for q in cp.slice(1, -1): cl = cl or q.distance_to((talkers.a.position + talkers.b.position) / 2) < 2.6
+		if cl: close += 1
+	_check(paths_ok and close >= 10, "commuters walk around things, and often close past the two (%d/30)" % close)
+	for c in commuters: c.body.queue_free()
+	commuters.clear(); for i in 4: _spawn_commuter(true)
 	# the conversation is different every time
 	var where := {}; var how := {}; var traps := 0; var right := true
 	for i in 300:
@@ -670,7 +724,9 @@ func _run_test() -> void:
 	guard.position = Vector3(-2, 0, 3); guard.rotation.y = 0.0     # looking up the screen
 	await _put(Vector3(-2, 0, -1.0)); await _secs(0.1)
 	var saw := _sees(guard, GUARD_RANGE, GUARD_HALF)
-	no_commuters = false; _spawn_commuter(); var cmt: Dictionary = commuters[-1]; cmt.speed = 0.0; cmt.body.position = Vector3(-2, 0, 1.0)
+	no_commuters = false
+	while not _spawn_commuter(): pass
+	var cmt: Dictionary = commuters[-1]; cmt.speed = 0.0; cmt.body.position = Vector3(-2, 0, 1.0)
 	await get_tree().physics_frame; await get_tree().physics_frame
 	var hid := not _sees(guard, GUARD_RANGE, GUARD_HALF)
 	_check(saw and hid, "a commuter walking between you and the guard blocks his view")
@@ -687,6 +743,7 @@ func _run_test() -> void:
 		if i + 1 != answer: wrong.append(i)
 	await _put(lockers[wrong[0]].global_position + Vector3(1.0, 0, 0)); await _secs(0.2)
 	_check(open_btn.visible and open_btn.text == "Open %s" % NUM[wrong[0]], "next to a locker the button says its Hangul number")
+	_check(locker_mats[wrong[0]].emission_enabled and not locker_mats[wrong[1]].emission_enabled, "only the locker the button opens lights up")
 	_open(wrong[0]); _check(state == "play" and suspicion < 0.15 and not investigating, "one wrong locker is fine")
 	_open(wrong[1]); _check(state == "play" and suspicion > 0.25 and not investigating, "a second one draws looks")
 	freeze_guard = false

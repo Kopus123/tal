@@ -13,7 +13,9 @@ const READ := 1.6                # right beside them: you can make out the words
 const NOTICE := 2.5              # stand this close to a group for a moment and they notice you
 const LINGER := 1.0
 const FAST := 10.0                # (tester) the clock runs this much faster, and lines take their length without playing
-const COOL := 45.0                # keep away from someone this long, nothing new odd, and their doubt cools a step
+const COOL := 45.0
+const HUNT := 2.8                 # security coming for you: brisk, but you can outwalk him
+const OUT_AT := Vector3(-6.0, 0, 6.4)   # in front of the lift doors                # keep away from someone this long, nothing new odd, and their doubt cools a step
 const TAG_RANGE := 2.6
 const START := Vector3(-6.0, 0, 5.4)
 const ELEVATOR := Vector3(-6.0, 0, 6.2)
@@ -60,7 +62,8 @@ const HANDLER := {"h_in": "You're in. We know their titles, not their faces. Lis
 	"h_out": "Okay, we're out. Let's see what you got."}
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
-	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."]}
+	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."],
+	"stop": ["잠깐만요, 손님.", "Just a moment, sir."]}
 const SPOTS := {   # where people gather
 	"bar": Vector3(6.6, 0, -1.0), "buffet": Vector3(-4.0, 0, -1.6), "window_l": Vector3(-5.5, 0, -5.3), "window_r": Vector3(1.0, 0, -5.3),
 	"balcony": Vector3(6.5, 0, -5.3), "lounge": Vector3(3.6, 0, 3.6), "middle": Vector3(-0.6, 0, 1.2), "door": Vector3(-8.3, 0, 2.5),
@@ -107,7 +110,10 @@ var me_voice: AudioStreamPlayer
 var phone_open := false
 var last_handler := ""
 var ring: MeshInstance3D          # under whoever your phone would point at
-var hold := false                # (tester) everyone stays put
+var hold := false
+var hunting := false             # security is coming for you
+var hunted := false
+var escorting := false           # caught: he walks you out                # (tester) everyone stays put
 # screen
 var goal: Label
 var sub: Label
@@ -253,7 +259,7 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 	var tag := _sign("", 30, Vector3(0, -0.15, 0), b); tag.modulate = Color(1, 0.85, 0.3); tag.visible = false
 	var role := id if id in ROLES else "guest"
 	var p := {"id": id, "role": role, "body": b, "look": look, "audio": au, "ko": ko, "tag": tag, "spot": "", "slot": -1,
-		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
+		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
 		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false}}   # their picture of you
 	people.append(p)
 	if late:
@@ -362,7 +368,7 @@ func _walk(p: Dictionary, dt: float) -> void:   # straight there, or veer round 
 			if a != 0.0 and (p.veer_t <= 0.0 or a != p.veer): p.veer = a; p.veer_t = 0.8
 			break
 	if not found: b.velocity = Vector3.ZERO; return   # boxed in: wait a moment
-	b.velocity = dir * minf(1.4, to.length() / dt); b.move_and_slide(); b.position.y = 0
+	b.velocity = dir * minf(p.speed, to.length() / dt); b.move_and_slide(); b.position.y = 0
 	b.rotation.y = lerp_angle(b.rotation.y, atan2(-dir.x, -dir.z), 1.0 - exp(-8.0 * dt))
 
 
@@ -370,7 +376,7 @@ func _people(dt: float) -> void:
 	for p in people.duplicate():
 		if p.gone: continue
 		p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-		if p.coming or p.errand or p.tell: continue   # on their way to you, or to security
+		if p.coming or p.errand or p.tell or (hunting and p.role == "security"): continue   # on their way to you, or to security
 		if not p.busy: _walk(p, dt)
 		if p.leaving and p.spot == "elevator" and _at(p):   # into the lift and gone
 			p.gone = true; slots_taken.erase("%s:%d" % [p.spot, p.slot]); p.body.queue_free(); continue
@@ -524,6 +530,38 @@ func _doubters(dt: float) -> void:   # doubt shows in what people do
 				_talk("alarm", [[p, "al_sec"], [sec, "r_yes"]])
 
 
+func _hunt(dt: float) -> void:   # security comes for you: get to the lift first
+	var sec := _find("security")
+	if not hunting or done or sec.is_empty() or sec.busy: return
+	var gap: Vector3 = player.position - sec.body.position; gap.y = 0
+	if gap.length() > 1.1:
+		sec.goto = player.position; sec.speed = HUNT; sec.coming = true; _walk(sec, dt); sec.coming = false
+	else: _caught(sec)
+
+
+func _caught(sec: Dictionary) -> void:   # 잠깐만요, 손님: and he walks you out
+	hunting = false; escorting = true; sec.busy = true
+	if not asking.is_empty(): _ask_end("walked")
+	if phone_open: _toggle_phone()
+	player.velocity = Vector3.ZERO
+	var d: Vector3 = player.position - sec.body.position
+	sec.body.rotation.y = atan2(-d.x, -d.z)
+	await _line(sec, "x_stop")
+
+
+func _escort(dt: float) -> void:   # the two of you walk to the lift, his hand at your elbow
+	var sec := _find("security")
+	var to := OUT_AT - player.position; to.y = 0
+	if to.length() < 0.3:
+		escorting = false; _finish(true); return
+	if sec and sec.busy and sec.get("said", "") != "": return   # he says his piece first
+	player.velocity = to.normalized() * 1.4; player.move_and_slide(); player.position.y = 0
+	body_mesh.rotation.y = atan2(-to.x, -to.z)
+	if sec:
+		var at: Vector3 = player.position + to.normalized().rotated(Vector3.UP, PI / 2) * 0.7
+		sec.body.position = sec.body.position.lerp(at, 1.0 - exp(-6.0 * dt)); sec.body.rotation.y = body_mesh.rotation.y
+
+
 func _tell_sec(p: Dictionary, sec: Dictionary) -> void:
 	await _talk("alarm", [[p, "al_sec"], [sec, "r_yes"]])
 	if not p.gone: _send_back(p)
@@ -598,6 +636,10 @@ func _talk(kind: String, lines: Array) -> void:
 		if l[1] == "al_sec":   # security looks your way, and so does everyone there
 			for o in people:
 				if not o.gone and (o.spot == p.spot or o.role == "security"): o.glance = 4.0
+			var sc := _find("security")
+			if sc and not hunting and not done:
+				hunting = true; hunted = true; sc.timer = INF
+				slots_taken.erase("%s:%d" % [sc.spot, sc.slot]); sc.slot = -1
 		await get_tree().create_timer(0.45).timeout
 	for p in who: p.busy = false
 	talks -= 1
@@ -612,8 +654,10 @@ func _physics_process(dt: float) -> void:
 		for p in people:
 			if p.gone or p.busy: continue
 			p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-			if _at(p) and not p.coming and not p.errand and not p.tell: _walk(p, dt)
+			if _at(p) and not p.coming and not p.errand and not p.tell and not (hunting and p.role == "security"): _walk(p, dt)
 	_doubters(dt)
+	_hunt(dt)
+	if escorting: _escort(dt); return
 	if done: return
 	var dir := Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT): dir.x -= 1
@@ -649,7 +693,7 @@ func _process(dt: float) -> void:
 	ring.visible = not n.is_empty()
 	if ring.visible: ring.position = n.body.position + Vector3(0, 0.05, 0)
 	for r in role_btns: role_btns[r].disabled = n.is_empty()
-	leave_btn.visible = not done and asking.is_empty() and player.position.z > 6.1 and absf(player.position.x + 6.0) < 0.9
+	leave_btn.visible = not done and not escorting and asking.is_empty() and player.position.z > 6.1 and absf(player.position.x + 6.0) < 0.9
 	if done: return
 	_linger(dt)
 	if not asking.is_empty():
@@ -771,7 +815,7 @@ func _tag(role: String) -> void:   # your guess, nothing more: nobody tells you 
 	role_btns[role].text = "%s  ·  %s   (marked)" % ROLE_NAME[role]
 
 
-func _finish() -> void:   # into the lift: the debrief
+func _finish(walked_out := false) -> void:   # into the lift: the debrief
 	if done: return
 	done = true
 	if not asking.is_empty(): _ask_end("walked")
@@ -782,6 +826,8 @@ func _finish() -> void:   # into the lift: the debrief
 	_handler("h_out")
 	await get_tree().create_timer(1.2).timeout
 	var t := "Debrief\n\n"
+	if walked_out: t += "Escorted out.\n\n"
+	elif hunted: t += "You got out before security reached you.\n\n"
 	var right := 0
 	for r in ROLES:
 		var line := "%s (%s): " % [ROLE_NAME[r][1], ROLE_NAME[r][0].to_lower()]
@@ -1220,6 +1266,11 @@ func _run_test() -> void:
 		await _secs(0.1)
 		if played.has(_vk(g) + "_al_sec"): told = true; break
 	var sc := _find("security")
+	for i in 60:
+		if hunting: break
+		await _secs(0.1)
+	_check(hunting, "told: security comes for you")
+	hunting = false; var scc := _find("security"); _go(scc, "door"); scc.body.position = _slot_pos(scc.spot, scc.slot); scc.speed = 1.4   # (tester) call him off for now
 	_check(told, "alarmed: they go and tell security, 팀장님, 저 분 좀 보세요 (%s at %s slot %d at=%s errand=%s tell=%s busy=%s doubt=%d told_sec=%s · security at %s at=%s busy=%s · room=%s)" % [g.id, g.spot, g.slot, _at(g) if g.slot >= 0 else false, g.errand, g.tell, g.busy, g.pic.doubt, g.pic.told_sec, sc.spot, _at(sc), sc.busy, _has_room(sc.spot)])
 	_check(not g.coming, "and the one who came over goes back to the party")
 	# repair: pass their check
@@ -1332,15 +1383,30 @@ func _run_test() -> void:
 	hold = true
 	for p in people: p.busy = false
 	await _beside(_find("host")); _tag("host")
+	var sch := _find("security"); sch.body.position = Vector3(8.5, 0, -5.5)
+	hunting = true; hunted = true; slots_taken.erase("%s:%d" % [sch.spot, sch.slot]); sch.slot = -1
 	await _put(Vector3(-6.0, 0, 6.6)); await _secs(0.2)
-	_check(leave_btn.visible, "at the lift doors you can leave")
+	_check(leave_btn.visible and hunting, "security's coming, but you made the lift: you can leave (done=%s escorting=%s asking=%s at %s)" % [done, escorting, asking.get("id", ""), str(player.position)])
 	_check(player.position.z < 7.0, "and the doors are solid: you can't walk out of the building")
 	await _finish(); await _secs(0.3)
 	await _secs(0.2)
 	_check(sub.get_global_rect().position.x > 0.0 and sub.get_global_rect().end.x < get_viewport().get_visible_rect().size.x, "the handler's subtitle sits on screen")
 	_check(done and end_ui.visible and end_text.text.contains("Debrief") and end_text.text.contains("김 대표님") and end_text.text.contains("right")
 		and end_text.text.contains("바텐더 (bartender): right") and end_text.text.contains("not marked"), "the debrief: which of your marks were right")
+	_check(end_text.text.contains("You got out before security reached you"), "and the debrief says you got away")
 	await _shot("g4_end")
+	print(end_text.text)
+	# caught: he walks you out
+	done = false; end_ui.visible = false; hunted = false
+	var sc2 := _find("security")
+	await _put(Vector3(-0.6, 0, 2.6)); sc2.busy = false; sc2.body.position = player.position + Vector3(3.0, 0, -1.0)
+	hunting = true; hunted = true
+	for i in 300:
+		await _secs(0.1)
+		if done and end_ui.visible: break
+	_check(played.has("security_x_stop"), "he reaches you: 잠깐만요, 손님")
+	_check(done and end_text.text.contains("Escorted out") and player.position.distance_to(OUT_AT) < 0.6, "and walks you out to the lift: escorted out (done=%s escorting=%s hunting=%s %.1f m from the lift, sec %.1f m away busy=%s, text starts '%s')" % [done, escorting, hunting, player.position.distance_to(OUT_AT), player.position.distance_to(sc2.body.position), sc2.busy, end_text.text.substr(0, 30).replace("
+", " ")])
 	print(end_text.text)
 	print("DONE %d failed" % _fails)
 	get_tree().quit(1 if _fails else 0)

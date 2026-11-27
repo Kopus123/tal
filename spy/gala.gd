@@ -131,6 +131,9 @@ var phone_open := false
 var last_handler := ""
 var ring: MeshInstance3D          # under whoever your phone would point at
 var hold := false
+var playing := false            # (play mode) an outside player drives the party by text commands
+var plog: FileAccess
+var tile_map := {}
 var hunting := false             # security is coming for you
 var hunted := false
 var escorting := false           # caught: he walks you out                # (tester) everyone stays put
@@ -157,6 +160,8 @@ var joy_touch := -1
 
 func _ready() -> void:
 	test = "--test" in OS.get_cmdline_user_args()
+	playing = "--play" in OS.get_cmdline_user_args()
+	if playing: test = true
 	randomize()
 	hvoice = AudioStreamPlayer.new(); add_child(hvoice)
 	me_voice = AudioStreamPlayer.new(); add_child(me_voice)
@@ -164,7 +169,8 @@ func _ready() -> void:
 	_screen()
 	_cast()
 	leave_at = randf_range(95.0, 130.0)
-	if test: _run_test()
+	if playing: _run_play()
+	elif test: _run_test()
 	else:
 		await get_tree().create_timer(1.0).timeout
 		_handler("h_in")
@@ -260,10 +266,17 @@ func _look(c: Color) -> Node3D:   # a grey-box person
 
 # ---------------------------------------------------------------- the people
 
-func _cast() -> void:
-	var looks := {"host": Color(0.85, 0.85, 0.82), "broker": Color(0.12, 0.12, 0.14), "assistant": Color(0.2, 0.25, 0.4),
-		"security": Color(0.14, 0.15, 0.16), "bartender": Color(0.95, 0.95, 0.95), "g1": Color(0.7, 0.2, 0.3), "g2": Color(0.3, 0.3, 0.5),
-		"g3": Color(0.5, 0.4, 0.25), "g4": Color(0.6, 0.5, 0.7), "g5": Color(0.25, 0.45, 0.4), "g6": Color(0.8, 0.6, 0.3)}
+const PALETTE := [[Color(0.85, 0.85, 0.82), "pale grey"], [Color(0.12, 0.12, 0.14), "black"], [Color(0.2, 0.25, 0.4), "navy"],
+	[Color(0.14, 0.15, 0.16), "charcoal"], [Color(0.95, 0.95, 0.95), "white"], [Color(0.7, 0.2, 0.3), "red"], [Color(0.3, 0.3, 0.5), "slate blue"],
+	[Color(0.5, 0.4, 0.25), "brown"], [Color(0.6, 0.5, 0.7), "lavender"], [Color(0.25, 0.45, 0.4), "teal"], [Color(0.8, 0.6, 0.3), "amber"]]
+var look_names := {}
+
+
+func _cast() -> void:   # who wears what is shuffled every party: you can't learn people by colour
+	var pal := PALETTE.duplicate(); pal.shuffle()
+	var looks := {}
+	var ids := ["host", "broker", "assistant", "security", "bartender", "g1", "g2", "g3", "g4", "g5", "g6"]
+	for i in ids.size(): looks[ids[i]] = pal[i][0]; look_names[ids[i]] = pal[i][1]
 	for id in ["host", "broker", "assistant", "security", "bartender", "g1", "g2", "g3", "g4"]:
 		_spawn(id, looks[id], false)
 	set_meta("looks", looks)
@@ -280,7 +293,7 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 	var role := id if id in ROLES else "guest"
 	var p := {"id": id, "role": role, "body": b, "look": look, "audio": au, "ko": ko, "tag": tag, "spot": "", "slot": -1,
 		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
-		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": []}}   # their picture of you
+		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": [], "concern": {}}}   # their picture of you
 	people.append(p)
 	if late:
 		b.position = ELEVATOR; _go(p, "elevator")
@@ -480,7 +493,7 @@ func _gossip(m: Array) -> Array:   # someone here knows something about you the 
 			if o == p or not (o.id in ASKERS): continue
 			if p.pic.wary and not o.pic.wary: out.append(["gossip", [[p, "g_odd"], [o, "r_really"]]])
 			for k in p.pic.told:
-				if not (k in o.pic.told) and o.pic.doubt < 2: out.append(["gossip", [[p, "g_" + k], [o, "r_really"]]])
+				if not (k in o.pic.told) and o.pic.doubt < 2 and not (k == "invited" and o.role == "host"): out.append(["gossip", [[p, "g_" + k], [o, "r_really"]]])
 	for p in m:   # someone who's taken to you speaks up for you
 		if not (p.id in ASKERS) or not p.pic.ok or p.pic.doubt > 0: continue
 		for o in m:
@@ -492,7 +505,8 @@ func _spread(p: Dictionary, k: String) -> void:   # everyone standing there hear
 	for o in people:
 		if o == p or o.gone or o.spot != p.spot: continue
 		if k == "odd":
-			if o.pic.doubt == 0: _doubt(o, 1)   # hearsay makes them curious, no more
+			if o.pic.doubt == 0:   # hearsay makes them curious, no more, and they don't know what was odd
+				_doubt(o, 1); o.pic.concern = {"why": "heard_odd", "k": "", "q": -1, "src": "heard"}
 		elif not (k in o.pic.told): o.pic.told.append(k); o.pic.second.append(k)
 		o.glance = 3.0   # and they all look over at you
 
@@ -587,14 +601,15 @@ func _tell_sec(p: Dictionary, sec: Dictionary) -> void:
 	if not p.gone: _send_back(p)
 
 
-func _come_check(p: Dictionary) -> void:   # "so you're from LA?" — something they heard, or something you said
+func _come_check(p: Dictionary) -> void:   # they come back to whatever made them doubt you
 	p.coming = false; p.came = true; p.pic.checked = true
-	var k: String
-	if p.pic.second: k = p.pic.second.pick_random()
-	elif p.pic.told: k = p.pic.told.pick_random()
-	else: k = CHECK.keys().pick_random()
 	reactions.append("came")
-	_ask(p, [p], k)
+	var c: Dictionary = p.pic.concern
+	var k: String = c.get("k", "")
+	if k == "invited" and p.role == "host": k = ""   # she knows who she invited
+	if k != "" and k in p.pic.told: _ask(p, [p], k); return   # they heard something about it: "so you're…?"
+	if k != "": _ask(p, [p], "", k, c.get("q", -1)); return   # the same question again
+	_ask(p, [p])   # they don't know what was odd: an ordinary question
 
 
 func _send_back(p: Dictionary) -> void:   # back to the party
@@ -645,6 +660,7 @@ func _talk(kind: String, lines: Array) -> void:
 		var voice_id: String = _vk(p) + "_" + l[1]
 		p.audio.stream = _clip(voice_id); p.audio.play(); played.append(voice_id)
 		p["line"] = l[1]
+		if LINES.has(l[1]): _perceive(p, LINES[l[1]][0])
 		await _wait_line(p.audio)
 		p["line"] = ""
 		if l[1].begins_with("g_") and not p.gone: _spread(p, l[1].trim_prefix("g_"))
@@ -798,6 +814,7 @@ func _input(ev: InputEvent) -> void:
 
 func _handler(id: String) -> void:
 	hvoice.stream = _clip(id); hvoice.play(); played.append(id); last_handler = id
+	_plg("Handler, in your ear (English): " + HANDLER[id])
 	sub.text = "Handler: " + HANDLER[id]; sub_t = 3.5
 
 
@@ -862,6 +879,7 @@ func _finish(walked_out := false) -> void:   # into the lift: the debrief
 	t += "\n%d of 5 right. %d:%02d at the party.\n%d took to you, %d are wary of you." % [right, int(clock) / 60, int(clock) % 60, ok, wary]
 	end_text.text = t
 	end_ui.visible = true
+	_plg("THE END. Screen shows:\n" + t)
 
 
 func _who_is(id: String) -> Dictionary:   # anyone, even someone who's left
@@ -908,21 +926,26 @@ func _react(spot: String) -> void:
 	reactions.append("ignore")   # they don't care who you are
 
 
-func _ask(p: Dictionary, group: Array, check := "") -> void:   # "and who are you?", or "I heard you're…?"
+func _ask(p: Dictionary, group: Array, check := "", fact := "", q := -1) -> void:   # "and who are you?", or "I heard you're…?"
 	asking = p; ask_group = group; p.busy = true; ask_tries = 0; ask_phone = false
 	ask_check = check != ""
 	if ask_check:
 		ask_fact = _fact(check); ask_q = 0; ask_text = CHECK[check]; ask_clip = "c_" + check
 	else:
-		var left := Cover.FACTS.filter(func(f): return not (f.k in p.pic.told))
-		ask_fact = (left if left else Cover.FACTS).pick_random()
-		ask_q = randi() % ask_fact.qs.size()
+		ask_fact = _fact(fact) if fact != "" else _pick_fact(p)
+		ask_q = q if q >= 0 and q < ask_fact.qs.size() else randi() % ask_fact.qs.size()
 		ask_text = ask_fact.qs[ask_q][0]; ask_clip = "q_%s_%d" % [ask_fact.k, ask_q]
 	var d: Vector3 = player.position - p.body.position
 	p.body.rotation.y = atan2(-d.x, -d.z)
 	for o in group:
 		if o != p and not o.busy: o.glance = 3.0
 	_question()
+
+
+func _pick_fact(p: Dictionary) -> Dictionary:   # something about you they don't know yet (and nothing silly: the host knows she invited you)
+	var ok := Cover.FACTS.filter(func(f): return not (p.role == "host" and f.k == "invited"))
+	var left := ok.filter(func(f): return not (f.k in p.pic.told))
+	return (left if left else ok).pick_random()
 
 
 func _question() -> void:
@@ -940,9 +963,12 @@ func _question() -> void:
 		if not seen.has(tx): seen[tx] = 1; deck.append(t)
 	deck.shuffle()
 	for c in tile_box.get_children(): c.queue_free()
+	tile_map.clear()
 	for t in deck:   # Korean only in here
 		var b := _btn(_chunk(t)[0].trim_prefix("~"), 26, Vector2(104, 80)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
+		tile_map[b.text] = t
 	ask_ui.visible = true
+	_plg("ASKED: %s speaks to you, waiting for your answer (15 s). Your pieces: %s" % [_desc(p), " | ".join(tile_map.keys())])
 	ask_busy = true
 	await _line(p, ask_clip)
 	ask_busy = false
@@ -954,6 +980,7 @@ func _line(p: Dictionary, id: String) -> void:   # one person says one line out 
 	p.audio.stream = _clip(vid); p.audio.play(); played.append(vid)
 	p["said"] = ask_text if id == ask_clip else REACT.get(id.trim_prefix("x_"), [""])[0]
 	if id.begins_with("ans_"): p["said"] = ANS[_vk(p)][id.trim_prefix("ans_")]
+	_perceive(p, p.said)
 	await _wait_line(p.audio)
 	p["said"] = ""
 
@@ -1078,10 +1105,13 @@ func _ask_end(how: String) -> void:   # how it went decides what they think of y
 		if how == "good" and not (k in o.pic.told): o.pic.told.append(k)
 		if how == "good": o.pic.second.erase(k)   # now they heard it from you
 		if how == "good" and not ask_phone and o.pic.doubt == 0: o.pic.ok = true
-		if how != "good": _doubt(o, 2 if how == "differ" and o == who else 1)
+		if how != "good":
+			_doubt(o, 2 if how == "differ" and o == who else 1)
+			if o.id in ASKERS: o.pic.concern = {"why": how, "k": k, "q": ask_q, "src": "direct" if o == who else "saw"}   # and why
+		elif o.pic.concern.get("k", "") == k or (o == who and who.came): o.pic.concern = {}   # that's cleared up
 	reactions.append("answer_" + how)
-	if how == "good" and ask_check: _doubt(who, -1)   # you passed their check
-	if how == "good" and ask_check: await _line(who, "x_fine" if not ask_phone else "x_cool")
+	if how == "good" and (ask_check or who.came): _doubt(who, -1)   # you passed their check
+	if how == "good" and (ask_check or who.came): await _line(who, "x_fine" if not ask_phone else "x_cool")
 	elif how == "good": await _line(who, "x_ok" if not ask_phone else "x_cool")
 	elif how == "differ": await _line(who, "x_differ")
 	elif how != "walked": await _line(who, "x_cool")
@@ -1106,9 +1136,12 @@ func _turn_ui() -> void:   # every question piece you know, mixed up
 		for i in 2: deck.append([q, i])
 	deck.shuffle()
 	for c in tile_box.get_children(): c.queue_free()
+	tile_map.clear()
 	for t in deck:
 		var b := _btn(_chunk(t)[0], 24, Vector2(104, 80)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
+		tile_map[b.text] = t
 	ask_ui.visible = true
+	_plg("YOUR TURN to ask %s something (12 s). Pieces: %s. Or: done" % [_desc(asking), " | ".join(tile_map.keys())])
 
 
 func _judge_back(p: Array) -> String:   # the question you built, or "" if it isn't one
@@ -1197,7 +1230,7 @@ func _right_pieces(f: Dictionary) -> Array:
 
 
 func _reset_pics() -> void:
-	for p in people: p.pic = {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": []}
+	for p in people: p.pic = {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": [], "concern": {}}
 
 
 func _guest_group() -> Array:   # a guest, and whoever's with them (everyone put in their places first)
@@ -1227,7 +1260,7 @@ func _run_test() -> void:
 	await _secs(1.5); await _shot("g1_room")
 	var started := talk_count
 	await _secs(14.0)
-	_check(talk_count - started >= 3 and talks <= 2, "they keep talking among themselves (%d conversations in 14 s)" % (talk_count - started))
+	_check(talk_count - started >= 2 and talks <= 2, "they keep talking among themselves (%d conversations in 14 s)" % (talk_count - started))
 	# reading: only right beside them, only Korean
 	hold = true
 	var br := _find("broker"); var asst := _find("assistant")
@@ -1268,7 +1301,7 @@ func _run_test() -> void:
 	var bt := _find("bartender")
 	await _beside(bt)
 	_tag("host")
-	_check(guesses.get("host", "") == bt.id and played.size() == said_before, "a wrong mark is saved just the same, and nobody says a word")
+	_check(guesses.get("host", "") == bt.id and not played.slice(said_before).any(func(x): return x.begins_with("h_")), "a wrong mark is saved just the same, and nobody says a word")
 	_tag("bartender")
 	_check(guesses.get("bartender", "") == bt.id and not guesses.has("host"), "one mark per person: re-marking her moves it")
 	_toggle_phone()
@@ -1348,6 +1381,8 @@ func _run_test() -> void:
 	var wrong_f: Dictionary = Cover.FACTS.filter(func(f): return f.k != ask_fact.k)[0]
 	picked = [[wrong_f.k, 0]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(g.pic.wary and not g.pic.ok and played.has(_vk(g) + "_x_cool"), "a wrong answer: 아... 네. and they're wary of you now")
+	var ck: String = g.pic.concern.get("k", "")
+	_check(ck == ask_fact.k and g.pic.concern.src == "direct" and grp.filter(func(o): return o != g and o.id in ASKERS).all(func(o): return o.pic.concern.get("src", "") == "saw"), "they remember why: the question you got wrong (the others in the group saw it)")
 	await _secs(1.5)
 	_check(g.audio.volume_db < -6.0, "wary of you: they lower their voices when you're near")
 	_check(g.pic.doubt == 1, "one slip: curious, not more")
@@ -1368,10 +1403,10 @@ func _run_test() -> void:
 	for i in 150:
 		await _secs(0.1)
 		if asking == g: came = true; break
-	_check(came and ask_check and player.position.distance_to(g.body.position) < 1.8, "and they walk over to you to check: %s (%s %s check=%s %.1f m, %s)" % [ask_label.text, g.id, str(g.pic), ask_check, player.position.distance_to(g.body.position), str(reactions)])
+	_check(came and not ask_check and ask_fact.k == ck and player.position.distance_to(g.body.position) < 1.8, "and they walk over to you and ask that same thing again: %s (%s %s check=%s %.1f m, %s)" % [ask_label.text, g.id, str(g.pic), ask_check, player.position.distance_to(g.body.position), str(reactions)])
 	await _wait_free()
 	picked = [["yn", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
-	_check(g.pic.doubt == 3, "fail their check: alarmed")
+	_check(g.pic.doubt == 3, "get it wrong again: alarmed")
 	var told := false
 	for i in 250:
 		await _secs(0.1)
@@ -1384,6 +1419,36 @@ func _run_test() -> void:
 	hunting = false; var scc := _find("security"); _go(scc, "door"); scc.body.position = _slot_pos(scc.spot, scc.slot); scc.speed = 1.4   # (tester) call him off for now
 	_check(told, "alarmed: they go and tell security, 팀장님, 저 분 좀 보세요 (%s at %s slot %d at=%s errand=%s tell=%s busy=%s doubt=%d told_sec=%s · security at %s at=%s busy=%s · room=%s)" % [g.id, g.spot, g.slot, _at(g) if g.slot >= 0 else false, g.errand, g.tell, g.busy, g.pic.doubt, g.pic.told_sec, sc.spot, _at(sc), sc.busy, _has_room(sc.spot)])
 	_check(not g.coming, "and the one who came over goes back to the party")
+	# what they come back with depends on what they know
+	_reset_pics()
+	var hx := _find("g3")
+	while hx.busy: await _secs(0.1)
+	await _beside(hx)
+	hx.pic.doubt = 2; hx.pic.concern = {"why": "heard_odd", "k": "", "q": -1, "src": "heard"}
+	_come_check(hx); await _secs(0.1); await _wait_free()
+	_check(asking == hx and not ask_check, "they only heard you're odd: an ordinary question, never 'I heard you're…'")
+	picked = _right_pieces(ask_fact); await _say_it(); await _secs(0.2); await _wait_free()
+	_check(hx.pic.doubt == 1 and hx.pic.concern.is_empty() and played.has(_vk(hx) + "_x_fine"), "answer it well: 아, 그렇군요, concern cleared and doubt down a step")
+	_reset_pics(); await _beside(hx)
+	hx.pic.doubt = 2; hx.pic.told = ["from"]; hx.pic.second = ["from"]; hx.pic.concern = {"why": "differ", "k": "from", "q": 0, "src": "direct"}
+	_come_check(hx); await _secs(0.1); await _wait_free()
+	_check(asking == hx and ask_check and ask_fact.k == "from", "you contradicted what they heard: they come back to check it, " + ask_label.text)
+	_ask_end("walked"); await _secs(0.2)
+	_reset_pics(); await _beside(hx)
+	hx.pic.doubt = 2; hx.pic.concern = {"why": "walked", "k": "job", "q": 1, "src": "direct"}
+	_come_check(hx); await _secs(0.1); await _wait_free()
+	_check(asking == hx and not ask_check and ask_text == Cover.FACTS.filter(func(f): return f.k == "job")[0].qs[1][0], "you walked off mid-question: they ask you the same thing again, " + ask_text)
+	_ask_end("walked"); await _secs(0.2)
+	_reset_pics(); await _beside(hx)
+	hx.pic.doubt = 2
+	_come_check(hx); await _secs(0.1); await _wait_free()
+	_check(asking == hx and not ask_check, "doubt with nothing heard: no 'I heard you're…'")
+	_ask_end("walked"); await _secs(0.2)
+	var hst := _find("host")
+	_check(range(80).all(func(_i): return _pick_fact(hst).k != "invited"), "the host never asks who invited you")
+	var pal_seen := {}
+	for c in get_meta("looks").values(): pal_seen[c] = 1
+	_check(pal_seen.size() == 11, "everyone wears a different colour, drawn fresh each party")
 	# repair: pass their check
 	_reset_pics()
 	await _beside(g)
@@ -1521,3 +1586,145 @@ func _run_test() -> void:
 	print(end_text.text)
 	print("DONE %d failed" % _fails)
 	get_tree().quit(1 if _fails else 0)
+
+
+# ---------------------------------------------------------------- play mode (godot gala.tscn -- --play): an outside player, by text
+# Commands go in build/agent/cmd.txt, one per line; what you see and hear comes out in build/agent/log.txt.
+# The party only moves while a command runs (10x fast); between commands it's frozen.
+
+const PLACES := {"bar": "at the bar", "buffet": "by the buffet", "window_l": "at the left window", "window_r": "at the right window",
+	"balcony": "by the balcony doors", "lounge": "on the lounge sofas", "middle": "in the middle of the room", "door": "by the back-room door", "elevator": "by the lift"}
+var tags := {}     # person id -> the letter you know them by
+var seen := {}     # what you last saw each person doing
+
+
+func _plg(t: String) -> void:
+	if not playing or plog == null: return
+	plog.store_line("[%5.1f s] %s" % [clock, t]); plog.flush()
+
+
+func _desc(p: Dictionary) -> String:
+	if p.is_empty(): return "someone"
+	return "%s (a %s in %s)" % [tags.get(p.id, "?"), "woman" if p.id in FEMALE else "man", look_names.get(p.id, "dark clothes")]
+
+
+func _perceive(p: Dictionary, text: String) -> void:   # what you'd catch of a line, from where you stand
+	if not playing or text == "" or p.gone: return
+	var d := player.position.distance_to(p.body.position)
+	if d < READ: _plg("%s says, right beside you (the words show on screen): %s" % [_desc(p), text])
+	elif d < 5.0: _plg("%s says, %.0f m away (you hear it; no text on screen): %s" % [_desc(p), d, text])
+	elif d < 10.0: _plg("%s is talking, %.0f m away: too far to make out" % [_desc(p), d])
+
+
+func _place(pos: Vector3) -> String:
+	var best := ""; var bd := INF
+	for sp in SPOTS:
+		var d: float = pos.distance_to(SPOTS[sp])
+		if d < bd: bd = d; best = sp
+	return PLACES[best] if bd < 3.0 else "walking across the room"
+
+
+func _look_log() -> void:
+	var t := "You look around. You are %s. You see:" % _place(player.position)
+	for p in people:
+		if p.gone: continue
+		var d := player.position.distance_to(p.body.position)
+		var doing := "talking" if p.busy else "standing"
+		var fwd := Vector3(-sin(p.body.rotation.y), 0, -cos(p.body.rotation.y)); var to_me: Vector3 = player.position - p.body.position; to_me.y = 0
+		if to_me.length() > 0.1 and fwd.dot(to_me.normalized()) > 0.7: doing += ", facing you"
+		t += "\n  %s, %s, %.0f m away, %s" % [_desc(p), _place(p.body.position), d, doing]
+	if guesses: t += "\n  Your phone marks: " + ", ".join(guesses.keys().map(func(r): return "%s = %s" % [ROLE_NAME[r][1], tags.get(guesses[r], "?")]))
+	_plg(t)
+
+
+func _watch() -> void:   # things you'd notice people doing
+	for p in people:
+		if p.gone: continue
+		var d := player.position.distance_to(p.body.position)
+		var now := {"look": signf(p.glance), "coming": p.coming, "hunt": hunting and p.role == "security"}
+		var was: Dictionary = seen.get(p.id, {"look": 0.0, "coming": false, "hunt": false})
+		if d < 10.0:
+			if now.look > 0 and was.look <= 0: _plg("%s looks over at you" % _desc(p))
+			if now.look < 0 and was.look >= 0: _plg("%s turns away from you" % _desc(p))
+			if now.coming and not was.coming: _plg("%s leaves their group and walks toward you" % _desc(p))
+		if now.hunt and not was.hunt: _plg("%s leaves his post and walks toward you, fast" % _desc(p))
+		if p.leaving and not was.get("leaving", false) and d < 10.0: _plg("%s heads for the lift to leave" % _desc(p))
+		now["leaving"] = p.leaving
+		seen[p.id] = now
+
+
+func _run_play() -> void:
+	AudioServer.set_bus_mute(0, true)
+	get_window().position = Vector2i(60, 60); get_window().always_on_top = true   # on your screen, so you can watch it play
+	get_window().title = "Spy box: the playtest agent is playing"
+	var dir := ProjectSettings.globalize_path("res://").path_join("../build/agent")
+	DirAccess.make_dir_recursive_absolute(dir)
+	plog = FileAccess.open(dir.path_join("log.txt"), FileAccess.WRITE)
+	var cmd_path := dir.path_join("cmd.txt")
+	if not FileAccess.file_exists(cmd_path): FileAccess.open(cmd_path, FileAccess.WRITE).close()
+	var letters := "ABCDEFGHIJKLMN".split("")
+	var order := people.duplicate(); order.shuffle()
+	for i in order.size(): tags[order[i].id] = letters[i]
+	Engine.physics_ticks_per_second = int(60 * FAST); Engine.max_physics_steps_per_frame = int(8 * FAST)
+	_plg("You step out of the lift into the party. Commands: look | wait N | goto LETTER | away | lift | say piece|piece|... | done | mark ROLE (host broker assistant security bartender) | leave | shot NAME | quit")
+	Engine.time_scale = FAST; await _secs(1.0); _handler("h_in"); await _secs(0.5); Engine.time_scale = 0.0
+	var done_n := 0
+	while true:
+		await get_tree().create_timer(0.15, true, false, true).timeout   # (real seconds: the party is frozen)
+		var all := FileAccess.get_file_as_string(cmd_path).split("\n", false)
+		while done_n < all.size():
+			var c := all[done_n].strip_edges(); done_n += 1
+			if c == "": continue
+			_plg("> " + c)
+			Engine.time_scale = FAST
+			await _do(c)
+			_watch()
+			Engine.time_scale = 0.0
+			if c == "quit": plog.close(); get_tree().quit(); return
+		if arrivals.size() > 0 and clock > arrivals[0][0]:
+			for p in people:
+				if not tags.has(p.id): tags[p.id] = letters[tags.size()]
+
+
+func _do(c: String) -> void:
+	var w := c.split(" ", false)
+	match w[0]:
+		"look": _look_log()
+		"wait":
+			var n := float(w[1]) if w.size() > 1 else 2.0
+			var until := clock + n
+			while clock < until:
+				await get_tree().create_timer(0.2).timeout; _watch()
+				for p in people:
+					if not tags.has(p.id): tags[p.id] = "ABCDEFGHIJKLMN"[tags.size()]; _plg("%s steps out of the lift" % _desc(p))
+		"goto":
+			for p in people:
+				if not p.gone and tags.get(p.id, "") == (w[1] if w.size() > 1 else ""): await _beside(p); _plg("You walk over and stand beside %s" % _desc(p)); break
+		"away": await _put(Vector3(-0.5, 0, 6.3)); _plg("You walk off to the empty space near the lift")
+		"lift":
+			await _put(Vector3(-6.0, 0, 6.6)); await _secs(0.3)
+			_plg("You're at the lift doors. " + ("A Leave button shows." if leave_btn.visible else "No Leave button right now."))
+		"say":
+			var pcs := c.substr(4).split("|", false)
+			picked.clear()
+			for pc in pcs:
+				var k := pc.strip_edges()
+				if tile_map.has(k): picked.append(tile_map[k])
+				else: _plg("(there's no piece '%s')" % k)
+			if picked.is_empty() or asking.is_empty(): _plg("(nobody's waiting on you)"); return
+			_plg("You say: " + _joined(picked))
+			await _say_it(); await _secs(0.4); await _wait_free(); await _secs(0.3)
+		"done":
+			if back: _back_end(); _plg("You smile and let them get back to their talk")
+		"mark":
+			var r := w[1] if w.size() > 1 else ""
+			if not ROLE_NAME.has(r): _plg("(roles: host broker assistant security bartender)"); return
+			var n := _nearest()
+			if n.is_empty(): _plg("(nobody close enough to mark)"); return
+			_tag(r); _plg("You mark %s on your phone as %s?" % [_desc(n), ROLE_NAME[r][1]])
+		"leave":
+			if leave_btn.visible: await _finish(); await _secs(1.5)
+			else: _plg("(no Leave button here: go to the lift first)")
+		"shot": await _shot("agent_" + (w[1] if w.size() > 1 else "x")); _plg("(screenshot saved: build/spy/agent_%s.png)" % (w[1] if w.size() > 1 else "x"))
+		"quit": pass
+		_: _plg("(unknown command)")

@@ -39,7 +39,7 @@ const DODGES := [["d_work", "일 얘기는 나중에 하시죠.", "Let's talk wo
 const SUBS := {   # what the handler says, as quiet subtitles
 	"h_intro": "Tonight you're Daniel Park. Learn him on the way.", "h_name": "Your name. These are pieces, not a script.", "h_from": "You're from L.A.",
 	"h_job": "You're an investor. You run money for a fund.", "h_stay": "You're in Seoul for a week.",
-	"h_invited": "Kim, the host, invited you. Call him 김 대표님.", "h_parents": "You grew up in Koreatown. Your parents are from Busan.",
+	"h_invited": "Kim, the host, invited you. Call her 김 대표님.", "h_parents": "You grew up in Koreatown. Your parents are from Busan.",
 	"h_korean": "That's why your Korean is rough. Own it.", "h_twice": "And you've been to Seoul twice before.",
 	"h_style": "Daniel is confident. Short answers. Steer back to business.", "h_dodge": "If they ask something you don't know, dodge it.",
 	"h_phone": "It's all on your phone. But checking it while someone waits for an answer looks bad.",

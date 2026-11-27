@@ -54,6 +54,21 @@ const LINES := {
 	"g_odd": ["저 분, 좀 이상해요.", "That man's a bit odd."], "al_sec": ["팀장님, 저 분 좀 보세요.", "Team leader, keep an eye on that man."],
 	"v_ok": ["저 분, 괜찮은 분이에요.", "He's alright, that one."], "r_really": ["아, 그래요?", "Oh, really?"],
 }
+const BACK := {   # your turn: what you can ask (you've heard each of these asked of you)
+	"b_name": {"k": "b_name", "chunks": [["성함이", ""], ["어떻게 되세요?", ""]]}, "b_job": {"k": "b_job", "chunks": [["무슨 일", ""], ["하세요?", ""]]},
+	"b_from": {"k": "b_from", "chunks": [["어디에서", ""], ["오셨어요?", ""]]}, "b_host": {"k": "b_host", "chunks": [["대표님하고", ""], ["어떻게 아세요?", ""]]}}
+const HUH := ["x_again", "x_huh1", "x_huh2", "x_huh3"]   # they didn't quite get you
+const ANS := {   # what each of them says when you ask (the broker gives little away)
+	"host": {"name": "김지현입니다. 오늘 파티 주최자예요.", "job": "회사 대표입니다.", "from": "서울에서 태어났어요.", "host": "제가 대표예요. 하하."},
+	"broker": {"name": "최입니다.", "job": "사업합니다.", "from": "그건 왜요?", "host": "김 대표님하고는 오래 알았어요."},
+	"assistant": {"name": "윤서연입니다. 최 사장님 비서예요.", "job": "최 사장님 비서입니다.", "from": "부산에서 왔어요.", "host": "사장님 덕분에 알게 됐어요."},
+	"g1": {"name": "이민지입니다.", "job": "의사예요.", "from": "대구에서 왔어요.", "host": "대학교 친구예요."},
+	"g2": {"name": "박준호입니다.", "job": "변호사예요.", "from": "서울 사람이에요.", "host": "같이 일했어요."},
+	"g3": {"name": "정우진입니다.", "job": "IT 회사 다녀요.", "from": "인천에서 왔어요.", "host": "골프 친구예요."},
+	"g4": {"name": "한소희입니다.", "job": "디자이너예요.", "from": "제주도에서 왔어요.", "host": "언니 친구예요."},
+	"g5": {"name": "강태호입니다.", "job": "은행에서 일해요.", "from": "대전에서 왔어요.", "host": "사업 파트너예요."},
+	"g6": {"name": "오수진입니다.", "job": "기자예요.", "from": "광주에서 왔어요.", "host": "옛날 이웃이에요."},
+}
 const CHECK := {   # "I heard you're…?": they check what someone told them
 	"name": "다니엘 박 씨라고요?", "from": "LA에서 오셨다고요?", "job": "투자자시라고요?", "stay": "일주일 계신다고요?",
 	"invited": "김 대표님이 초대하셨다고요?", "parents": "부모님이 부산 분이시라고요?", "korean": "한국어 잘 못하신다고요?", "twice": "두 번 오셨다고요?"}
@@ -63,7 +78,8 @@ const HANDLER := {"h_in": "You're in. We know their titles, not their faces. Lis
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
 	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."],
-	"stop": ["잠깐만요, 손님.", "Just a moment, sir."]}
+	"stop": ["잠깐만요, 손님.", "Just a moment, sir."],
+	"huh1": ["뭐라고요?", "Sorry?"], "huh2": ["죄송해요, 잘 못 들었어요.", "Sorry, I didn't catch that."], "huh3": ["무슨 말씀이세요?", "What do you mean?"]}
 const SPOTS := {   # where people gather
 	"bar": Vector3(6.6, 0, -1.0), "buffet": Vector3(-4.0, 0, -1.6), "window_l": Vector3(-5.5, 0, -5.3), "window_r": Vector3(1.0, 0, -5.3),
 	"balcony": Vector3(6.5, 0, -5.3), "lounge": Vector3(3.6, 0, 3.6), "middle": Vector3(-0.6, 0, 1.2), "door": Vector3(-8.3, 0, 2.5),
@@ -104,6 +120,10 @@ var ask_busy := false
 var ask_group: Array = []
 var ask_check := false           # they're checking something they heard about you
 var ask_text := ""
+var back := false                # your turn: you ask them
+var skip_turn := false           # (tester) answers end without your turn
+var hear_btn: Button
+var done_btn: Button
 var ask_clip := ""
 var picked: Array = []
 var me_voice: AudioStreamPlayer
@@ -260,7 +280,7 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 	var role := id if id in ROLES else "guest"
 	var p := {"id": id, "role": role, "body": b, "look": look, "audio": au, "ko": ko, "tag": tag, "spot": "", "slot": -1,
 		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
-		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false}}   # their picture of you
+		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": []}}   # their picture of you
 	people.append(p)
 	if late:
 		b.position = ELEVATOR; _go(p, "elevator")
@@ -908,7 +928,7 @@ func _ask(p: Dictionary, group: Array, check := "") -> void:   # "and who are yo
 func _question() -> void:
 	var p: Dictionary = asking
 	ask_t = 15.0; picked.clear(); _show_pick()
-	ask_label.text = ask_text
+	ask_label.text = ask_text; hear_btn.visible = true; done_btn.visible = false
 	var tiles := []
 	for i in ask_fact.chunks.size(): tiles.append([ask_fact.k, i])
 	tiles += [["yn", 0], ["yn", 1]]
@@ -933,6 +953,7 @@ func _line(p: Dictionary, id: String) -> void:   # one person says one line out 
 	var vid := _vk(p) + "_" + id
 	p.audio.stream = _clip(vid); p.audio.play(); played.append(vid)
 	p["said"] = ask_text if id == ask_clip else REACT.get(id.trim_prefix("x_"), [""])[0]
+	if id.begins_with("ans_"): p["said"] = ANS[_vk(p)][id.trim_prefix("ans_")]
 	await _wait_line(p.audio)
 	p["said"] = ""
 
@@ -946,10 +967,12 @@ func _ask_screen(root: Control) -> void:   # answering someone: build it from yo
 	var qrow := HBoxContainer.new(); qrow.add_theme_constant_override("separation", 14); left.add_child(qrow)
 	ask_label = _label(38); ask_label.modulate = Color(0.75, 0.85, 1.0); qrow.add_child(ask_label)
 	var hear := _btn("Hear", 22, Vector2(90, 54)); qrow.add_child(hear)
-	hear.pressed.connect(_hear_q)
+	hear.pressed.connect(_hear_q); hear_btn = hear
 	var arow := HBoxContainer.new(); arow.add_theme_constant_override("separation", 14); left.add_child(arow)
 	ans_label = _label(36); ans_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; arow.add_child(ans_label)
 	var clr := _btn("Clear", 22, Vector2(100, 54)); arow.add_child(clr); clr.pressed.connect(func(): picked.clear(); _show_pick())
+	done_btn = _btn("Done", 22, Vector2(100, 54)); arow.add_child(done_btn); done_btn.visible = false
+	done_btn.pressed.connect(func(): if back and not ask_busy: _back_end())
 	tile_box = HBoxContainer.new(); tile_box.add_theme_constant_override("separation", 8); left.add_child(tile_box)
 	say_btn = _btn("Say it", 34, Vector2(180, 120)); say_btn.size_flags_vertical = Control.SIZE_SHRINK_END; row.add_child(say_btn); say_btn.pressed.connect(_say_it)
 	var gs := StyleBoxFlat.new(); gs.bg_color = Color(0.2, 0.55, 0.3); gs.set_corner_radius_all(10); say_btn.add_theme_stylebox_override("normal", gs)
@@ -957,6 +980,7 @@ func _ask_screen(root: Control) -> void:   # answering someone: build it from yo
 
 
 func _fact(k: String) -> Dictionary:
+	if BACK.has(k): return BACK[k]
 	if k == "yn": return Cover.YN
 	for f in Cover.FACTS:
 		if f.k == k: return f
@@ -985,7 +1009,7 @@ func _joined(ts: Array) -> String:
 
 func _show_pick() -> void:
 	if ans_label == null: return
-	ans_label.text = _joined(picked) if picked else "Tap the pieces to answer"
+	ans_label.text = _joined(picked) if picked else ("Tap the pieces to ask" if back else "Tap the pieces to answer")
 	ans_label.modulate = Color.WHITE if picked else Color(1, 1, 1, 0.45)
 	say_btn.disabled = picked.is_empty()
 
@@ -1023,6 +1047,7 @@ func _me(id: String) -> void:   # Daniel says it
 
 func _say_it() -> void:
 	if ask_busy or picked.is_empty() or asking.is_empty(): return
+	if back: _say_back(); return
 	ask_busy = true
 	var who: Dictionary = asking
 	var r := _judge_check(picked, ask_fact) if ask_check else _judge(picked, ask_fact)
@@ -1035,13 +1060,14 @@ func _say_it() -> void:
 	if r == "differ": _ask_end("differ"); return
 	if r != "good" and r != "wrong" and ask_tries == 0:   # close: they didn't quite catch it
 		ask_tries = 1
-		await _line(who, "x_again")
+		await _line(who, HUH.pick_random())
 		if asking == who: _question()
 		return
 	_ask_end("good" if r == "good" else "bad")
 
 
 func _ask_end(how: String) -> void:   # how it went decides what they think of you, and they remember
+	if back: _back_end(); return
 	var who: Dictionary = asking
 	if who.is_empty(): return
 	asking = {}; ask_ui.visible = false; ask_busy = true
@@ -1059,10 +1085,68 @@ func _ask_end(how: String) -> void:   # how it went decides what they think of y
 	elif how == "good": await _line(who, "x_ok" if not ask_phone else "x_cool")
 	elif how == "differ": await _line(who, "x_differ")
 	elif how != "walked": await _line(who, "x_cool")
+	if how == "good" and not done and not skip_turn and not who.gone and player.position.distance_to(who.body.position) < 3.2:
+		_turn(who); return   # your turn: ask them something
 	who.busy = false; ask_busy = false
 	if who.came: who.came = false; _send_back(who)
 	if how != "good":
 		for o in ask_group: o.glance = -3.0   # they turn back to each other
+
+
+func _turn(who: Dictionary) -> void:
+	back = true; asking = who; ask_group = [who]; ask_tries = 0; ask_busy = false
+	_turn_ui()
+
+
+func _turn_ui() -> void:   # every question piece you know, mixed up
+	ask_t = 12.0; picked.clear(); _show_pick()
+	ask_label.text = "Your turn: ask them something"; hear_btn.visible = false; done_btn.visible = true
+	var deck := []
+	for q in BACK:
+		for i in 2: deck.append([q, i])
+	deck.shuffle()
+	for c in tile_box.get_children(): c.queue_free()
+	for t in deck:
+		var b := _btn(_chunk(t)[0], 24, Vector2(104, 80)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
+	ask_ui.visible = true
+
+
+func _judge_back(p: Array) -> String:   # the question you built, or "" if it isn't one
+	for q in BACK:
+		if p == [[q, 0], [q, 1]]: return q
+	return ""
+
+
+func _say_back() -> void:
+	ask_busy = true
+	var who: Dictionary = asking
+	var q := _judge_back(picked)
+	if q != "": await _me("ask_" + q)
+	else:
+		for t in picked: await _me("t_%s_%d" % t)
+	if asking != who or not back: return
+	if q == "":
+		if ask_tries == 0:   # they try to work out what you meant
+			ask_tries = 1; await _line(who, HUH.pick_random())
+			if asking == who and back: _turn_ui(); ask_busy = false
+			return
+		await _line(who, "x_cool"); _back_end(); return   # they give up, no harm done
+	var k := q.trim_prefix("b_")
+	if k in who.pic.asked:   # you asked that already
+		await _line(who, "x_cool")
+		if who.pic.doubt == 0: _doubt(who, 1)
+	else:
+		who.pic.asked.append(k); reactions.append("told_" + k)
+		await _line(who, "ans_" + k)
+	_back_end()
+
+
+func _back_end() -> void:   # your turn's over: they go back to their talk
+	var who: Dictionary = asking
+	back = false; asking = {}; ask_ui.visible = false; ask_busy = false; done_btn.visible = false
+	if who.is_empty(): return
+	who.busy = false
+	if who.came: who.came = false; _send_back(who)
 
 
 func _hear_q() -> void:
@@ -1086,6 +1170,7 @@ func _shot(nm: String) -> void:
 
 func _secs(t: float) -> void:
 	await get_tree().create_timer(t).timeout
+	await get_tree().process_frame; await get_tree().process_frame   # (on the fast clock a short wait can be a single frame)
 
 
 func _put(p: Vector3) -> void:
@@ -1112,7 +1197,7 @@ func _right_pieces(f: Dictionary) -> Array:
 
 
 func _reset_pics() -> void:
-	for p in people: p.pic = {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false}
+	for p in people: p.pic = {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": []}
 
 
 func _guest_group() -> Array:   # a guest, and whoever's with them (everyone put in their places first)
@@ -1132,6 +1217,7 @@ func _facing_away(p: Dictionary) -> bool:
 
 func _run_test() -> void:
 	AudioServer.set_bus_mute(0, true)
+	skip_turn = true
 	Engine.time_scale = FAST; Engine.physics_ticks_per_second = int(60 * FAST); Engine.max_physics_steps_per_frame = int(8 * FAST)   # same small steps, just more of them
 	get_window().position = Vector2i(-3000, 60)
 	await _secs(0.5)
@@ -1189,7 +1275,7 @@ func _run_test() -> void:
 	await _put(Vector3(-0.5, 0, 6.3))
 	# they notice you: not everyone the same way
 	var kinds := {}
-	for i in 40:
+	for i in 80:
 		_reset_pics(); asking = {}; ask_busy = false
 		var grp := _guest_group()
 		if grp.is_empty(): continue
@@ -1219,6 +1305,31 @@ func _run_test() -> void:
 	picked = _right_pieces(ask_fact); await _say_it(); await _secs(0.2); await _wait_free()
 	_check(g.pic.ok and g.pic.met and ask_fact.k in g.pic.told and grp.all(func(o): return o.pic.met), "answer well: they take to you, and the whole group remembers what you said")
 	_check(played.has(_vk(g) + "_x_ok"), "and they say 아, 반갑습니다")
+	# your turn: ask them back
+	_reset_pics(); skip_turn = false
+	grp = _guest_group(); g = grp[0]; await _beside(g)
+	_ask(g, grp); await _secs(0.1); await _wait_free()
+	picked = _right_pieces(ask_fact); await _say_it(); await _secs(0.2); await _wait_free()
+	_check(back and asking == g and ask_ui.visible and ask_label.text.begins_with("Your turn") and tile_box.get_children().any(func(b): return b.text == "성함이"), "answer well, and it's your turn: ask them something")
+	await _shot("g7_turn")
+	picked = [["b_name", 0], ["b_name", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(played.has(_vk(g) + "_ans_name") and "name" in g.pic.asked and not back and asking.is_empty(), "성함이 어떻게 되세요? and they tell you: " + ANS[_vk(g)].name)
+	_turn(g); picked = [["b_name", 0], ["b_name", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(g.pic.doubt == 1 and not back, "ask the same person the same thing twice: now they're curious about you")
+	_reset_pics()
+	var bk := _find("broker"); await _beside(bk)
+	_turn(bk); picked = [["b_job", 0], ["b_job", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(played.has("broker_ans_job"), "ask the broker what he does: 사업합니다, and no more")
+	_reset_pics(); g = grp[0]; await _beside(g)
+	_turn(g); picked = [["b_name", 1], ["b_name", 0]]; var before_huh := played.size(); await _say_it(); await _secs(0.2); await _wait_free()
+	_check(back and played.slice(before_huh).any(func(x): return HUH.any(func(h): return x == _vk(g) + "_" + h)), "a question that doesn't make sense: they try to work out what you meant")
+	picked = [["b_job", 1], ["b_from", 0]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(not back and g.pic.doubt == 0 and played.has(_vk(g) + "_x_cool"), "still no sense: 아... 네., and they let it go (no doubt)")
+	_turn(g); done_btn.pressed.emit(); await _secs(0.1)
+	_check(not back and asking.is_empty(), "or tap Done and ask nothing")
+	_reset_pics(); skip_turn = true
+	grp = _guest_group(); g = grp[0]; await _beside(g); reactions.clear()
+	for o in grp: o.pic.met = true   # (as if they'd just met you)
 	reacted.clear(); reactions.clear(); _react(g.spot)
 	_check(reactions.has("glance") or reactions.has("ask"), "come back later: the ones who met you just nod")
 	if not asking.is_empty(): _ask_end("walked")
@@ -1233,7 +1344,7 @@ func _run_test() -> void:
 	picked = rv if _judge(rv, ask_fact) != "good" else [rv[0]]
 	var first_q := ask_label.text
 	await _say_it(); await _secs(0.1); await _wait_free()
-	_check(not asking.is_empty() and played.has(_vk(g) + "_x_again") and ask_label.text == first_q, "almost right: 네? 다시 한 번요? and they ask again")
+	_check(not asking.is_empty() and HUH.any(func(h): return played.has(_vk(g) + "_" + h)) and ask_label.text == first_q, "almost right: they ask you to say it again (a few different ways) and ask again")
 	var wrong_f: Dictionary = Cover.FACTS.filter(func(f): return f.k != ask_fact.k)[0]
 	picked = [[wrong_f.k, 0]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(g.pic.wary and not g.pic.ok and played.has(_vk(g) + "_x_cool"), "a wrong answer: 아... 네. and they're wary of you now")
@@ -1306,7 +1417,7 @@ func _run_test() -> void:
 	grp = _guest_group(); g = grp[0]; await _beside(g)
 	_ask(g, grp); await _secs(0.1); await _wait_free()
 	ask_t = 0.05; await _secs(0.3); await _wait_free()
-	_check(asking.is_empty() and g.pic.wary, "say nothing and they give up on you, wary")
+	_check(asking.is_empty() and g.pic.wary, "say nothing and they give up on you, wary (%s asking=%s back=%s doubt=%d busy=%s)" % [g.id, asking.get("id", ""), back, g.pic.doubt, ask_busy])
 	# the phone while they wait
 	_reset_pics(); for p in people: p.glance = 0.0
 	grp = _guest_group(); g = grp[0]; await _beside(g)

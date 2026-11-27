@@ -52,11 +52,14 @@ const LINES := {
 	"g_parents": ["저 분, 부모님이 부산 분이시래요.", "His parents are from Busan, apparently."],
 	"g_korean": ["저 분, 한국어 잘 못한대요.", "His Korean isn't good, apparently."], "g_twice": ["저 분, 두 번 왔대요.", "He's been here twice, apparently."],
 	"g_odd": ["저 분, 좀 이상해요.", "That man's a bit odd."], "al_sec": ["팀장님, 저 분 좀 보세요.", "Team leader, keep an eye on that man."],
-	"v_ok": ["저 분, 괜찮은 분이에요.", "He's alright, that one."], "r_really": ["아, 그래요?", "Oh, really?"],
+	"v_ok": ["저 분, 괜찮은 분이에요.", "He's alright, that one."],
+	"w_go": ["같이 가요.", "Let's go together."], "go_yes": ["네, 좋아요.", "Sure, sounds good."], "go_no1": ["아, 지금은 좀...", "Ah, not right now..."],
+	"go_no2": ["죄송해요, 얘기 중이라서요.", "Sorry, I'm in the middle of a chat."], "go_bye": ["저 이만 가 볼게요.", "I'll be off now."], "r_really": ["아, 그래요?", "Oh, really?"],
 }
 const BACK := {   # your turn: what you can ask (you've heard each of these asked of you)
 	"b_name": {"k": "b_name", "chunks": [["성함이", ""], ["어떻게 되세요?", ""]]}, "b_job": {"k": "b_job", "chunks": [["무슨 일", ""], ["하세요?", ""]]},
-	"b_from": {"k": "b_from", "chunks": [["어디에서", ""], ["오셨어요?", ""]]}, "b_host": {"k": "b_host", "chunks": [["대표님하고", ""], ["어떻게 아세요?", ""]]}}
+	"b_from": {"k": "b_from", "chunks": [["어디에서", ""], ["오셨어요?", ""]]}, "b_host": {"k": "b_host", "chunks": [["대표님하고", ""], ["어떻게 아세요?", ""]]},
+	"b_go": {"k": "b_go", "chunks": [["같이", ""], ["가요", ""]]}, "b_thanks": {"k": "b_thanks", "chunks": [["감사합니다", ""]]}}
 const HUH := ["x_again", "x_huh1", "x_huh2", "x_huh3"]   # they didn't quite get you
 const ANS := {   # what each of them says when you ask (the broker gives little away)
 	"host": {"name": "김지현입니다. 오늘 파티 주최자예요.", "job": "회사 대표입니다.", "from": "서울에서 태어났어요.", "host": "제가 대표예요. 하하."},
@@ -123,6 +126,8 @@ var ask_text := ""
 var back := false                # your turn: you ask them
 var skip_turn := false           # (tester) answers end without your turn
 var hear_btn: Button
+var talk_btn: Button
+var comp_btn: Button
 var done_btn: Button
 var ask_clip := ""
 var picked: Array = []
@@ -292,7 +297,7 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 	var tag := _sign("", 30, Vector3(0, -0.15, 0), b); tag.modulate = Color(1, 0.85, 0.3); tag.visible = false
 	var role := id if id in ROLES else "guest"
 	var p := {"id": id, "role": role, "body": b, "look": look, "audio": au, "ko": ko, "tag": tag, "spot": "", "slot": -1,
-		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
+		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "following": false, "follow_t": 0.0, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
 		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": [], "concern": {}}}   # their picture of you
 	people.append(p)
 	if late:
@@ -327,6 +332,7 @@ func _go(p: Dictionary, spot: String) -> void:
 
 
 func _at(p: Dictionary) -> bool:
+	if p.spot == "" or p.slot < 0: return false   # with you, or between places
 	return Vector2(p.body.position.x, p.body.position.z).distance_to(Vector2(_slot_pos(p.spot, p.slot).x, _slot_pos(p.spot, p.slot).z)) < 0.25
 
 
@@ -383,7 +389,7 @@ func _walk(p: Dictionary, dt: float) -> void:   # straight there, or veer round 
 		return
 	p.chk_t += dt
 	if p.chk_t >= 2.0:   # every couple of seconds: are they getting anywhere?
-		if p.chk_d - to.length() < 0.3 and not p.coming:
+		if p.chk_d - to.length() < 0.3 and (not p.coming or p.following):
 			p.stuck += 1
 			if p.stuck >= 2 or to.length() < 1.5: b.position = dest; b.velocity = Vector3.ZERO; p.stuck = 0; return   # step in
 			p.veer = [1.5, -1.5].pick_random(); p.veer_t = 1.2   # try round the other way
@@ -409,7 +415,7 @@ func _people(dt: float) -> void:
 	for p in people.duplicate():
 		if p.gone: continue
 		p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-		if p.coming or p.errand or p.tell or (hunting and p.role == "security"): continue   # on their way to you, or to security
+		if p.coming or p.errand or p.tell or p.following or (hunting and p.role == "security"): continue   # on their way to you, or to security, or with you
 		if not p.busy: _walk(p, dt)
 		if p.leaving and p.spot == "elevator" and _at(p):   # into the lift and gone
 			p.gone = true; slots_taken.erase("%s:%d" % [p.spot, p.slot]); p.body.queue_free(); continue
@@ -417,7 +423,9 @@ func _people(dt: float) -> void:
 		p.timer -= dt
 		if p.timer <= 0.0:
 			var sp := _pick_spot(p)
-			if sp != p.spot: _go(p, sp)
+			var mate := _mate(p)
+			if sp != p.spot and not mate.is_empty() and randf() < 0.35 and _free_slots(sp) >= 2: _go_together(p, mate, sp)
+			elif sp != p.spot: _go(p, sp)
 			p.timer = {"host": randf_range(16, 26), "broker": randf_range(28, 42), "assistant": 3.0, "security": randf_range(18, 30)}.get(p.role, randf_range(10, 18))
 	for a in arrivals.duplicate():   # late arrivals step out of the lift, and the host goes to greet them
 		if clock >= a[0]:
@@ -524,6 +532,7 @@ func _doubters(dt: float) -> void:   # doubt shows in what people do
 	var sec := _find("security")
 	for p in people:
 		if p.gone or p.leaving or not (p.id in ASKERS): continue
+		if p.following: _follow(p, dt); continue
 		var d: int = p.pic.doubt
 		if d > 0:   # keep out of their way and it cools, a step at a time; what they heard stays
 			if player.position.distance_to(p.body.position) > 6.0:
@@ -594,6 +603,100 @@ func _escort(dt: float) -> void:   # the two of you walk to the lift, his hand a
 	if sec:
 		var at: Vector3 = player.position + to.normalized().rotated(Vector3.UP, PI / 2) * 0.7
 		sec.body.position = sec.body.position.lerp(at, 1.0 - exp(-6.0 * dt)); sec.body.rotation.y = body_mesh.rotation.y
+
+
+func _mate(p: Dictionary) -> Dictionary:   # a guest standing with them who might tag along
+	if p.role != "guest": return {}
+	var m := people.filter(func(o): return o != p and o.role == "guest" and not o.gone and not o.busy and not o.leaving and o.spot == p.spot and _at(o))
+	return m.pick_random() if m else {}
+
+
+func _free_slots(spot: String) -> int:
+	var n := 0
+	for i in 4:
+		if not slots_taken.has("%s:%d" % [spot, i]): n += 1
+	return n
+
+
+func _go_together(p: Dictionary, m: Dictionary, sp: String) -> void:   # "같이 가요." "네, 좋아요."
+	await _talk("go", [[p, "w_go"], [m, "go_yes"]])
+	if p.gone or m.gone or p.following or m.following: return
+	_go(p, sp); _go(m, sp); m.timer = p.timer
+
+
+func _talk_target() -> Dictionary:   # who the Talk button would talk to
+	if not asking.is_empty() or back or done or escorting: return {}
+	var n := _nearest()
+	if n.is_empty() or not (n.id in ASKERS) or n.leaving or n.coming or n.tell or n.busy: return {}
+	return n
+
+
+func _companion() -> Dictionary:   # someone walking with you, close enough to talk to
+	if not asking.is_empty() or back or done or escorting: return {}
+	for p in people:
+		if p.following and not p.busy and not p.gone and player.position.distance_to(p.body.position) < 3.0: return p
+	return {}
+
+
+func _talk_btn() -> void:
+	_talk_to(_talk_target())
+
+
+func _talk_to(p: Dictionary) -> void:
+	if p.is_empty(): return
+	p.busy = true
+	var d: Vector3 = player.position - p.body.position
+	p.body.rotation.y = atan2(-d.x, -d.z)
+	_turn(p)
+
+
+func _turn_keys(who: Dictionary) -> Array:
+	return ["b_name", "b_job", "b_from", "b_host", "b_thanks" if who.get("following", false) else "b_go"]
+
+
+func _will_follow(p: Dictionary) -> bool:   # each of them decides from what they think of you
+	if p.pic.doubt > 0 or p.role == "security" or p.role == "bartender": return false
+	var ok: bool = p.pic.ok
+	match p.role:
+		"host": return ok and randf() < 0.9   # looking after her guests is her job
+		"broker": return ok and randf() < 0.5
+		"assistant": return ok and randf() < 0.3
+	if ok: return randf() < 0.85
+	if p.pic.met: return randf() < 0.4
+	return randf() < 0.15
+
+
+func _go_ask(who: Dictionary) -> void:   # 같이 가요?
+	if who.following: await _line(who, "go_yes"); return
+	if _will_follow(who):
+		await _line(who, "go_yes"); _start_follow(who)
+	else: await _line(who, ["go_no1", "go_no2"].pick_random())
+
+
+func _start_follow(p: Dictionary) -> void:
+	slots_taken.erase("%s:%d" % [p.spot, p.slot])
+	p.following = true; p.follow_t = 30.0; p.slot = -1; p.spot = ""; p.errand = false; p.timer = INF
+	reactions.append("follow")
+
+
+func _end_follow(p: Dictionary, say := false) -> void:   # back to the party
+	if not p.following: return
+	p.following = false
+	if say and not p.gone: _line(p, "go_bye")
+	_send_back(p)
+
+
+func _follow(p: Dictionary, dt: float) -> void:   # a step behind you, wherever you go
+	if p.busy: return
+	p.follow_t -= dt
+	if p.pic.doubt > 0 or p.follow_t <= 0.0 or done: _end_follow(p, true); return
+	var behind: Vector3 = player.position + Vector3(sin(body_mesh.rotation.y), 0, cos(body_mesh.rotation.y)) * 1.1
+	var gap: Vector3 = player.position - p.body.position; gap.y = 0
+	if gap.length() > 1.5:
+		p.goto = behind; p.speed = SPEED; p.coming = true; _walk(p, dt); p.coming = false; p.speed = 1.4
+	else:
+		p.body.velocity = Vector3.ZERO
+		p.body.rotation.y = lerp_angle(p.body.rotation.y, atan2(-gap.x, -gap.z), 1.0 - exp(-5.0 * dt))
 
 
 func _tell_sec(p: Dictionary, sec: Dictionary) -> void:
@@ -690,7 +793,7 @@ func _physics_process(dt: float) -> void:
 		for p in people:
 			if p.gone or p.busy: continue
 			p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-			if _at(p) and not p.coming and not p.errand and not p.tell and not (hunting and p.role == "security"): _walk(p, dt)
+			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not (hunting and p.role == "security"): _walk(p, dt)
 	_doubters(dt)
 	_hunt(dt)
 	if escorting: _escort(dt); return
@@ -729,6 +832,8 @@ func _process(dt: float) -> void:
 	ring.visible = not n.is_empty()
 	if ring.visible: ring.position = n.body.position + Vector3(0, 0.05, 0)
 	for r in role_btns: role_btns[r].disabled = n.is_empty()
+	talk_btn.visible = not _talk_target().is_empty() and not phone_open
+	comp_btn.visible = not _companion().is_empty() and not phone_open
 	leave_btn.visible = not done and not escorting and asking.is_empty() and player.position.z > 6.1 and absf(player.position.x + 6.0) < 0.9
 	if done: return
 	_linger(dt)
@@ -766,6 +871,12 @@ func _screen() -> void:
 	sub.custom_minimum_size = Vector2(840, 0); sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; root.add_child(sub)
 	phone_btn = _btn("Phone", 26, Vector2(150, 70)); phone_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	phone_btn.position = Vector2(-174, 20); root.add_child(phone_btn); phone_btn.pressed.connect(_toggle_phone)
+	talk_btn = _btn("Talk", 34, Vector2(200, 110)); root.add_child(talk_btn); talk_btn.pressed.connect(_talk_btn)   # walk up to someone and talk
+	talk_btn.anchor_left = 1; talk_btn.anchor_right = 1; talk_btn.anchor_top = 1; talk_btn.anchor_bottom = 1
+	talk_btn.offset_left = -240; talk_btn.offset_right = -30; talk_btn.offset_top = -170; talk_btn.offset_bottom = -40; talk_btn.visible = false
+	comp_btn = _btn("Talk (with you)", 24, Vector2(210, 80)); root.add_child(comp_btn); comp_btn.pressed.connect(func(): _talk_to(_companion()))   # whoever's walking with you
+	comp_btn.anchor_left = 1; comp_btn.anchor_right = 1; comp_btn.anchor_top = 1; comp_btn.anchor_bottom = 1
+	comp_btn.offset_left = -240; comp_btn.offset_right = -30; comp_btn.offset_top = -270; comp_btn.offset_bottom = -185; comp_btn.visible = false
 	phone_ui = PanelContainer.new(); phone_ui.add_theme_stylebox_override("panel", _style(0.97)); root.add_child(phone_ui)
 	phone_ui.anchor_left = 1; phone_ui.anchor_right = 1; phone_ui.anchor_top = 0; phone_ui.anchor_bottom = 1
 	phone_ui.offset_left = -520; phone_ui.offset_right = -16; phone_ui.offset_top = 100; phone_ui.offset_bottom = -16
@@ -980,6 +1091,7 @@ func _line(p: Dictionary, id: String) -> void:   # one person says one line out 
 	p.audio.stream = _clip(vid); p.audio.play(); played.append(vid)
 	p["said"] = ask_text if id == ask_clip else REACT.get(id.trim_prefix("x_"), [""])[0]
 	if id.begins_with("ans_"): p["said"] = ANS[_vk(p)][id.trim_prefix("ans_")]
+	if LINES.has(id): p["said"] = LINES[id][0]
 	_perceive(p, p.said)
 	await _wait_line(p.audio)
 	p["said"] = ""
@@ -1132,8 +1244,8 @@ func _turn_ui() -> void:   # every question piece you know, mixed up
 	ask_t = 12.0; picked.clear(); _show_pick()
 	ask_label.text = "Your turn: ask them something"; hear_btn.visible = false; done_btn.visible = true
 	var deck := []
-	for q in BACK:
-		for i in 2: deck.append([q, i])
+	for q in _turn_keys(asking):
+		for i in BACK[q].chunks.size(): deck.append([q, i])
 	deck.shuffle()
 	for c in tile_box.get_children(): c.queue_free()
 	tile_map.clear()
@@ -1146,7 +1258,9 @@ func _turn_ui() -> void:   # every question piece you know, mixed up
 
 func _judge_back(p: Array) -> String:   # the question you built, or "" if it isn't one
 	for q in BACK:
-		if p == [[q, 0], [q, 1]]: return q
+		var want := []
+		for i in BACK[q].chunks.size(): want.append([q, i])
+		if p == want: return q
 	return ""
 
 
@@ -1165,6 +1279,9 @@ func _say_back() -> void:
 			return
 		await _line(who, "x_cool"); _back_end(); return   # they give up, no harm done
 	var k := q.trim_prefix("b_")
+	if k == "go": await _go_ask(who); _back_end(); return
+	if k == "thanks":   # off you go, and thanks
+		await _line(who, "go_bye"); _back_end(); _end_follow(who); return
 	if k in who.pic.asked:   # you asked that already
 		await _line(who, "x_cool")
 		if who.pic.doubt == 0: _doubt(who, 1)
@@ -1230,6 +1347,7 @@ func _right_pieces(f: Dictionary) -> Array:
 
 
 func _reset_pics() -> void:
+	for p in people: p.calm_t = 0.0
 	for p in people: p.pic = {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": [], "concern": {}}
 
 
@@ -1449,6 +1567,54 @@ func _run_test() -> void:
 	var pal_seen := {}
 	for c in get_meta("looks").values(): pal_seen[c] = 1
 	_check(pal_seen.size() == 11, "everyone wears a different colour, drawn fresh each party")
+	# 같이 가요
+	_reset_pics()
+	var fa := _find("g1"); var fb := _find("g2")
+	while fa.busy or fb.busy: await _secs(0.1)
+	fb.spot = fa.spot
+	var tsp: String = GUEST_SPOTS.filter(func(x): return x != fa.spot and _free_slots(x) >= 2)[0]
+	await _go_together(fa, fb, tsp)
+	_check(played.has(_vk(fa) + "_w_go") and played.has(_vk(fb) + "_go_yes") and fa.spot == tsp and fb.spot == tsp, "friends move on together: 같이 가요. 네, 좋아요. (you hear it first)")
+	_reset_pics()
+	var fg := _find("g3")
+	for i in 30:
+		if not fg.busy: break
+		await _secs(0.1)
+	fg.busy = false   # (an earlier test can leave them marked busy)
+	await _beside(fg)
+	for i in 100:   # (until they're not mid-conversation)
+		await _secs(0.1)
+		if _talk_target() == fg: break
+	_check(talk_btn.visible and _talk_target() == fg, "stand beside someone free: a Talk button")
+	_talk_btn(); await _secs(0.1)
+	_check(back and asking == fg and tile_map.has("같이") and tile_map.has("가요") and not tile_map.has("감사합니다"), "Talk: your turn, with 같이 + 가요 among the pieces")
+	fg.pic.ok = true; fg.pic.met = true
+	var fol := false
+	for tries in 8:
+		picked = [["b_go", 0], ["b_go", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
+		if fg.following: fol = true; break
+		await _secs(0.2); _talk_btn(); await _secs(0.1)
+	_check(fol and played.has(_vk(fg) + "_go_yes"), "someone who likes you: 같이 가요, 네, 좋아요, and they come with you")
+	await _put(player.position + Vector3(4.0, 0, 0)); await _secs(3.0)
+	if player.position.distance_to(fg.body.position) > 2.2: await _put(Vector3(-0.5, 0, 6.3)); await _secs(3.0)
+	_check(fg.following and player.position.distance_to(fg.body.position) < 2.2, "walk off: they keep up, a step behind (%.1f m)" % player.position.distance_to(fg.body.position))
+	await _put(Vector3(-0.5, 0, 6.3)); await _secs(5.0)   # somewhere quiet (and they catch up)
+	if not asking.is_empty(): _ask_end("walked"); await _secs(0.3)
+	_check(comp_btn.visible, "with someone along: a Talk (with you) button (%.1f m, asking=%s)" % [player.position.distance_to(fg.body.position), asking.get("id", "")])
+	comp_btn.pressed.emit(); await _secs(0.1)
+	_check(back and asking == fg and tile_map.has("감사합니다") and not tile_map.has("같이"), "talk to your companion: you can say 감사합니다 (talking to %s, %s following=%s %.1f m busy=%s)" % [asking.get("id", "nobody"), fg.id, fg.following, player.position.distance_to(fg.body.position), fg.busy])
+	picked = [["b_thanks", 0]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(not fg.following and played.has(_vk(fg) + "_go_bye") and fg.spot != "", "감사합니다: 저 이만 가 볼게요, and back to the party")
+	_reset_pics(); fg.pic.doubt = 1
+	_check(not _will_follow(fg) and not _will_follow(_find("security")), "someone who doubts you, or security: never")
+	var hh := _find("host"); var bb := _find("broker")
+	hh.pic.ok = false; bb.pic.ok = false
+	_check(range(30).all(func(_i): return not _will_follow(hh) and not _will_follow(bb)), "the host and the broker won't, unless they like you")
+	hh.pic.ok = true; bb.pic.ok = true
+	_check(range(40).any(func(_i): return _will_follow(hh)) and range(60).any(func(_i): return _will_follow(bb)), "once they like you: the host often comes along, the broker sometimes")
+	_reset_pics(); fg.pic.ok = true; fg.pic.met = true
+	_start_follow(fg); fg.follow_t = 0.2; await _secs(0.6)
+	_check(not fg.following, "after a while they go back to their own evening")
 	# repair: pass their check
 	_reset_pics()
 	await _beside(g)
@@ -1461,9 +1627,9 @@ func _run_test() -> void:
 	var va := _find("g3"); var vb := _find("g4")
 	while va.busy or vb.busy: await _secs(0.1)
 	vb.spot = va.spot; va.pic.ok = true; vb.pic.doubt = 2; vb.pic.wary = true
-	_check(_gossip([va, vb]).any(func(o): return o[0] == "vouch" and o[1][0][0] == va), "someone who likes you, standing with someone who doubts you: they can vouch for you")
+	_check(_gossip([va, vb]).any(func(o): return o[0] == "vouch" and o[1][0][0] == va), "someone who likes you, standing with someone who doubts you: they can vouch for you (%s %s / %s %s)" % [va.id, str(va.pic), vb.id, str(vb.pic)])
 	await _talk("vouch", [[va, "v_ok"], [vb, "r_really"]])
-	_check(vb.pic.doubt == 1 and played.has(_vk(va) + "_v_ok"), "저 분, 괜찮은 분이에요: their doubt drops a step")
+	_check(vb.pic.doubt == 1 and played.has(_vk(va) + "_v_ok"), "저 분, 괜찮은 분이에요: their doubt drops a step (%s doubt=%d vouched=%s %s)" % [vb.id, vb.pic.doubt, vb.pic.vouched, str(reactions.slice(-4))])
 	_check(not _gossip([va, vb]).any(func(o): return o[0] == "vouch"), "a vouch works once per person")
 	# repair: keep out of their way
 	_reset_pics()
@@ -1641,12 +1807,14 @@ func _watch() -> void:   # things you'd notice people doing
 	for p in people:
 		if p.gone: continue
 		var d := player.position.distance_to(p.body.position)
-		var now := {"look": signf(p.glance), "coming": p.coming, "hunt": hunting and p.role == "security"}
+		var now := {"look": signf(p.glance), "coming": p.coming, "hunt": hunting and p.role == "security", "follow": p.following}
 		var was: Dictionary = seen.get(p.id, {"look": 0.0, "coming": false, "hunt": false})
 		if d < 10.0:
 			if now.look > 0 and was.look <= 0: _plg("%s looks over at you" % _desc(p))
 			if now.look < 0 and was.look >= 0: _plg("%s turns away from you" % _desc(p))
 			if now.coming and not was.coming: _plg("%s leaves their group and walks toward you" % _desc(p))
+		if now.follow and not was.get("follow", false): _plg("%s walks along with you" % _desc(p))
+		if was.get("follow", false) and not now.follow: _plg("%s leaves you and goes back to the party" % _desc(p))
 		if now.hunt and not was.hunt: _plg("%s leaves his post and walks toward you, fast" % _desc(p))
 		if p.leaving and not was.get("leaving", false) and d < 10.0: _plg("%s heads for the lift to leave" % _desc(p))
 		now["leaving"] = p.leaving
@@ -1666,7 +1834,7 @@ func _run_play() -> void:
 	var order := people.duplicate(); order.shuffle()
 	for i in order.size(): tags[order[i].id] = letters[i]
 	Engine.physics_ticks_per_second = int(60 * FAST); Engine.max_physics_steps_per_frame = int(8 * FAST)
-	_plg("You step out of the lift into the party. Commands: look | wait N | goto LETTER | away | lift | say piece|piece|... | done | mark ROLE (host broker assistant security bartender) | leave | shot NAME | quit")
+	_plg("You step out of the lift into the party. Commands: look | wait N | goto LETTER | away | lift | talk | talkwith | say piece|piece|... | done | mark ROLE (host broker assistant security bartender) | leave | shot NAME | quit")
 	Engine.time_scale = FAST; await _secs(1.0); _handler("h_in"); await _secs(0.5); Engine.time_scale = 0.0
 	var done_n := 0
 	while true:
@@ -1716,6 +1884,14 @@ func _do(c: String) -> void:
 			await _say_it(); await _secs(0.4); await _wait_free(); await _secs(0.3)
 		"done":
 			if back: _back_end(); _plg("You smile and let them get back to their talk")
+		"talk":
+			var tt := _talk_target()
+			if tt.is_empty(): _plg("(no Talk button: nobody free right beside you)")
+			else: _plg("You tap Talk beside %s" % _desc(tt)); _talk_btn()
+		"talkwith":
+			var cc := _companion()
+			if cc.is_empty(): _plg("(nobody walking with you right now)")
+			else: _plg("You turn to %s, walking with you" % _desc(cc)); _talk_to(cc)
 		"mark":
 			var r := w[1] if w.size() > 1 else ""
 			if not ROLE_NAME.has(r): _plg("(roles: host broker assistant security bartender)"); return

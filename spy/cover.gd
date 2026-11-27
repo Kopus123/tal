@@ -78,6 +78,7 @@ var phone_prop: MeshInstance3D
 var cards: VBoxContainer
 var sub: Label
 var skip_btn: Button
+var party_btn: Button
 var phone_btn: Button
 var phone_ui: PanelContainer
 var talk_ui: PanelContainer
@@ -201,6 +202,8 @@ func _screen() -> void:
 	skip_btn.position = Vector2(-214, -84); root.add_child(skip_btn); skip_btn.pressed.connect(_skip)
 	phone_btn = _btn("Phone", 26, Vector2(150, 70)); phone_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	phone_btn.position = Vector2(-174, 20); root.add_child(phone_btn); phone_btn.pressed.connect(_toggle_phone)
+	party_btn = _btn("Skip to party", 22, Vector2(200, 70)); root.add_child(party_btn); party_btn.pressed.connect(_go_in)   # straight up to the gala
+	party_btn.anchor_left = 1; party_btn.anchor_right = 1; party_btn.offset_left = -394; party_btn.offset_right = -194; party_btn.offset_top = 20; party_btn.offset_bottom = 90
 	_talk_screen(root)
 	_phone_screen(root)   # on top: to answer, you put it away
 	end_ui = PanelContainer.new(); end_ui.add_theme_stylebox_override("panel", _panel_style()); end_ui.set_anchors_preset(Control.PRESET_CENTER)
@@ -566,6 +569,7 @@ func _run_test() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SEEN_FILE))
 	_start()
 	_check(not skip_btn.visible or test, "the first time there's no skipping (the tester can)")
+	_check(party_btn.visible and party_btn.is_connected("pressed", _go_in) and party_btn.get_global_rect().end.x <= phone_btn.get_global_rect().position.x + 1, "Skip to party is always there, next to the phone, and goes straight to the gala")
 	await _secs(0.3)
 	_check(state == "brief" and sub.text.begins_with("Tonight") and voice.playing, "the handler starts the briefing out loud, with a subtitle")
 	for i in 400:

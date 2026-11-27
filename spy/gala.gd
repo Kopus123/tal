@@ -12,6 +12,8 @@ const ROOM := Vector2(20, 14)
 const READ := 1.6                # right beside them: you can make out the words (Korean only, never English)
 const NOTICE := 2.5              # stand this close to a group for a moment and they notice you
 const LINGER := 1.0
+const FAST := 10.0                # (tester) the clock runs this much faster, and lines take their length without playing
+const COOL := 45.0                # keep away from someone this long, nothing new odd, and their doubt cools a step
 const TAG_RANGE := 2.6
 const START := Vector3(-6.0, 0, 5.4)
 const ELEVATOR := Vector3(-6.0, 0, 6.2)
@@ -47,7 +49,8 @@ const LINES := {
 	"g_invited": ["저 분, 김 대표님이 초대하셨대요.", "CEO Kim invited him, apparently."],
 	"g_parents": ["저 분, 부모님이 부산 분이시래요.", "His parents are from Busan, apparently."],
 	"g_korean": ["저 분, 한국어 잘 못한대요.", "His Korean isn't good, apparently."], "g_twice": ["저 분, 두 번 왔대요.", "He's been here twice, apparently."],
-	"g_odd": ["저 분, 좀 이상해요.", "That man's a bit odd."], "al_sec": ["팀장님, 저 분 좀 보세요.", "Team leader, keep an eye on that man."], "r_really": ["아, 그래요?", "Oh, really?"],
+	"g_odd": ["저 분, 좀 이상해요.", "That man's a bit odd."], "al_sec": ["팀장님, 저 분 좀 보세요.", "Team leader, keep an eye on that man."],
+	"v_ok": ["저 분, 괜찮은 분이에요.", "He's alright, that one."], "r_really": ["아, 그래요?", "Oh, really?"],
 }
 const CHECK := {   # "I heard you're…?": they check what someone told them
 	"name": "다니엘 박 씨라고요?", "from": "LA에서 오셨다고요?", "job": "투자자시라고요?", "stay": "일주일 계신다고요?",
@@ -57,7 +60,7 @@ const HANDLER := {"h_in": "You're in. We know their titles, not their faces. Lis
 	"h_out": "Okay, we're out. Let's see what you got."}
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
-	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."]}
+	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."]}
 const SPOTS := {   # where people gather
 	"bar": Vector3(6.6, 0, -1.0), "buffet": Vector3(-4.0, 0, -1.6), "window_l": Vector3(-5.5, 0, -5.3), "window_r": Vector3(1.0, 0, -5.3),
 	"balcony": Vector3(6.5, 0, -5.3), "lounge": Vector3(3.6, 0, 3.6), "middle": Vector3(-0.6, 0, 1.2), "door": Vector3(-8.3, 0, 2.5),
@@ -250,8 +253,8 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 	var tag := _sign("", 30, Vector3(0, -0.15, 0), b); tag.modulate = Color(1, 0.85, 0.3); tag.visible = false
 	var role := id if id in ROLES else "guest"
 	var p := {"id": id, "role": role, "body": b, "look": look, "audio": au, "ko": ko, "tag": tag, "spot": "", "slot": -1,
-		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
-		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false}}   # their picture of you
+		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
+		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false}}   # their picture of you
 	people.append(p)
 	if late:
 		b.position = ELEVATOR; _go(p, "elevator")
@@ -329,6 +332,7 @@ func _walk(p: Dictionary, dt: float) -> void:   # straight there, or veer round 
 	var dest: Vector3 = p.goto if p.coming else _slot_pos(p.spot, p.slot)
 	var to := dest - b.position; to.y = 0
 	if to.length() < 0.2 and not p.coming:
+		p.chk_t = 0.0; p.chk_d = INF; p.stuck = 0
 		b.velocity = Vector3.ZERO
 		var c: Vector3 = SPOTS[p.spot] if p.spot != "bar" else Vector3(8.0, 0, b.position.z)
 		if p.id == "bartender": c = Vector3(7.1, 0, -1.0)
@@ -338,6 +342,14 @@ func _walk(p: Dictionary, dt: float) -> void:   # straight there, or veer round 
 		elif p.glance < 0.0 or (p.pic.doubt >= 2 and mine.length() < 3.5): d = -mine   # their back to you
 		if d.length() > 0.1: b.rotation.y = lerp_angle(b.rotation.y, atan2(-d.x, -d.z), 1.0 - exp(-5.0 * dt))
 		return
+	p.chk_t += dt
+	if p.chk_t >= 2.0:   # every couple of seconds: are they getting anywhere?
+		if p.chk_d - to.length() < 0.3 and not p.coming:
+			p.stuck += 1
+			if p.stuck >= 2 or to.length() < 1.5: b.position = dest; b.velocity = Vector3.ZERO; p.stuck = 0; return   # step in
+			p.veer = [1.5, -1.5].pick_random(); p.veer_t = 1.2   # try round the other way
+		else: p.stuck = 0
+		p.chk_t = 0.0; p.chk_d = to.length()
 	var dir := to.normalized()
 	p.veer_t = p.get("veer_t", 0.0) - dt
 	var tries: Array = [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.1, -2.1]
@@ -358,7 +370,7 @@ func _people(dt: float) -> void:
 	for p in people.duplicate():
 		if p.gone: continue
 		p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-		if p.coming or p.errand: continue   # on their way to you, or to security
+		if p.coming or p.errand or p.tell: continue   # on their way to you, or to security
 		if not p.busy: _walk(p, dt)
 		if p.leaving and p.spot == "elevator" and _at(p):   # into the lift and gone
 			p.gone = true; slots_taken.erase("%s:%d" % [p.spot, p.slot]); p.body.queue_free(); continue
@@ -443,6 +455,10 @@ func _gossip(m: Array) -> Array:   # someone here knows something about you the 
 			if p.pic.wary and not o.pic.wary: out.append(["gossip", [[p, "g_odd"], [o, "r_really"]]])
 			for k in p.pic.told:
 				if not (k in o.pic.told) and o.pic.doubt < 2: out.append(["gossip", [[p, "g_" + k], [o, "r_really"]]])
+	for p in m:   # someone who's taken to you speaks up for you
+		if not (p.id in ASKERS) or not p.pic.ok or p.pic.doubt > 0: continue
+		for o in m:
+			if o != p and o.id in ASKERS and o.pic.doubt > 0 and not o.pic.vouched: out.append(["vouch", [[p, "v_ok"], [o, "r_really"]]])
 	return out
 
 
@@ -457,7 +473,10 @@ func _spread(p: Dictionary, k: String) -> void:   # everyone standing there hear
 
 func _doubt(o: Dictionary, n: int) -> void:   # curious (1) · doubtful (2) · alarmed (3)
 	if not (o.id in ASKERS): return
-	o.pic.doubt = mini(3, o.pic.doubt + n); o.pic.wary = o.pic.doubt > 0; o.pic.ok = false
+	o.pic.doubt = clampi(o.pic.doubt + n, 0, 3); o.pic.wary = o.pic.doubt > 0
+	if n > 0: o.pic.ok = false; o.calm_t = 0.0   # something new looked odd
+	if o.pic.doubt < 2: o.pic.checked = false
+	if o.pic.doubt < 3: o.pic.told_sec = false
 
 
 func _doubters(dt: float) -> void:   # doubt shows in what people do
@@ -466,6 +485,11 @@ func _doubters(dt: float) -> void:   # doubt shows in what people do
 	for p in people:
 		if p.gone or p.leaving or not (p.id in ASKERS): continue
 		var d: int = p.pic.doubt
+		if d > 0:   # keep out of their way and it cools, a step at a time; what they heard stays
+			if player.position.distance_to(p.body.position) > 6.0:
+				p.calm_t += dt
+				if p.calm_t >= COOL: p.calm_t = 0.0; _doubt(p, -1); d = p.pic.doubt
+			else: p.calm_t = 0.0
 		if p.coming:   # doubtful: they come over to check you
 			var gap: Vector3 = player.position - p.body.position; gap.y = 0
 			p.come_t -= dt
@@ -474,6 +498,13 @@ func _doubters(dt: float) -> void:   # doubt shows in what people do
 			else:
 				p.body.velocity = Vector3.ZERO; p.body.rotation.y = atan2(-gap.x, -gap.z)
 				if asking.is_empty() and not ask_busy: _come_check(p)
+			continue
+		if p.tell:   # alarmed, no room by security: they go right up to him
+			if not sec or d < 3: p.tell = false; _send_back(p); continue
+			var gs: Vector3 = sec.body.position - p.body.position; gs.y = 0
+			p.tell_t += dt
+			if gs.length() > 2.0 and p.tell_t < 6.0: p.goto = sec.body.position; p.coming = true; _walk(p, dt); p.coming = false   # (or as close as they can get)
+			elif not sec.busy and not p.busy: p.tell = false; p.pic.told_sec = true; _tell_sec(p, sec)
 			continue
 		if p.busy: continue
 		if p.errand:
@@ -487,9 +518,15 @@ func _doubters(dt: float) -> void:   # doubt shows in what people do
 		if d >= 3 and not p.pic.told_sec and sec and _at(p):   # alarmed: they tell security
 			if p.spot != sec.spot:
 				if _has_room(sec.spot): _go(p, sec.spot); p.errand = true
+				else: p.tell = true; p.tell_t = 0.0; slots_taken.erase("%s:%d" % [p.spot, p.slot]); p.slot = -1
 			elif _at(sec) and not sec.busy:
 				p.pic.told_sec = true; p.errand = false
 				_talk("alarm", [[p, "al_sec"], [sec, "r_yes"]])
+
+
+func _tell_sec(p: Dictionary, sec: Dictionary) -> void:
+	await _talk("alarm", [[p, "al_sec"], [sec, "r_yes"]])
+	if not p.gone: _send_back(p)
 
 
 func _come_check(p: Dictionary) -> void:   # "so you're from LA?" — something they heard, or something you said
@@ -513,7 +550,7 @@ func _maybe_talk() -> void:
 	if talks >= 2: return
 	var opts := _options()
 	if opts.is_empty(): return
-	var gossip := opts.filter(func(o): return o[0] == "gossip")
+	var gossip := opts.filter(func(o): return o[0] == "gossip" or o[0] == "vouch")
 	if gossip and randf() < 0.7:
 		var g: Array = gossip.pick_random(); _talk(g[0], g[1]); return
 	var fresh := opts.filter(func(o): return o[0] != "small" and not (o[0] in recent))
@@ -550,13 +587,17 @@ func _talk(kind: String, lines: Array) -> void:
 		var voice_id: String = _vk(p) + "_" + l[1]
 		p.audio.stream = _clip(voice_id); p.audio.play(); played.append(voice_id)
 		p["line"] = l[1]
-		await get_tree().process_frame
-		while is_instance_valid(p.body) and p.audio.playing: await get_tree().process_frame
+		await _wait_line(p.audio)
 		p["line"] = ""
 		if l[1].begins_with("g_") and not p.gone: _spread(p, l[1].trim_prefix("g_"))
+		if l[1] == "v_ok":   # they take it from someone they trust
+			for o in people:
+				if o == p or o.gone or o.spot != p.spot: continue
+				if o.pic.doubt > 0 and not o.pic.vouched: o.pic.vouched = true; _doubt(o, -1)
+				o.glance = 3.0
 		if l[1] == "al_sec":   # security looks your way, and so does everyone there
 			for o in people:
-				if not o.gone and o.spot == p.spot: o.glance = 4.0
+				if not o.gone and (o.spot == p.spot or o.role == "security"): o.glance = 4.0
 		await get_tree().create_timer(0.45).timeout
 	for p in who: p.busy = false
 	talks -= 1
@@ -571,7 +612,7 @@ func _physics_process(dt: float) -> void:
 		for p in people:
 			if p.gone or p.busy: continue
 			p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-			if _at(p) and not p.coming and not p.errand: _walk(p, dt)
+			if _at(p) and not p.coming and not p.errand and not p.tell: _walk(p, dt)
 	_doubters(dt)
 	if done: return
 	var dir := Vector2.ZERO
@@ -846,8 +887,7 @@ func _line(p: Dictionary, id: String) -> void:   # one person says one line out 
 	var vid := _vk(p) + "_" + id
 	p.audio.stream = _clip(vid); p.audio.play(); played.append(vid)
 	p["said"] = ask_text if id == ask_clip else REACT.get(id.trim_prefix("x_"), [""])[0]
-	await get_tree().process_frame
-	while is_instance_valid(p.body) and p.audio.playing: await get_tree().process_frame
+	await _wait_line(p.audio)
 	p["said"] = ""
 
 
@@ -922,10 +962,17 @@ func _judge_check(p: Array, f: Dictionary) -> String:   # good · differ · or j
 	return _judge(p, f)
 
 
+func _wait_line(au: Node) -> void:   # until the line's been said (the tester just waits its length, on the fast clock)
+	if test:
+		var n: float = au.stream.get_length() if au.stream else 0.0
+		au.stop(); await _secs(maxf(n, 0.05)); return
+	await get_tree().process_frame
+	while is_instance_valid(au) and au.playing: await get_tree().process_frame
+
+
 func _me(id: String) -> void:   # Daniel says it
 	me_voice.stream = _mine(id); me_voice.play()
-	await get_tree().process_frame
-	while me_voice.playing: await get_tree().process_frame
+	await _wait_line(me_voice)
 
 
 func _say_it() -> void:
@@ -958,10 +1005,12 @@ func _ask_end(how: String) -> void:   # how it went decides what they think of y
 		o.pic.met = true
 		if how == "good" and not (k in o.pic.told): o.pic.told.append(k)
 		if how == "good": o.pic.second.erase(k)   # now they heard it from you
-		if how == "good" and not ask_phone: o.pic.ok = true
+		if how == "good" and not ask_phone and o.pic.doubt == 0: o.pic.ok = true
 		if how != "good": _doubt(o, 2 if how == "differ" and o == who else 1)
 	reactions.append("answer_" + how)
-	if how == "good": await _line(who, "x_ok" if not ask_phone else "x_cool")
+	if how == "good" and ask_check: _doubt(who, -1)   # you passed their check
+	if how == "good" and ask_check: await _line(who, "x_fine" if not ask_phone else "x_cool")
+	elif how == "good": await _line(who, "x_ok" if not ask_phone else "x_cool")
 	elif how == "differ": await _line(who, "x_differ")
 	elif how != "walked": await _line(who, "x_cool")
 	who.busy = false; ask_busy = false
@@ -1017,7 +1066,7 @@ func _right_pieces(f: Dictionary) -> Array:
 
 
 func _reset_pics() -> void:
-	for p in people: p.pic = {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false}
+	for p in people: p.pic = {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false}
 
 
 func _guest_group() -> Array:   # a guest, and whoever's with them (everyone put in their places first)
@@ -1037,6 +1086,7 @@ func _facing_away(p: Dictionary) -> bool:
 
 func _run_test() -> void:
 	AudioServer.set_bus_mute(0, true)
+	Engine.time_scale = FAST; Engine.physics_ticks_per_second = int(60 * FAST); Engine.max_physics_steps_per_frame = int(8 * FAST)   # same small steps, just more of them
 	get_window().position = Vector2i(-3000, 60)
 	await _secs(0.5)
 	_check(people.size() == 9 and ROLES.all(func(r): return not _find(r).is_empty()), "nine people at the party, one of each role")
@@ -1169,8 +1219,36 @@ func _run_test() -> void:
 	for i in 250:
 		await _secs(0.1)
 		if played.has(_vk(g) + "_al_sec"): told = true; break
-	_check(told, "alarmed: they go and tell security, 팀장님, 저 분 좀 보세요")
+	var sc := _find("security")
+	_check(told, "alarmed: they go and tell security, 팀장님, 저 분 좀 보세요 (%s at %s slot %d at=%s errand=%s tell=%s busy=%s doubt=%d told_sec=%s · security at %s at=%s busy=%s · room=%s)" % [g.id, g.spot, g.slot, _at(g) if g.slot >= 0 else false, g.errand, g.tell, g.busy, g.pic.doubt, g.pic.told_sec, sc.spot, _at(sc), sc.busy, _has_room(sc.spot)])
 	_check(not g.coming, "and the one who came over goes back to the party")
+	# repair: pass their check
+	_reset_pics()
+	await _beside(g)
+	g.pic.doubt = 2; g.pic.wary = true; g.pic.checked = true; g.pic.told = ["from"]
+	_ask(g, [g], "from"); await _secs(0.1); await _wait_free()
+	picked = [["yn", 0]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(g.pic.doubt == 1 and played.has(_vk(g) + "_x_fine") and not g.pic.checked, "pass their check: 아, 그렇군요, and their doubt drops a step")
+	# repair: someone who likes you vouches
+	_reset_pics()
+	var va := _find("g3"); var vb := _find("g4")
+	while va.busy or vb.busy: await _secs(0.1)
+	vb.spot = va.spot; va.pic.ok = true; vb.pic.doubt = 2; vb.pic.wary = true
+	_check(_gossip([va, vb]).any(func(o): return o[0] == "vouch" and o[1][0][0] == va), "someone who likes you, standing with someone who doubts you: they can vouch for you")
+	await _talk("vouch", [[va, "v_ok"], [vb, "r_really"]])
+	_check(vb.pic.doubt == 1 and played.has(_vk(va) + "_v_ok"), "저 분, 괜찮은 분이에요: their doubt drops a step")
+	_check(not _gossip([va, vb]).any(func(o): return o[0] == "vouch"), "a vouch works once per person")
+	# repair: keep out of their way
+	_reset_pics()
+	vb.pic.doubt = 1; vb.pic.wary = true; vb.pic.told = ["job"]
+	await _beside(vb); vb.calm_t = COOL - 0.3; await _secs(0.6)
+	_check(vb.pic.doubt == 1, "stay near them and nothing cools")
+	for far in [Vector3(-0.5, 0, 6.3), Vector3(8.0, 0, 5.5), Vector3(-8.0, 0, -5.0), Vector3(8.5, 0, -5.5), Vector3(-8.5, 0, 5.5)]:
+		await _put(far)
+		if player.position.distance_to(vb.body.position) > 7.0: break
+	vb.calm_t = COOL - 0.3; await _secs(0.6)
+	_check(vb.pic.doubt == 0 and "job" in vb.pic.told, "keep away for a while: their doubt cools, but they still know what you said (%.1f m away)" % player.position.distance_to(vb.body.position))
+	_reset_pics()
 	# silence
 	_reset_pics(); for p in people: p.glance = 0.0
 	await _put(Vector3(-0.5, 0, 6.3))

@@ -80,7 +80,7 @@ const HANDLER := {"h_in": "You're in. We know their titles, not their faces. Lis
 	"h_out": "Okay, we're out. Let's see what you got.",
 	"h_heat1": "Careful. People are starting to talk about you.", "h_heat2": "Security's watching you now. Keep it clean, or head for the lift.",
 	"h_heat3": "They're onto you. Get to the lift. Now.", "h_calm": "Okay. Security's backed off."}
-const HEAT := [4, 8, 12]          # how much doubt in the room (everyone's added up) before: talk, security watches you, security comes
+const HEAT := [3, 6, 9]          # how much doubt in the room (everyone's added up) before: talk, security watches you, security comes
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
 	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."],
@@ -137,6 +137,7 @@ var picked: Array = []
 var me_voice: AudioStreamPlayer
 var phone_open := false
 var last_handler := ""
+var lift_pad: MeshInstance3D     # the lit floor in front of the lift: stand on it to leave
 var ring: MeshInstance3D          # under whoever your phone would point at
 var hold := false
 var playing := false            # (play mode) an outside player drives the party by text commands
@@ -244,7 +245,11 @@ func _room() -> void:
 		_glow(Vector3(-8.5 + i * 2.1, 1.4, -hd - 0.05), Vector3(1.8, 0.12, 0.12), Color(1.0, 0.8, 0.45))
 		_glow(Vector3(-8.5 + i * 2.1 + randf_range(-0.5, 0.5), 1.6, -hd - 0.4), Vector3(0.2, 0.2, 0.2), Color(0.6, 0.8, 1.0))
 	_box(Vector3(-6.0, 0, hd + 0.05), Vector3(1.6, 1.9, 0.2), Color(0.6, 0.6, 0.65))                       # elevator doors
-	_sign("엘리베이터", 60, Vector3(-6.0, 2.3, hd), self)
+	lift_pad = MeshInstance3D.new(); var lpm := BoxMesh.new(); lpm.size = Vector3(2.2, 0.03, 1.5); lift_pad.mesh = lpm
+	lift_pad.position = Vector3(-6.0, 0.02, hd - 0.9)
+	var lm := _mat(Color(0.95, 0.85, 0.45)); lm.emission_enabled = true; lm.emission = Color(0.95, 0.8, 0.35); lm.emission_energy_multiplier = 0.6
+	lift_pad.material_override = lm; add_child(lift_pad)
+	_sign("LIFT  ·  엘리베이터", 56, Vector3(-6.0, 1.3, hd - 1.2), self)
 	_box(Vector3(-hw + 0.1, 0, 2.5), Vector3(0.2, 1.9, 1.3), Color(0.35, 0.22, 0.14), false)               # the back room's door, shut
 	_box(Vector3(8.2, 0, -1.0), Vector3(0.8, 1.1, 4.2), Color(0.25, 0.15, 0.1))                             # bar
 	for i in 6: _glow(Vector3(9.6, 1.2, -2.8 + i * 0.7), Vector3(0.12, 0.35, 0.12), Color(0.5, 0.9, 0.6) if i % 2 else Color(0.9, 0.5, 0.3))
@@ -891,7 +896,9 @@ func _process(dt: float) -> void:
 	for r in role_btns: role_btns[r].disabled = n.is_empty()
 	talk_btn.visible = (not _talk_target().is_empty() or not talk_wait.is_empty()) and not phone_open
 	comp_btn.visible = not _companion().is_empty() and not phone_open
-	leave_btn.visible = not done and not escorting and asking.is_empty() and player.position.z > 6.1 and absf(player.position.x + 6.0) < 0.9
+	leave_btn.visible = not done and not escorting and asking.is_empty() and player.position.z > 5.3 and absf(player.position.x + 6.0) < 1.2
+	var lmat: StandardMaterial3D = lift_pad.material_override   # pulses when you need to get out
+	lmat.emission_energy_multiplier = (1.4 + 1.2 * sin(clock * 6.0)) if (hunting or heat_stage >= 2) and not done else 0.6
 	if done: return
 	_linger(dt)
 	if not asking.is_empty():
@@ -1341,7 +1348,7 @@ func _say_back() -> void:
 		await _line(who, "go_bye"); _back_end(); _end_follow(who); return
 	if k in who.pic.asked:   # you asked that already
 		await _line(who, "x_cool")
-		if who.pic.doubt == 0: _doubt(who, 1)
+		_doubt(who, 1)   # and again, and again: they start to wonder what you're up to
 	else:
 		who.pic.asked.append(k); reactions.append("told_" + k)
 		await _line(who, "ans_" + k)
@@ -1524,6 +1531,8 @@ func _run_test() -> void:
 	_check(played.has(_vk(g) + "_ans_name") and "name" in g.pic.asked and not back and asking.is_empty(), "성함이 어떻게 되세요? and they tell you: " + ANS[_vk(g)].name)
 	_turn(g); picked = [["b_name", 0], ["b_name", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(g.pic.doubt == 1 and not back, "ask the same person the same thing twice: now they're curious about you")
+	_turn(g); picked = [["b_name", 0], ["b_name", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(g.pic.doubt == 2, "and a third time: they doubt you (doubt=%d back=%s asking=%s)" % [g.pic.doubt, back, asking.get("id", "")])
 	_reset_pics()
 	var bk := _find("broker"); await _beside(bk)
 	_turn(bk); picked = [["b_job", 0], ["b_job", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
@@ -1641,16 +1650,22 @@ func _run_test() -> void:
 	await _beside(fg)
 	for i in 100:   # (until they're not mid-conversation)
 		await _secs(0.1)
-		if _talk_target() == fg: break
-	_check(talk_btn.visible and _talk_target() == fg, "stand beside someone free: a Talk button")
-	_talk_btn(); await _secs(0.1)
+		if _talk_target() == fg and not fg.busy: break
+	_check(talk_btn.visible and _talk_target() == fg, "stand beside someone free: a Talk button (target=%s fg=%s coming=%s doubt=%d asking=%s back=%s)" % [_talk_target().get("id", ""), fg.id, fg.coming, fg.pic.doubt, asking.get("id", ""), back])
+	_talk_btn()
+	for i in 100:   # (if a chat just started, they finish it first)
+		await _secs(0.1)
+		if back: break
 	_check(back and asking == fg and tile_map.has("같이") and tile_map.has("가요") and not tile_map.has("감사합니다"), "Talk: your turn, with 같이 + 가요 among the pieces")
 	fg.pic.ok = true; fg.pic.met = true
 	var fol := false
 	for tries in 8:
 		picked = [["b_go", 0], ["b_go", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
 		if fg.following: fol = true; break
-		await _secs(0.2); _talk_btn(); await _secs(0.1)
+		await _secs(0.2); _talk_btn()
+		for i in 100:
+			await _secs(0.1)
+			if back: break
 	_check(fol and played.has(_vk(fg) + "_go_yes"), "someone who likes you: 같이 가요, 네, 좋아요, and they come with you")
 	await _put(player.position + Vector3(4.0, 0, 0)); await _secs(3.0)
 	if player.position.distance_to(fg.body.position) > 2.2: await _put(Vector3(-0.5, 0, 6.3)); await _secs(3.0)
@@ -1826,6 +1841,8 @@ func _run_test() -> void:
 	await _put(Vector3(-6.0, 0, 6.6)); await _secs(0.2)
 	_check(leave_btn.visible and hunting, "security's coming, but you made the lift: you can leave (done=%s escorting=%s asking=%s at %s)" % [done, escorting, asking.get("id", ""), str(player.position)])
 	_check(player.position.z < 7.0, "and the doors are solid: you can't walk out of the building")
+	var lpe: float = (lift_pad.material_override as StandardMaterial3D).emission_energy_multiplier
+	_check(lpe != 0.6, "the lift's pad pulses while security's after you")
 	await _finish(); await _secs(0.3)
 	await _secs(0.2)
 	_check(sub.get_global_rect().position.x > 0.0 and sub.get_global_rect().end.x < get_viewport().get_visible_rect().size.x, "the handler's subtitle sits on screen")

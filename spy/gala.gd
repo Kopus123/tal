@@ -59,7 +59,9 @@ const LINES := {
 	"appt_wait": ["잠깐만요.", "One moment."], "appt_in": ["들어가세요.", "Go on in."], "appt_no": ["죄송해요, 지금은 안 돼요.", "Sorry, not right now."],
 	"appt_go": ["아, 네! 같이 가요.", "Oh, yes! Come with me."], "appt_meh": ["글쎄요...", "Well..."], "appt_asst": ["비서한테 얘기하세요.", "Talk to my assistant."],
 	"appt_huh": ["네? 최 사장님이요?", "Sorry? President Choi?"], "deal_hi": ["어서 오세요. 앉으세요.", "Welcome. Have a seat."],
-	"deal_ok": ["좋습니다. 여기 있습니다.", "Good. Here it is."], "deal_bad": ["당신, 누구야?", "Who the hell are you?"], "go_bye": ["저 이만 가 볼게요.", "I'll be off now."], "r_really": ["아, 그래요?", "Oh, really?"],
+	"deal_ok": ["좋습니다. 여기 있습니다.", "Good. Here it is."],
+	"b_self": ["안녕하세요. 에릭 신입니다. 최 사장님하고 약속 있어요.", "Hello. I'm Eric Shin. I have an appointment with President Choi."],
+	"real_huh": ["네? 에릭 신 씨는 벌써 오셨는데요...", "Sorry? Eric Shin's already here..."], "deal_bad": ["당신, 누구야?", "Who the hell are you?"], "go_bye": ["저 이만 가 볼게요.", "I'll be off now."], "r_really": ["아, 그래요?", "Oh, really?"],
 }
 const BACK := {   # your turn: what you can ask (you've heard each of these asked of you)
 	"b_name": {"k": "b_name", "chunks": [["성함이", ""], ["어떻게 되세요?", ""]]}, "b_job": {"k": "b_job", "chunks": [["무슨 일", ""], ["하세요?", ""]]},
@@ -104,6 +106,8 @@ const CHECK := {   # "I heard you're…?": they check what someone told them
 const SMALL := ["cold", "food", "view", "busy", "wine", "know"]
 const HANDLER := {"h_in": "You're in. Choi has the drive. Get to him through his assistant, or the host. Then get out.",
 	"h_got": "That's the drive. Now get out of there.",
+	"h_real1": "Bad news. The real Eric Shin just pulled up downstairs. You've got about a minute.",
+	"h_real2": "He's in the room. Finish it and get out.", "h_blown": "He's talking to them. You're blown. Go, now!",
 	"h_out": "Okay, we're out. Let's see what you got.",
 	"h_heat1": "Careful. People are starting to talk about you.", "h_heat2": "Security's watching you now. Keep it clean, or head for the lift.",
 	"h_heat3": "They're onto you. Get to the lift. Now.", "h_calm": "Okay. Security's backed off.",
@@ -192,6 +196,14 @@ const BR := Vector3(-50.0, 0, 0)          # the back room: far off, so from the 
 const DOOR_IN := Vector3(-9.3, 0, 2.5)    # in front of the brown door
 const BR_ENTRY := Vector3(-46.6, 0, 0)    # just inside the back room's door
 const BR_SEAT := Vector3(-51.5, 0, -1.5)  # where the broker waits for you
+const REAL_WARN := 150.0           # the handler hears the real Eric Shin is downstairs
+const REAL_AT := 210.0             # and he steps out of the lift
+var real := {}                     # the real buyer
+var real_stage := 0                # 0 not yet · 1 warned · 2 in the room · 3 he's told them
+var no_real := false               # (tester) he doesn't come unless a test sends him
+var blown := false
+var blow_t := 0.0                  # word reaches the broker in the back room
+var right_btn: Button
 var gate := ""                    # who's taking you to the broker: "assistant" or "host"
 var gate_by := {}
 var gate_check := false           # the assistant is checking who you are
@@ -909,6 +921,65 @@ func _through(going_in: bool) -> void:
 			if p.following: _end_follow(p)
 		var u: Dictionary = gate_by
 		if u and u.usher: u.usher = false; u.busy = false; _send_back(u)
+		if blown and not has_drive: blow_t = 8.0
+
+
+func _real_tick(dt: float) -> void:   # the real Eric Shin is coming: warned, then he's here, then he tells them who he is
+	if done or killed: return
+	if not no_real:
+		if real_stage == 0 and clock >= REAL_WARN: real_stage = 1; _handler("h_real1")
+		elif real_stage == 1 and clock >= REAL_AT: _real_arrive()
+	if real_stage == 2: _real_walk(dt)
+	if blow_t > 0.0:
+		blow_t -= dt
+		if blow_t <= 0.0: _broker_learns()
+
+
+func _real_arrive() -> void:
+	real_stage = 2
+	real = _spawn("buyer", Color(0.45, 0.7, 1.0), true)
+	real.role = "buyer"; real.usher = true; real.busy = true
+	if real.slot >= 0: slots_taken.erase("%s:%d" % [real.spot, real.slot]); real.slot = -1
+	_handler("h_real2"); _plg("Someone steps out of the lift: a man in light blue. The real Eric Shin.")
+
+
+func _real_target() -> Dictionary:   # he asks for Choi's assistant, or failing her, the host
+	for r in ["assistant", "host"]:
+		var t := _find(r)
+		if t and not t.away: return t
+	return {}
+
+
+func _real_walk(dt: float) -> void:
+	var t := _real_target()
+	if t.is_empty() or real.gone: return
+	var g: Vector3 = t.body.position - real.body.position; g.y = 0
+	if g.length() > 1.4:
+		real.goto = t.body.position; real.speed = 1.8; real.coming = true; _walk(real, dt); real.coming = false
+	elif not t.busy or t.usher:
+		real_stage = 3; _real_reveal(t)
+
+
+func _real_reveal(t: Dictionary) -> void:   # "I'm Eric Shin, I have an appointment" — "...Eric Shin's already here"
+	if t.usher: t.usher = false
+	if asking == t: _ask_end("walked")
+	await _talk("real", [[real, "b_self"], [t, "real_huh"]])
+	blown = true; _handler("h_blown")
+	for o in people:   # she knows, and so does anyone close enough to hear
+		if o.gone or not (o.id in ASKERS): continue
+		if o == t or o.body.position.distance_to(t.body.position) < 5.0: _doubt(o, 3); o.glance = 4.0
+	if in_back and not has_drive: blow_t = 8.0   # someone goes in to tell him
+	real.busy = false
+
+
+func _broker_learns() -> void:   # a knock, a word in his ear: he knows you're not the buyer
+	var br := _find("broker")
+	if br.is_empty() or not in_back or has_drive or killed or done: return
+	if asking == br: asking = {}; ask_ui.visible = false; deal_ask = false
+	ask_busy = true
+	_plg("Someone slips into the back room and whispers to the broker.")
+	await _line(br, "deal_bad")
+	_killed(br)
 
 
 func _deal_tick() -> void:   # step up to him and he starts: what you're after, the price, did you bring it
@@ -1235,6 +1306,7 @@ func _physics_process(dt: float) -> void:
 			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not p.shadow and not p.away and not p.usher and not (hunting and p.role == "security") and not (distract_t > 0.0 and p.role == "security"): _walk(p, dt)
 	_doubters(dt)
 	_gate_tick(dt)
+	_real_tick(dt)
 	_waiter(dt)
 	_distract(dt)
 	_heat(dt)
@@ -1440,7 +1512,8 @@ func _finish(walked_out := false) -> void:   # into the lift: the debrief
 	elif has_drive: t += "MISSION DONE: you got the drive out.\n\n"
 	else: t += "Mission failed: no drive.\n\n"
 	if walked_out: t += "Escorted out.\n\n"
-	if downed: t += "You took down: %s.\n\n" % ", ".join(downed.map(func(id): var q := _who_is(id); return "a guest" if q.role == "guest" else ROLE_NAME[q.role][1]))
+	if real_stage >= 2: t += "The real Eric Shin showed up%s.\n\n" % (" and blew your cover" if blown else "")
+	if downed: t += "You took down: %s.\n\n" % ", ".join(downed.map(func(id): var q := _who_is(id); return ("the real Eric Shin" if q.role == "buyer" else "a guest") if not ROLE_NAME.has(q.role) else ROLE_NAME[q.role][1]))
 	elif hunted: t += "You got out before security reached you.\n\n"
 	var right := 0
 	for r in ROLES:
@@ -1449,7 +1522,7 @@ func _finish(walked_out := false) -> void:   # into the lift: the debrief
 		else:
 			var p := _who_is(guesses[r])
 			if p.role == r: line += "right"; right += 1
-			else: line += "wrong, that was " + ("a guest" if p.role == "guest" else ROLE_NAME[p.role][1])
+			else: line += "wrong, that was " + (("the real Eric Shin" if p.role == "buyer" else "a guest") if not ROLE_NAME.has(p.role) else ROLE_NAME[p.role][1])
 		t += line + "\n"
 	var ok := people.filter(func(o): return o.pic.ok).size()
 	var wary := people.filter(func(o): return o.pic.wary).size()
@@ -1528,7 +1601,7 @@ func _pick_fact(p: Dictionary) -> Dictionary:   # something about you they don't
 func _question() -> void:
 	var p: Dictionary = asking
 	ask_t = 15.0; picked.clear(); _show_pick()
-	ask_label.text = _en(ask_text); hear_btn.visible = true; done_btn.visible = false
+	ask_label.text = _en(ask_text); hear_btn.visible = true; done_btn.visible = false; right_btn.visible = english
 	var tiles := []
 	for i in ask_fact.chunks.size(): tiles.append([ask_fact.k, i])
 	tiles += [["yn", 0], ["yn", 1]]
@@ -1577,6 +1650,8 @@ func _ask_screen(root: Control) -> void:   # answering someone: build it from yo
 	var arow := HBoxContainer.new(); arow.add_theme_constant_override("separation", 14); left.add_child(arow)
 	ans_label = _label(36); ans_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; arow.add_child(ans_label)
 	var clr := _btn("Clear", 22, Vector2(100, 54)); arow.add_child(clr); clr.pressed.connect(func(): picked.clear(); _show_pick())
+	right_btn = _btn("Say the right answer", 20, Vector2(230, 54)); arow.add_child(right_btn); right_btn.visible = false   # (English mode: for testing)
+	right_btn.pressed.connect(func(): if not back and not asking.is_empty() and not ask_busy: picked = _right_pieces(ask_fact); _show_pick(); _say_it())
 	done_btn = _btn("Done", 22, Vector2(100, 54)); arow.add_child(done_btn); done_btn.visible = false
 	done_btn.pressed.connect(func(): if back and not ask_busy: _back_end())
 	tile_box = HBoxContainer.new(); tile_box.add_theme_constant_override("separation", 8); left.add_child(tile_box)
@@ -1608,7 +1683,7 @@ func _toggle_en() -> void:
 	en_btn.text = "English: on" if english else "English: off"
 	if not asking.is_empty():
 		if back: _turn_ui()
-		else: ask_label.text = _en(ask_text); _show_pick()
+		else: ask_label.text = _en(ask_text); _show_pick(); right_btn.visible = english
 
 
 func _fact(k: String) -> Dictionary:
@@ -1739,7 +1814,7 @@ func _turn(who: Dictionary) -> void:
 
 func _turn_ui() -> void:   # every question piece you know, mixed up
 	ask_t = 12.0; picked.clear(); _show_pick()
-	ask_label.text = "Your turn: ask them something"; hear_btn.visible = false; done_btn.visible = true
+	ask_label.text = "Your turn: ask them something"; hear_btn.visible = false; done_btn.visible = true; right_btn.visible = false
 	var deck := []
 	for q in _turn_keys(asking):
 		for i in BACK[q].chunks.size(): deck.append([q, i])
@@ -1867,7 +1942,7 @@ func _facing_away(p: Dictionary) -> bool:
 
 func _run_test() -> void:
 	AudioServer.set_bus_mute(0, true)
-	skip_turn = true; no_heat = true
+	skip_turn = true; no_heat = true; no_real = true
 	english = false; en_btn.text = "English: off"
 	Engine.time_scale = FAST; Engine.physics_ticks_per_second = int(60 * FAST); Engine.max_physics_steps_per_frame = int(8 * FAST)   # same small steps, just more of them
 	get_window().position = Vector2i(-3000, 60)
@@ -2222,7 +2297,7 @@ func _run_test() -> void:
 	clock = 34.9; await _secs(0.4)
 	var g5 := _find("g5")
 	_check(not g5.is_empty() and people.size() == 10 and g5.body.position.distance_to(ELEVATOR) < 3.5, "someone arrives late, out of the lift")
-	var leaver: Dictionary = people.filter(func(o): return o.role == "guest" and not o.gone and not o.busy and o.id != "g5")[0]
+	var leaver: Dictionary = people.filter(func(o): return o.role == "guest" and not o.gone and o.id != "g5")[0]; leaver.busy = false
 	leaver.body.position = SPOTS.elevator + Vector3(0.5, 0, 0.5); _leave(leaver)
 	for i in 60:
 		await _secs(0.1)
@@ -2312,18 +2387,23 @@ func _run_test() -> void:
 		_send_back(q)
 	downed.clear(); ammo = MAG; hunting = false; hunted = false; heat_stage = 0; _reset_pics()
 	# English mode: the words on screen in English (the voices stay Korean)
-	_reset_pics(); var eg: Dictionary = _guest_group()[0]; await _beside(eg)
+	_reset_pics(); hold = true; var eg: Dictionary = _guest_group()[0]; await _beside(eg)
 	var _we := clock
 	while eg.busy and clock - _we < 30.0: await _secs(0.1)
 	english = true; ask_busy = false; _ask(eg, [eg], "", "from", 0); await _secs(0.1)
 	_check(ask_label.text == "Where are you from?" and tile_box.get_children().any(func(b): return b.text == "from LA"), "English mode: their question and your pieces in English (%s)" % ask_label.text)
 	await _shot("g11_english")
-	await _wait_free(); asking = {}; ask_ui.visible = false; ask_busy = false; eg.busy = false; english = false; await _secs(0.2); _reset_pics()
+	_check(right_btn.visible, "and a Say the right answer button, for testing")
+	await _wait_free(); right_btn.pressed.emit(); await _secs(0.2); await _wait_free()
+	_check(played.has(_vk(eg) + "_x_ok") and eg.pic.ok, "tap it: you say the right answer, and they take to you (asking=%s back=%s %.1f m)" % [asking.get("id", ""), back, player.position.distance_to(eg.body.position)])
+	asking = {}; back = false; ask_ui.visible = false; ask_busy = false; eg.busy = false; english = false; await _secs(0.2); _reset_pics()
 	# the mission: through the assistant, into the back room, the broker's check, the drive
-	_reset_pics(); hold = true
+	_reset_pics(); hold = true; await _wait_free(); asking = {}; back = false; ask_busy = false; ask_ui.visible = false
 	for p in people: p.busy = false
 	var gasst := _find("assistant"); var gbrk := _find("broker")
-	await _beside(gasst); _talk_to(gasst); await _secs(0.1)
+	await _beside(gasst); await _wait_free()
+	if not asking.is_empty(): asking.busy = false; asking = {}; ask_ui.visible = false; ask_busy = false   # (she'd started asking you something herself)
+	back = false; _talk_to(gasst); await _secs(0.1)
 	_check(back and tile_map.has("최 사장님하고") and tile_map.has("약속 있어요"), "Talk: you can say 최 사장님하고 약속 있어요")
 	picked = [["b_appt", 0], ["b_appt", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(asking == gasst and ask_fact.k == "name", "the assistant checks who you are: " + ask_text)
@@ -2379,6 +2459,35 @@ func _run_test() -> void:
 	gbrk.away = false; gbrk.inside = false; gbrk.busy = false; gbrk.body.position = DOOR_IN + Vector3(1.0, 0, 0); _send_back(gbrk)
 	gasst.usher = false; gasst.busy = false
 	await _put(Vector3(-0.6, 0, 2.0)); _reset_pics()
+	# the real Eric Shin turns up
+	var rasst := _find("assistant"); rasst.busy = false
+	real_stage = 0; no_real = false; var c0 := clock
+	clock = REAL_WARN + 0.05; await _secs(0.2)
+	_check(real_stage == 1 and played.has("h_real1"), "the handler: the real Eric Shin is downstairs, you've got about a minute")
+	clock = REAL_AT + 0.05; await _secs(0.3)
+	_check(real_stage >= 2 and not real.is_empty() and played.has("h_real2"), "and he steps out of the lift")
+	for i in 400:
+		await _secs(0.1)
+		if blown: break
+	_check(blown and played.has("buyer_b_self") and played.has("assistant_real_huh") and rasst.pic.doubt == 3 and played.has("h_blown"),
+		"he tells the assistant who he is: 네? 에릭 신 씨는 벌써 오셨는데요... and you're blown")
+	await _shot("g12_real")
+	# in the back room when it happens: someone tells the broker
+	await _put(BR_ENTRY); in_back = true; gbrk.inside = true; gbrk.away = true; gbrk.busy = true; gbrk.body.position = BR_SEAT; has_drive = false
+	blow_t = 0.5
+	for i in 100:
+		await _secs(0.1)
+		if done and end_ui.visible: break
+	_check(killed and end_text.text.contains("KILLED") and end_text.text.contains("real Eric Shin showed up and blew your cover"), "in the back room without the drive: word reaches him, and he shoots you")
+	killed = false; done = false; end_ui.visible = false; body_mesh.rotation.x = 0.0; in_back = false; fade.color.a = 0.0; asking = {}; ask_busy = false; ask_ui.visible = false
+	deal_step = -1; deal_ask = false; blown = false; blow_t = 0.0; no_real = true; real_stage = 0; hunting = false; hunted = false
+	real.gone = true; real.body.queue_free(); real = {}
+	gbrk.away = false; gbrk.inside = false; gbrk.busy = false; gbrk.body.position = DOOR_IN + Vector3(1.0, 0, 0); _send_back(gbrk)
+	clock = c0; await _put(Vector3(-0.6, 0, 2.0)); _reset_pics()
+	for p in people: p.tell = false; p.errand = false
+	await _secs(4.0)   # (an alarm already on its way to security can still land: call him off)
+	hunting = false; hunted = false; escorting = false; done = false; end_ui.visible = false
+	var s3 := _find("security"); s3.busy = false; s3.shadow = false; _send_back(s3); _reset_pics()
 	# the host can take you in too, if she likes you; a guest has no idea what you mean
 	var hst2 := _find("host"); await _beside(hst2)
 	hst2.pic.ok = true; var _w10 := clock

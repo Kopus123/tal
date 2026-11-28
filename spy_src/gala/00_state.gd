@@ -116,7 +116,7 @@ const HEAT := [2, 4, 6]          # how much doubt in the room (everyone's added 
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
 	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."],
-	"stop": ["잠깐만요, 손님.", "Just a moment, sir."],
+	"stop": ["잠깐만요, 손님.", "Just a moment, sir."], "freeze": ["멈춰!", "Freeze!"],
 	"huh1": ["뭐라고요?", "Sorry?"], "huh2": ["죄송해요, 잘 못 들었어요.", "Sorry, I didn't catch that."], "huh3": ["무슨 말씀이세요?", "What do you mean?"]}
 const SPOTS := {   # where people gather
 	"bar": Vector3(6.6, 0, -1.0), "buffet": Vector3(-4.0, 0, -1.6), "window_l": Vector3(-5.5, 0, -5.3), "window_r": Vector3(1.0, 0, -5.3),
@@ -252,6 +252,15 @@ var tile_box: HBoxContainer
 var say_btn: Button
 var end_ui: PanelContainer
 var end_text: Label
+var again_btn: Button
+var hurt: ColorRect                # a red flash when you're hit
+var drunk := 0                     # sips all night (you never sober up)
+var armed := false                 # security's drawn his gun
+var sec_fire_t := 0.0
+var hits := 0                      # two and you're dead
+var shot_dead := false
+var force_hit := -1                # (tester) 1 = his next shots hit, 0 = they miss
+var holster: MeshInstance3D        # security's gun: on his hip, then in his hand
 var joy_draw: Control
 var joy_center := Vector2.ZERO
 var joy_vec := Vector2.ZERO

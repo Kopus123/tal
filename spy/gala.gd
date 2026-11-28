@@ -117,7 +117,7 @@ const HEAT := [2, 4, 6]          # how much doubt in the room (everyone's added 
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
 	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."],
-	"stop": ["잠깐만요, 손님.", "Just a moment, sir."],
+	"stop": ["잠깐만요, 손님.", "Just a moment, sir."], "freeze": ["멈춰!", "Freeze!"],
 	"huh1": ["뭐라고요?", "Sorry?"], "huh2": ["죄송해요, 잘 못 들었어요.", "Sorry, I didn't catch that."], "huh3": ["무슨 말씀이세요?", "What do you mean?"]}
 const SPOTS := {   # where people gather
 	"bar": Vector3(6.6, 0, -1.0), "buffet": Vector3(-4.0, 0, -1.6), "window_l": Vector3(-5.5, 0, -5.3), "window_r": Vector3(1.0, 0, -5.3),
@@ -253,6 +253,15 @@ var tile_box: HBoxContainer
 var say_btn: Button
 var end_ui: PanelContainer
 var end_text: Label
+var again_btn: Button
+var hurt: ColorRect                # a red flash when you're hit
+var drunk := 0                     # sips all night (you never sober up)
+var armed := false                 # security's drawn his gun
+var sec_fire_t := 0.0
+var hits := 0                      # two and you're dead
+var shot_dead := false
+var force_hit := -1                # (tester) 1 = his next shots hit, 0 = they miss
+var holster: MeshInstance3D        # security's gun: on his hip, then in his hand
 var joy_draw: Control
 var joy_center := Vector2.ZERO
 var joy_vec := Vector2.ZERO
@@ -308,7 +317,7 @@ func _physics_process(dt: float) -> void:
 		for p in people:
 			if p.gone or p.busy: continue
 			p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not p.shadow and not p.away and not p.usher and not (hunting and p.role == "security") and not (distract_t > 0.0 and p.role == "security"): _walk(p, dt)
+			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not p.shadow and not p.away and not p.usher and not ((hunting or armed) and p.role == "security") and not (distract_t > 0.0 and p.role == "security"): _walk(p, dt)
 	_doubters(dt)
 	_gate_tick(dt)
 	_real_tick(dt)
@@ -316,6 +325,7 @@ func _physics_process(dt: float) -> void:
 	_distract(dt)
 	_heat(dt)
 	_hunt(dt)
+	_armed_tick(dt)
 	if escorting: _escort(dt); return
 	if done or killed: return
 	var dir := Vector2.ZERO
@@ -325,14 +335,23 @@ func _physics_process(dt: float) -> void:
 	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN): dir.y += 1
 	if joy_vec.length() > 0.12: dir = joy_vec
 	dir = dir.limit_length(1.0)
-	player.velocity = Vector3(dir.x, 0, dir.y) * SPEED
+	var tip := _tipsy()
+	if tip > 0.0:   # you stagger: your steps wander off where you meant, and you're slower
+		var veer := sin(clock * 1.3) * 0.8 * tip + sin(clock * 3.1) * 0.3 * tip
+		if dir.length() > 0.12: dir = dir.rotated(veer)
+		else: dir += Vector2(sin(clock * 0.9), cos(clock * 0.7)) * 0.12 * tip
+	body_mesh.rotation.z = sin(clock * 1.3) * 0.14 * tip   # and you lean with it
+	player.velocity = Vector3(dir.x, 0, dir.y) * SPEED * (1.0 - 0.4 * tip)
 	player.move_and_slide(); player.position.y = 0
 	if dir.length() > 0.12: body_mesh.rotation.y = atan2(-dir.x, -dir.y)
 
 
 func _process(dt: float) -> void:
 	var focus := player.position + (Vector3(3.4, 0, 0) if phone_open else Vector3.ZERO)   # the phone covers the right: keep you in view
+	var tip := _tipsy()
+	focus += Vector3(sin(clock * 0.5) * 0.7, 0, cos(clock * 0.37) * 0.4) * tip   # drunk: the view drifts…
 	cam.position = cam.position.lerp(focus + CAM_OFF, 1.0 - exp(-6.0 * dt)); cam.look_at(cam.position - CAM_OFF, Vector3.UP)
+	if tip > 0.0: cam.rotate_object_local(Vector3(0, 0, 1), sin(clock * 0.45) * 0.07 * tip)   # …and tilts, slowly (a sway, not a shake)
 	throw_btn.visible = false
 	shoot_btn.visible = false
 	_items_ui()
@@ -529,6 +548,9 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "following": false, "follow_t": 0.0, "shadow": false, "away": false, "inside": false, "usher": false, "said_in": false, "look_t": 0.0, "look_pt": Vector3.ZERO, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
 		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": [], "concern": {}}}   # their picture of you
 	people.append(p)
+	if id == "security":   # a gun on his hip, always
+		holster = MeshInstance3D.new(); var hb := BoxMesh.new(); hb.size = Vector3(0.08, 0.24, 0.16); holster.mesh = hb
+		holster.material_override = _mat(Color(0.05, 0.05, 0.05)); look.add_child(holster); _holster_hip()
 	if late:
 		b.position = ELEVATOR; _go(p, "elevator")
 		p.timer = randf_range(3.0, 5.0)
@@ -645,7 +667,7 @@ func _people(dt: float) -> void:
 	for p in people.duplicate():
 		if p.gone: continue
 		p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-		if p.coming or p.errand or p.tell or p.following or p.shadow or p.away or p.usher or (hunting and p.role == "security") or (distract_t > 0.0 and p.role == "security"): continue   # on their way to you, or to security, or with you
+		if p.coming or p.errand or p.tell or p.following or p.shadow or p.away or p.usher or ((hunting or armed) and p.role == "security") or (distract_t > 0.0 and p.role == "security"): continue   # on their way to you, or to security, or with you
 		if not p.busy: _walk(p, dt)
 		if p.leaving and p.spot == "elevator" and _at(p):   # into the lift and gone
 			p.gone = true; slots_taken.erase("%s:%d" % [p.spot, p.slot]); p.body.queue_free(); continue
@@ -898,7 +920,7 @@ func _room_doubt() -> int:   # everyone's doubt about you, added up
 
 
 func _heat(dt: float) -> void:   # the more of the room doubts you, the closer security gets
-	if done or escorting or no_heat: return
+	if done or escorting or no_heat or armed: return
 	var sec := _find("security")
 	if sec.is_empty(): return
 	var h := _room_doubt()
@@ -933,9 +955,52 @@ func _heat(dt: float) -> void:   # the more of the room doubts you, the closer s
 		if to_me.length() > 0.1: sec.body.rotation.y = lerp_angle(sec.body.rotation.y, atan2(-to_me.x, -to_me.z), 1.0 - exp(-5.0 * dt))
 
 
+func _holster_hip() -> void:
+	if holster: holster.position = Vector3(0.33, 0.85, 0.05); holster.rotation = Vector3.ZERO
+
+
+func _draw_gun(sec: Dictionary) -> void:   # he heard the shot: 멈춰! and the gun comes out
+	armed = true; hunting = false; distract_t = 0.0; sec.shadow = false; sec.timer = INF
+	if escorting: escorting = false
+	if sec.slot >= 0: slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
+	if holster: holster.position = Vector3(0.3, 1.05, -0.4); holster.rotation = Vector3(PI / 2, 0, 0)
+	sec_fire_t = 1.2
+	_plg("%s draws a gun: 멈춰!" % _desc(sec))
+	sec.busy = true; await _line(sec, "x_freeze"); sec.busy = false
+
+
+func _armed_tick(dt: float) -> void:   # he shoots at you, about every second and a half; half of them hit; two and you're dead
+	if not armed or done or killed: return
+	var sec := _find("security")
+	if sec.is_empty(): armed = false; return
+	if in_back:   # he won't follow you in: he waits outside the door
+		var w: Vector3 = DOOR_IN + Vector3(1.6, 0, 0); var g: Vector3 = w - sec.body.position; g.y = 0
+		if g.length() > 0.5: sec.goto = w; sec.speed = HUNT; sec.coming = true; _walk(sec, dt); sec.coming = false
+		sec_fire_t = maxf(sec_fire_t, 1.0); return
+	var to: Vector3 = player.position - sec.body.position; to.y = 0
+	sec.body.velocity = Vector3.ZERO
+	if to.length() > 0.1: sec.body.rotation.y = atan2(-to.x, -to.z)
+	sec_fire_t -= dt
+	if sec_fire_t > 0.0 or sec.busy: return
+	sec_fire_t = 1.5
+	var snd := AudioStreamPlayer3D.new(); snd.stream = _shot_sound(); snd.position = sec.body.position + Vector3(0, 1, 0); add_child(snd); snd.play()
+	var hit := (randf() < 0.5) if force_hit < 0 else force_hit == 1
+	if not hit: played.append("miss"); _plg("He fires, and misses."); return
+	hits += 1; played.append("hit"); _plg("He fires. You're hit (%d)." % hits)
+	hurt.color.a = 0.55; create_tween().tween_property(hurt, "color:a", 0.0, 0.6)
+	if hits >= 2: _shot_dead()
+
+
+func _shot_dead() -> void:
+	killed = true; shot_dead = true
+	create_tween().tween_property(body_mesh, "rotation:x", -PI / 2, 0.3)
+	await get_tree().create_timer(1.4).timeout
+	_finish()
+
+
 func _hunt(dt: float) -> void:   # security comes for you: get to the lift first
 	var sec := _find("security")
-	if not hunting or done or sec.is_empty() or sec.busy or distract_t > 0.0 or in_back: return
+	if not hunting or done or sec.is_empty() or sec.busy or distract_t > 0.0 or in_back or armed: return
 	var gap: Vector3 = player.position - sec.body.position; gap.y = 0
 	if hunt_wait > 0.0:   # a hand to his earpiece, eyes on you: go, now
 		hunt_wait -= dt; sec.body.velocity = Vector3.ZERO
@@ -1326,7 +1391,7 @@ func _say_back() -> void:
 			ask_tries = 1; await _line(who, HUH.pick_random())
 			if asking == who and back: _turn_ui(); ask_busy = false
 			return
-		await _line(who, "x_cool"); _doubt(who, 1); _back_end(); return   # they give up, and wonder about you
+		await _line(who, "x_cool"); _slip(who); _back_end(); return   # they give up, and wonder about you
 	if q == "b_appt": await _appt(who); return
 	if q == "b_wine":   # 네, 여기 있습니다: you face her and take the glass
 		await _line(who, "r_wine")
@@ -1339,7 +1404,7 @@ func _say_back() -> void:
 		await _line(who, "go_bye"); _back_end(); _end_follow(who); return
 	if k in who.pic.asked:   # you asked that already
 		await _line(who, "x_cool")
-		_doubt(who, 1)   # and again, and again: they start to wonder what you're up to
+		_slip(who)   # and again, and again: they start to wonder what you're up to
 	else:
 		who.pic.asked.append(k); reactions.append("told_" + k)
 		await _line(who, "ans_" + k)
@@ -1621,9 +1686,21 @@ func _distract(dt: float) -> void:   # heads turn to the noise; security goes ov
 	if distract_t <= 0.0 and not hunting and not sec.shadow: _send_back(sec)   # back to his post
 
 
+func _blending() -> bool:   # a glass in your hand (even an empty one): you look like everyone else
+	return hand == "drink"
+
+
+func _slip(o: Dictionary) -> void:   # a small slip: it counts against you, but with a glass in your hand only half the time
+	if not _blending() or randf() < 0.5: _doubt(o, 1)
+
+
+func _tipsy() -> float:   # one glass and you're fine; it builds from there, at its worst from three glasses on
+	return clampf(float(drunk - SIPS) / float(2 * SIPS), 0.0, 1.0)
+
+
 func _aim() -> Dictionary:   # who you'd hit: security first if he's after you, else whoever's in front of you, else whoever's nearest
 	var sec := _find("security")
-	if sec and (hunting or sec.shadow) and player.position.distance_to(sec.body.position) < 14.0: return sec
+	if sec and (hunting or sec.shadow or escorting or armed) and player.position.distance_to(sec.body.position) < 14.0: return sec
 	var fwd := Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y))
 	var best := {}; var bd := INF
 	for p in people:
@@ -1638,7 +1715,7 @@ func _aim() -> Dictionary:   # who you'd hit: security first if he's after you, 
 
 
 func _shoot() -> void:   # pfft: they drop. Anyone who sees it panics, and security comes for you
-	if ammo <= 0 or done or escorting or not asking.is_empty() or back: return
+	if ammo <= 0 or done or killed or not asking.is_empty() or back: return
 	var p := _aim()
 	ammo -= 1
 	var to: Vector3 = (p.body.position if p else player.position + Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y)) * 5.0) - player.position
@@ -1649,7 +1726,11 @@ func _shoot() -> void:   # pfft: they drop. Anyone who sees it panics, and secur
 	get_tree().create_timer(0.08).timeout.connect(flash.queue_free)
 	var snd := AudioStreamPlayer3D.new(); snd.stream = _shot_sound(); snd.position = player.position + Vector3(0, 1.0, 0); add_child(snd); snd.play()
 	played.append("shot")
-	if p.is_empty(): _plg("You fire. Nobody there."); return
+	if p.is_empty():
+		_plg("You fire. Nobody there.")
+		var sc0 := _find("security")
+		if sc0 and not armed: _draw_gun(sc0)
+		return
 	_plg("You fire at %s. They drop." % _desc(p))
 	_drop(p)
 	_handler("h_shot")
@@ -1657,9 +1738,7 @@ func _shoot() -> void:   # pfft: they drop. Anyone who sees it panics, and secur
 	for o in people:   # everyone who saw: alarmed, and they look at you
 		if o.gone or o.body.position.distance_to(player.position) > 10.0: continue
 		_doubt(o, 3); o.glance = 5.0; o.look_t = 0.0
-	if sec and not hunting and not done:   # he heard it: he comes for you, no waiting
-		hunting = true; hunted = true; hunt_wait = 0.6; sec.shadow = false; sec.timer = INF; heat_stage = 3
-		slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
+	if sec and not armed and not done: _draw_gun(sec)   # he heard it: his gun comes out
 
 
 func _drop(p: Dictionary) -> void:   # down on the floor, out of the party
@@ -1669,7 +1748,7 @@ func _drop(p: Dictionary) -> void:   # down on the floor, out of the party
 	downed.append(p.id)
 	var b: CharacterBody3D = p.body
 	b.velocity = Vector3.ZERO; b.collision_layer = 0; p.audio.stop(); p.ko.text = ""
-	if p.role == "security": hunting = false; distract_t = 0.0
+	if p.role == "security": hunting = false; distract_t = 0.0; escorting = false; armed = false
 	create_tween().tween_property(b, "rotation:x", -PI / 2, 0.35)
 	var pos := b.position; create_tween().tween_property(b, "position:y", 0.3, 0.35).from(pos.y)
 
@@ -1724,11 +1803,11 @@ func _hand_tap() -> void:
 
 
 func _act(a: String) -> void:
-	if done or killed or escorting or not asking.is_empty() or back: return
+	if done or killed or not asking.is_empty() or back: return
 	match a:
 		"sip":
 			if hand != "drink" or sips <= 0: return
-			sips -= 1; played.append("sip"); _plg("You sip your wine (%d left)." % sips)
+			sips -= 1; drunk += 1; played.append("sip"); _plg("You sip your wine (%d left)." % sips)
 			var tw := create_tween(); tw.tween_property(glass_prop, "position:y", 1.45, 0.2); tw.tween_property(glass_prop, "position:y", 1.0, 0.25)
 		"put": _put_down()
 		"drop": await _drop_glass()
@@ -1872,7 +1951,7 @@ func _bag_back() -> void:
 
 func _items_ui() -> void:   # bottom right, above Talk: the hand button and the bag
 	_props()
-	var show := not done and not killed and not escorting and not phone_open and asking.is_empty() and not back and not ask_ui.visible
+	var show := not done and not killed and not phone_open and asking.is_empty() and not back and not ask_ui.visible
 	hand_btn.visible = show and not bag_open
 	bag_btn.visible = show and not bag_open
 	bag_box.visible = show and bag_open
@@ -1955,11 +2034,15 @@ func _screen() -> void:
 	leave_btn.position = Vector2(-85, -110); root.add_child(leave_btn); leave_btn.pressed.connect(_finish); leave_btn.visible = false
 	_ask_screen(root)
 	fade = ColorRect.new(); fade.color = Color(0, 0, 0, 0); fade.set_anchors_preset(Control.PRESET_FULL_RECT); fade.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(fade)
-	end_ui = PanelContainer.new(); end_ui.add_theme_stylebox_override("panel", _style()); end_ui.set_anchors_preset(Control.PRESET_CENTER)
-	end_ui.custom_minimum_size = Vector2(640, 0); end_ui.position = Vector2(-320, -320); root.add_child(end_ui)
-	var eb := VBoxContainer.new(); eb.add_theme_constant_override("separation", 18); end_ui.add_child(eb)
-	end_text = _label(24); end_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; end_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; eb.add_child(end_text)
-	var again := _btn("Again", 30, Vector2(0, 80)); eb.add_child(again); again.pressed.connect(func(): get_tree().reload_current_scene())
+	hurt = ColorRect.new(); hurt.color = Color(0.8, 0.0, 0.0, 0.0); hurt.set_anchors_preset(Control.PRESET_FULL_RECT); hurt.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(hurt)
+	end_ui = PanelContainer.new(); end_ui.add_theme_stylebox_override("panel", _style()); root.add_child(end_ui)   # the debrief: the text scrolls, the buttons always fit
+	end_ui.anchor_left = 0.5; end_ui.anchor_right = 0.5; end_ui.anchor_top = 0.0; end_ui.anchor_bottom = 1.0
+	end_ui.offset_left = -340; end_ui.offset_right = 340; end_ui.offset_top = 24; end_ui.offset_bottom = -24
+	var eb := VBoxContainer.new(); eb.add_theme_constant_override("separation", 14); end_ui.add_child(eb)
+	var es := ScrollContainer.new(); es.size_flags_vertical = Control.SIZE_EXPAND_FILL; es.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; eb.add_child(es)
+	end_text = _label(24); end_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; end_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	end_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL; es.add_child(end_text)
+	var again := _btn("Again", 30, Vector2(0, 80)); eb.add_child(again); again.pressed.connect(func(): get_tree().reload_current_scene()); again_btn = again
 	var car := _btn("Back to the car", 24, Vector2(0, 64)); eb.add_child(car); car.pressed.connect(func(): get_tree().change_scene_to_file("res://cover.tscn"))
 	end_ui.visible = false
 
@@ -2034,7 +2117,8 @@ func _finish(walked_out := false) -> void:   # into the lift: the debrief
 	_handler("h_out")
 	await get_tree().create_timer(1.2).timeout
 	var t := "Debrief\n\n"
-	if killed: t += "KILLED.\nThe broker didn't believe you were the buyer. Your body's in the corner of his back room.\nMission failed.\n\n"
+	if shot_dead: t += "SHOT BY SECURITY.\nMission failed.\n\n"
+	elif killed: t += "KILLED.\nThe broker didn't believe you were the buyer. Your body's in the corner of his back room.\nMission failed.\n\n"
 	elif has_drive: t += "MISSION DONE: you got the drive out.\n\n"
 	else: t += "Mission failed: no drive.\n\n"
 	if walked_out: t += "Escorted out.\n\n"

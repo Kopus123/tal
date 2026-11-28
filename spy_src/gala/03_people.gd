@@ -23,6 +23,9 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "following": false, "follow_t": 0.0, "shadow": false, "away": false, "inside": false, "usher": false, "said_in": false, "look_t": 0.0, "look_pt": Vector3.ZERO, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
 		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": [], "concern": {}}}   # their picture of you
 	people.append(p)
+	if id == "security":   # a gun on his hip, always
+		holster = MeshInstance3D.new(); var hb := BoxMesh.new(); hb.size = Vector3(0.08, 0.24, 0.16); holster.mesh = hb
+		holster.material_override = _mat(Color(0.05, 0.05, 0.05)); look.add_child(holster); _holster_hip()
 	if late:
 		b.position = ELEVATOR; _go(p, "elevator")
 		p.timer = randf_range(3.0, 5.0)
@@ -139,7 +142,7 @@ func _people(dt: float) -> void:
 	for p in people.duplicate():
 		if p.gone: continue
 		p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-		if p.coming or p.errand or p.tell or p.following or p.shadow or p.away or p.usher or (hunting and p.role == "security") or (distract_t > 0.0 and p.role == "security"): continue   # on their way to you, or to security, or with you
+		if p.coming or p.errand or p.tell or p.following or p.shadow or p.away or p.usher or ((hunting or armed) and p.role == "security") or (distract_t > 0.0 and p.role == "security"): continue   # on their way to you, or to security, or with you
 		if not p.busy: _walk(p, dt)
 		if p.leaving and p.spot == "elevator" and _at(p):   # into the lift and gone
 			p.gone = true; slots_taken.erase("%s:%d" % [p.spot, p.slot]); p.body.queue_free(); continue

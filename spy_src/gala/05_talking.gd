@@ -304,7 +304,7 @@ func _say_back() -> void:
 			ask_tries = 1; await _line(who, HUH.pick_random())
 			if asking == who and back: _turn_ui(); ask_busy = false
 			return
-		await _line(who, "x_cool"); _doubt(who, 1); _back_end(); return   # they give up, and wonder about you
+		await _line(who, "x_cool"); _slip(who); _back_end(); return   # they give up, and wonder about you
 	if q == "b_appt": await _appt(who); return
 	if q == "b_wine":   # 네, 여기 있습니다: you face her and take the glass
 		await _line(who, "r_wine")
@@ -317,7 +317,7 @@ func _say_back() -> void:
 		await _line(who, "go_bye"); _back_end(); _end_follow(who); return
 	if k in who.pic.asked:   # you asked that already
 		await _line(who, "x_cool")
-		_doubt(who, 1)   # and again, and again: they start to wonder what you're up to
+		_slip(who)   # and again, and again: they start to wonder what you're up to
 	else:
 		who.pic.asked.append(k); reactions.append("told_" + k)
 		await _line(who, "ans_" + k)

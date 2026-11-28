@@ -40,7 +40,7 @@ func _physics_process(dt: float) -> void:
 		for p in people:
 			if p.gone or p.busy: continue
 			p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not p.shadow and not p.away and not p.usher and not (hunting and p.role == "security") and not (distract_t > 0.0 and p.role == "security"): _walk(p, dt)
+			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not p.shadow and not p.away and not p.usher and not ((hunting or armed) and p.role == "security") and not (distract_t > 0.0 and p.role == "security"): _walk(p, dt)
 	_doubters(dt)
 	_gate_tick(dt)
 	_real_tick(dt)
@@ -48,6 +48,7 @@ func _physics_process(dt: float) -> void:
 	_distract(dt)
 	_heat(dt)
 	_hunt(dt)
+	_armed_tick(dt)
 	if escorting: _escort(dt); return
 	if done or killed: return
 	var dir := Vector2.ZERO
@@ -57,14 +58,23 @@ func _physics_process(dt: float) -> void:
 	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN): dir.y += 1
 	if joy_vec.length() > 0.12: dir = joy_vec
 	dir = dir.limit_length(1.0)
-	player.velocity = Vector3(dir.x, 0, dir.y) * SPEED
+	var tip := _tipsy()
+	if tip > 0.0:   # you stagger: your steps wander off where you meant, and you're slower
+		var veer := sin(clock * 1.3) * 0.8 * tip + sin(clock * 3.1) * 0.3 * tip
+		if dir.length() > 0.12: dir = dir.rotated(veer)
+		else: dir += Vector2(sin(clock * 0.9), cos(clock * 0.7)) * 0.12 * tip
+	body_mesh.rotation.z = sin(clock * 1.3) * 0.14 * tip   # and you lean with it
+	player.velocity = Vector3(dir.x, 0, dir.y) * SPEED * (1.0 - 0.4 * tip)
 	player.move_and_slide(); player.position.y = 0
 	if dir.length() > 0.12: body_mesh.rotation.y = atan2(-dir.x, -dir.y)
 
 
 func _process(dt: float) -> void:
 	var focus := player.position + (Vector3(3.4, 0, 0) if phone_open else Vector3.ZERO)   # the phone covers the right: keep you in view
+	var tip := _tipsy()
+	focus += Vector3(sin(clock * 0.5) * 0.7, 0, cos(clock * 0.37) * 0.4) * tip   # drunk: the view drifts…
 	cam.position = cam.position.lerp(focus + CAM_OFF, 1.0 - exp(-6.0 * dt)); cam.look_at(cam.position - CAM_OFF, Vector3.UP)
+	if tip > 0.0: cam.rotate_object_local(Vector3(0, 0, 1), sin(clock * 0.45) * 0.07 * tip)   # …and tilts, slowly (a sway, not a shake)
 	throw_btn.visible = false
 	shoot_btn.visible = false
 	_items_ui()

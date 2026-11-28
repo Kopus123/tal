@@ -74,9 +74,21 @@ func _distract(dt: float) -> void:   # heads turn to the noise; security goes ov
 	if distract_t <= 0.0 and not hunting and not sec.shadow: _send_back(sec)   # back to his post
 
 
+func _blending() -> bool:   # a glass in your hand (even an empty one): you look like everyone else
+	return hand == "drink"
+
+
+func _slip(o: Dictionary) -> void:   # a small slip: it counts against you, but with a glass in your hand only half the time
+	if not _blending() or randf() < 0.5: _doubt(o, 1)
+
+
+func _tipsy() -> float:   # one glass and you're fine; it builds from there, at its worst from three glasses on
+	return clampf(float(drunk - SIPS) / float(2 * SIPS), 0.0, 1.0)
+
+
 func _aim() -> Dictionary:   # who you'd hit: security first if he's after you, else whoever's in front of you, else whoever's nearest
 	var sec := _find("security")
-	if sec and (hunting or sec.shadow) and player.position.distance_to(sec.body.position) < 14.0: return sec
+	if sec and (hunting or sec.shadow or escorting or armed) and player.position.distance_to(sec.body.position) < 14.0: return sec
 	var fwd := Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y))
 	var best := {}; var bd := INF
 	for p in people:
@@ -91,7 +103,7 @@ func _aim() -> Dictionary:   # who you'd hit: security first if he's after you, 
 
 
 func _shoot() -> void:   # pfft: they drop. Anyone who sees it panics, and security comes for you
-	if ammo <= 0 or done or escorting or not asking.is_empty() or back: return
+	if ammo <= 0 or done or killed or not asking.is_empty() or back: return
 	var p := _aim()
 	ammo -= 1
 	var to: Vector3 = (p.body.position if p else player.position + Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y)) * 5.0) - player.position
@@ -102,7 +114,11 @@ func _shoot() -> void:   # pfft: they drop. Anyone who sees it panics, and secur
 	get_tree().create_timer(0.08).timeout.connect(flash.queue_free)
 	var snd := AudioStreamPlayer3D.new(); snd.stream = _shot_sound(); snd.position = player.position + Vector3(0, 1.0, 0); add_child(snd); snd.play()
 	played.append("shot")
-	if p.is_empty(): _plg("You fire. Nobody there."); return
+	if p.is_empty():
+		_plg("You fire. Nobody there.")
+		var sc0 := _find("security")
+		if sc0 and not armed: _draw_gun(sc0)
+		return
 	_plg("You fire at %s. They drop." % _desc(p))
 	_drop(p)
 	_handler("h_shot")
@@ -110,9 +126,7 @@ func _shoot() -> void:   # pfft: they drop. Anyone who sees it panics, and secur
 	for o in people:   # everyone who saw: alarmed, and they look at you
 		if o.gone or o.body.position.distance_to(player.position) > 10.0: continue
 		_doubt(o, 3); o.glance = 5.0; o.look_t = 0.0
-	if sec and not hunting and not done:   # he heard it: he comes for you, no waiting
-		hunting = true; hunted = true; hunt_wait = 0.6; sec.shadow = false; sec.timer = INF; heat_stage = 3
-		slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
+	if sec and not armed and not done: _draw_gun(sec)   # he heard it: his gun comes out
 
 
 func _drop(p: Dictionary) -> void:   # down on the floor, out of the party
@@ -122,7 +136,7 @@ func _drop(p: Dictionary) -> void:   # down on the floor, out of the party
 	downed.append(p.id)
 	var b: CharacterBody3D = p.body
 	b.velocity = Vector3.ZERO; b.collision_layer = 0; p.audio.stop(); p.ko.text = ""
-	if p.role == "security": hunting = false; distract_t = 0.0
+	if p.role == "security": hunting = false; distract_t = 0.0; escorting = false; armed = false
 	create_tween().tween_property(b, "rotation:x", -PI / 2, 0.35)
 	var pos := b.position; create_tween().tween_property(b, "position:y", 0.3, 0.35).from(pos.y)
 
@@ -177,11 +191,11 @@ func _hand_tap() -> void:
 
 
 func _act(a: String) -> void:
-	if done or killed or escorting or not asking.is_empty() or back: return
+	if done or killed or not asking.is_empty() or back: return
 	match a:
 		"sip":
 			if hand != "drink" or sips <= 0: return
-			sips -= 1; played.append("sip"); _plg("You sip your wine (%d left)." % sips)
+			sips -= 1; drunk += 1; played.append("sip"); _plg("You sip your wine (%d left)." % sips)
 			var tw := create_tween(); tw.tween_property(glass_prop, "position:y", 1.45, 0.2); tw.tween_property(glass_prop, "position:y", 1.0, 0.25)
 		"put": _put_down()
 		"drop": await _drop_glass()
@@ -325,7 +339,7 @@ func _bag_back() -> void:
 
 func _items_ui() -> void:   # bottom right, above Talk: the hand button and the bag
 	_props()
-	var show := not done and not killed and not escorting and not phone_open and asking.is_empty() and not back and not ask_ui.visible
+	var show := not done and not killed and not phone_open and asking.is_empty() and not back and not ask_ui.visible
 	hand_btn.visible = show and not bag_open
 	bag_btn.visible = show and not bag_open
 	bag_box.visible = show and bag_open

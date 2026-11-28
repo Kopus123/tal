@@ -4,7 +4,7 @@ extends "res://gala.gd"
 ## Every section but core starts from a clean party (_fresh), so one can't break the next.
 
 
-const SECTIONS := ["core", "chat", "heat", "gun", "english", "items", "mission", "exit"]
+const SECTIONS := ["core", "chat", "heat", "gun", "english", "items", "mission", "danger", "exit"]
 
 
 func _run_test() -> void:
@@ -29,6 +29,7 @@ func _run_test() -> void:
 			"english": await _t_english()
 			"items": await _t_items()
 			"mission": await _t_mission()
+			"danger": await _t_danger()
 			"exit": await _t_exit()
 	print("DONE %d failed" % _fails)
 	get_tree().quit(1 if _fails else 0)
@@ -428,7 +429,7 @@ func _t_chat() -> void:
 	_talk("t", [[tw, "sq_cold"], [mate, "sa_cold"]]); await _secs(0.1)
 	_check(tw.busy and talk_btn.visible, "they're mid-chat, and you still get a Talk button")
 	talk_btn.pressed.emit(); await _secs(0.1)
-	_check(not talk_wait.is_empty() and not back, "tap it: they finish what they're saying first")
+	_check(not talk_wait.is_empty() or back, "tap it: they finish what they're saying first (or turn to you if they just did)")
 	for i in 120:
 		await _secs(0.1)
 		if back: break
@@ -711,6 +712,69 @@ func _t_exit() -> void:
 	print(end_text.text)
 
 
+func _t_danger() -> void:
+	# blend in: a glass in your hand (even empty) and a slip only counts half the time
+	no_ask = true
+	var bg: Dictionary = _guest_group()[0]
+	var n_dry := 0; var n_wet := 0
+	for i in 80: bg.pic.doubt = 0; _slip(bg); n_dry += bg.pic.doubt
+	inv.append("drink"); hand = "drink"; sips = 0; _props()
+	for i in 80: bg.pic.doubt = 0; _slip(bg); n_wet += bg.pic.doubt
+	_check(n_dry == 80 and n_wet > 20 and n_wet < 60, "a slip always counts; with a glass in hand (even empty) about half the time (%d of 80)" % n_wet)
+	_reset_pics()
+	# tipsy: one glass and you're fine; after that slower, staggering, the view sways
+	drunk = SIPS
+	_check(_tipsy() == 0.0, "one glass: you're fine")
+	await _put(Vector3(-6.0, 0, 0.0)); var p0 := player.position
+	joy_vec = Vector2(1, 0); await _secs(1.0); joy_vec = Vector2.ZERO
+	var sober := player.position.distance_to(p0)
+	drunk = SIPS * 3
+	await _put(Vector3(-6.0, 0, 0.0)); p0 = player.position
+	joy_vec = Vector2(1, 0); await _secs(1.0); joy_vec = Vector2.ZERO
+	var tipsy_d := player.position.distance_to(p0)
+	_check(_tipsy() == 1.0 and tipsy_d < sober * 0.8, "three glasses: you walk slower (%.1f m against %.1f sober)" % [tipsy_d, sober])
+	await _secs(0.3)
+	_check(absf(cam.rotation.z) > 0.001 and absf(body_mesh.rotation.z) > 0.001, "and you lean, and the view sways (cam roll %.3f)" % cam.rotation.z)
+	await _shot("g14_drunk")
+	drunk = 0; await _secs(0.2)
+	# security's gun: on his hip; fire a shot and it comes out
+	var sg := _find("security")
+	_check(holster != null and holster.position.y < 0.95, "security has a gun on his hip")
+	_bag_pick("gun"); var vg: Dictionary = _guest_group()[0]; await _beside(vg)
+	var tv: Vector3 = vg.body.position - player.position; body_mesh.rotation.y = atan2(-tv.x, -tv.z)
+	force_hit = 0
+	sg.body.position = Vector3(8.5, 0, -5.5); hunting = false   # (he's across the room)
+	await _put(Vector3(-6.0, 0, 6.5)); body_mesh.rotation.y = PI   # (by the lift, facing the wall: a shot at nobody in particular)
+	ammo = MAG; downed.clear()
+	_shoot()
+	for i in 40:
+		await _secs(0.1)
+		if armed: break
+	_check(armed and played.has("security_x_freeze") and holster.position.y > 0.95, "fire a shot: 멈춰!, and his gun comes out (target %s)" % [downed])
+	for i in 60:
+		await _secs(0.1)
+		if played.has("miss"): break
+	_check(played.has("miss") and hits == 0 and not killed, "he shoots at you (that one missed)")
+	force_hit = 1
+	for i in 80:
+		await _secs(0.1)
+		if done and end_ui.visible: break
+	_check(shot_dead and hits == 2 and end_text.text.contains("SHOT BY SECURITY"), "two hits: shot by security")
+	_check(again_btn.get_global_rect().end.y <= get_viewport().get_visible_rect().size.y and again_btn.is_visible_in_tree(), "the debrief's Again button fits on screen (bottom %.0f of %.0f)" % [again_btn.get_global_rect().end.y, get_viewport().get_visible_rect().size.y])
+	await _shot("g15_shot_debrief")
+	for id in downed:
+		var q := _who_is(id); q.gone = false; q.busy = false; q.body.rotation.x = 0.0; q.body.position.y = 0.0; q.body.collision_layer = 8; _send_back(q)
+	await _fresh()
+	# walking you out: you can still shoot him
+	var se := _find("security"); se.body.position = player.position + Vector3(1.0, 0, 0)
+	_caught(se); await _secs(1.5)
+	_check(escorting, "(he's walking you out)")
+	_bag_pick("gun"); _act("shoot"); await _secs(0.4)
+	_check(se.gone and not escorting and not done, "shoot him while he walks you out: he drops, and you're free")
+	se.gone = false; se.busy = false; se.body.rotation.x = 0.0; se.body.position.y = 0.0; se.body.collision_layer = 8; _send_back(se); downed.clear()
+	no_ask = false
+
+
 func _fresh() -> void:   # a clean party: nobody in the middle of anything, everyone in their place, you in the middle of the room
 	hold = true; no_ask = false
 	await _wait_free()
@@ -721,6 +785,7 @@ func _fresh() -> void:   # a clean party: nobody in the middle of anything, ever
 	if not real.is_empty() and not real.gone: real.gone = true; real.body.queue_free()
 	real = {}; real_stage = 0
 	_offer_end(); _ring_close(); bag_open = false; inv = ["gun"]; hand = ""; sips = 0; ammo = MAG; downed.clear(); _props()
+	armed = false; hits = 0; shot_dead = false; drunk = 0; force_hit = -1; _holster_hip(); hurt.color.a = 0.0
 	for g in placed: g.node.queue_free()
 	placed.clear()
 	if phone_open: _toggle_phone()

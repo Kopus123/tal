@@ -62,7 +62,7 @@ func _room_doubt() -> int:   # everyone's doubt about you, added up
 
 
 func _heat(dt: float) -> void:   # the more of the room doubts you, the closer security gets
-	if done or escorting or no_heat: return
+	if done or escorting or no_heat or armed: return
 	var sec := _find("security")
 	if sec.is_empty(): return
 	var h := _room_doubt()
@@ -97,9 +97,52 @@ func _heat(dt: float) -> void:   # the more of the room doubts you, the closer s
 		if to_me.length() > 0.1: sec.body.rotation.y = lerp_angle(sec.body.rotation.y, atan2(-to_me.x, -to_me.z), 1.0 - exp(-5.0 * dt))
 
 
+func _holster_hip() -> void:
+	if holster: holster.position = Vector3(0.33, 0.85, 0.05); holster.rotation = Vector3.ZERO
+
+
+func _draw_gun(sec: Dictionary) -> void:   # he heard the shot: 멈춰! and the gun comes out
+	armed = true; hunting = false; distract_t = 0.0; sec.shadow = false; sec.timer = INF
+	if escorting: escorting = false
+	if sec.slot >= 0: slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
+	if holster: holster.position = Vector3(0.3, 1.05, -0.4); holster.rotation = Vector3(PI / 2, 0, 0)
+	sec_fire_t = 1.2
+	_plg("%s draws a gun: 멈춰!" % _desc(sec))
+	sec.busy = true; await _line(sec, "x_freeze"); sec.busy = false
+
+
+func _armed_tick(dt: float) -> void:   # he shoots at you, about every second and a half; half of them hit; two and you're dead
+	if not armed or done or killed: return
+	var sec := _find("security")
+	if sec.is_empty(): armed = false; return
+	if in_back:   # he won't follow you in: he waits outside the door
+		var w: Vector3 = DOOR_IN + Vector3(1.6, 0, 0); var g: Vector3 = w - sec.body.position; g.y = 0
+		if g.length() > 0.5: sec.goto = w; sec.speed = HUNT; sec.coming = true; _walk(sec, dt); sec.coming = false
+		sec_fire_t = maxf(sec_fire_t, 1.0); return
+	var to: Vector3 = player.position - sec.body.position; to.y = 0
+	sec.body.velocity = Vector3.ZERO
+	if to.length() > 0.1: sec.body.rotation.y = atan2(-to.x, -to.z)
+	sec_fire_t -= dt
+	if sec_fire_t > 0.0 or sec.busy: return
+	sec_fire_t = 1.5
+	var snd := AudioStreamPlayer3D.new(); snd.stream = _shot_sound(); snd.position = sec.body.position + Vector3(0, 1, 0); add_child(snd); snd.play()
+	var hit := (randf() < 0.5) if force_hit < 0 else force_hit == 1
+	if not hit: played.append("miss"); _plg("He fires, and misses."); return
+	hits += 1; played.append("hit"); _plg("He fires. You're hit (%d)." % hits)
+	hurt.color.a = 0.55; create_tween().tween_property(hurt, "color:a", 0.0, 0.6)
+	if hits >= 2: _shot_dead()
+
+
+func _shot_dead() -> void:
+	killed = true; shot_dead = true
+	create_tween().tween_property(body_mesh, "rotation:x", -PI / 2, 0.3)
+	await get_tree().create_timer(1.4).timeout
+	_finish()
+
+
 func _hunt(dt: float) -> void:   # security comes for you: get to the lift first
 	var sec := _find("security")
-	if not hunting or done or sec.is_empty() or sec.busy or distract_t > 0.0 or in_back: return
+	if not hunting or done or sec.is_empty() or sec.busy or distract_t > 0.0 or in_back or armed: return
 	var gap: Vector3 = player.position - sec.body.position; gap.y = 0
 	if hunt_wait > 0.0:   # a hand to his earpiece, eyes on you: go, now
 		hunt_wait -= dt; sec.body.velocity = Vector3.ZERO

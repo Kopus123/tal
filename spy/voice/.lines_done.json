@@ -78,5 +78,6 @@
  "gala/host_appt_meh": "host|글쎄요...",
  "gala/host_c_name": "host|에릭 신 씨라고요?",
  "gala/host_g_name": "host|저 분, 에릭 신이래요.",
- "gala/host_real_huh": "host|네? 에릭 신 씨는 벌써 오셨는데요..."
+ "gala/host_real_huh": "host|네? 에릭 신 씨는 벌써 오셨는데요...",
+ "gala/security_x_freeze": "security|멈춰!"
 }

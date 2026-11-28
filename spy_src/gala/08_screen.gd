@@ -69,11 +69,15 @@ func _screen() -> void:
 	leave_btn.position = Vector2(-85, -110); root.add_child(leave_btn); leave_btn.pressed.connect(_finish); leave_btn.visible = false
 	_ask_screen(root)
 	fade = ColorRect.new(); fade.color = Color(0, 0, 0, 0); fade.set_anchors_preset(Control.PRESET_FULL_RECT); fade.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(fade)
-	end_ui = PanelContainer.new(); end_ui.add_theme_stylebox_override("panel", _style()); end_ui.set_anchors_preset(Control.PRESET_CENTER)
-	end_ui.custom_minimum_size = Vector2(640, 0); end_ui.position = Vector2(-320, -320); root.add_child(end_ui)
-	var eb := VBoxContainer.new(); eb.add_theme_constant_override("separation", 18); end_ui.add_child(eb)
-	end_text = _label(24); end_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; end_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; eb.add_child(end_text)
-	var again := _btn("Again", 30, Vector2(0, 80)); eb.add_child(again); again.pressed.connect(func(): get_tree().reload_current_scene())
+	hurt = ColorRect.new(); hurt.color = Color(0.8, 0.0, 0.0, 0.0); hurt.set_anchors_preset(Control.PRESET_FULL_RECT); hurt.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(hurt)
+	end_ui = PanelContainer.new(); end_ui.add_theme_stylebox_override("panel", _style()); root.add_child(end_ui)   # the debrief: the text scrolls, the buttons always fit
+	end_ui.anchor_left = 0.5; end_ui.anchor_right = 0.5; end_ui.anchor_top = 0.0; end_ui.anchor_bottom = 1.0
+	end_ui.offset_left = -340; end_ui.offset_right = 340; end_ui.offset_top = 24; end_ui.offset_bottom = -24
+	var eb := VBoxContainer.new(); eb.add_theme_constant_override("separation", 14); end_ui.add_child(eb)
+	var es := ScrollContainer.new(); es.size_flags_vertical = Control.SIZE_EXPAND_FILL; es.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; eb.add_child(es)
+	end_text = _label(24); end_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; end_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	end_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL; es.add_child(end_text)
+	var again := _btn("Again", 30, Vector2(0, 80)); eb.add_child(again); again.pressed.connect(func(): get_tree().reload_current_scene()); again_btn = again
 	var car := _btn("Back to the car", 24, Vector2(0, 64)); eb.add_child(car); car.pressed.connect(func(): get_tree().change_scene_to_file("res://cover.tscn"))
 	end_ui.visible = false
 
@@ -148,7 +152,8 @@ func _finish(walked_out := false) -> void:   # into the lift: the debrief
 	_handler("h_out")
 	await get_tree().create_timer(1.2).timeout
 	var t := "Debrief\n\n"
-	if killed: t += "KILLED.\nThe broker didn't believe you were the buyer. Your body's in the corner of his back room.\nMission failed.\n\n"
+	if shot_dead: t += "SHOT BY SECURITY.\nMission failed.\n\n"
+	elif killed: t += "KILLED.\nThe broker didn't believe you were the buyer. Your body's in the corner of his back room.\nMission failed.\n\n"
 	elif has_drive: t += "MISSION DONE: you got the drive out.\n\n"
 	else: t += "Mission failed: no drive.\n\n"
 	if walked_out: t += "Escorted out.\n\n"

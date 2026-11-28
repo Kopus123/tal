@@ -148,6 +148,13 @@ var hunted := false
 var heat_stage := 0               # 0 calm · 1 people talk · 2 security shadows you · 3 he comes for you
 var no_heat := false              # (tester) doubt in the room doesn't bring security
 var talk_wait := {}               # you tapped Talk while they were mid-chat: they turn to you when it's done
+var hunt_wait := 0.0              # he checks in on his earpiece before he comes: your head start
+var glass := true                 # a wine glass in your hand: throw it and everyone looks where it smashes
+var glass_prop: MeshInstance3D
+var throw_btn: Button
+var noise_at := Vector3.ZERO      # where it smashed
+var distract_t := 0.0             # security's gone to look at the mess this long
+var distract_go := false          # (he's still walking over)
 var escorting := false           # caught: he walks you out                # (tester) everyone stays put
 # screen
 var goal: Label
@@ -263,6 +270,8 @@ func _room() -> void:
 	phone_prop = MeshInstance3D.new(); var pb := BoxMesh.new(); pb.size = Vector3(0.14, 0.03, 0.24); phone_prop.mesh = pb
 	var pmat := _mat(Color(0.4, 0.8, 1.0)); pmat.emission_enabled = true; pmat.emission = Color(0.3, 0.6, 0.9); phone_prop.material_override = pmat
 	phone_prop.position = Vector3(0, 1.05, -0.4); phone_prop.visible = false; body_mesh.add_child(phone_prop)
+	glass_prop = MeshInstance3D.new(); glass_prop.mesh = _glass_mesh(); glass_prop.material_override = _glass_mat()
+	glass_prop.position = Vector3(0.34, 1.0, -0.15); body_mesh.add_child(glass_prop)
 	var ear := AudioListener3D.new(); ear.position.y = 1.5; player.add_child(ear); ear.make_current()   # you hear from where you stand
 	player.position = START
 	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.42; tm.outer_radius = 0.55; ring.mesh = tm
@@ -308,7 +317,7 @@ func _spawn(id: String, c: Color, late: bool) -> Dictionary:
 	var tag := _sign("", 30, Vector3(0, -0.15, 0), b); tag.modulate = Color(1, 0.85, 0.3); tag.visible = false
 	var role := id if id in ROLES else "guest"
 	var p := {"id": id, "role": role, "body": b, "look": look, "audio": au, "ko": ko, "tag": tag, "spot": "", "slot": -1,
-		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "following": false, "follow_t": 0.0, "shadow": false, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
+		"timer": randf_range(2.0, 12.0), "veer": 0.0, "veer_t": 0.0, "coming": false, "came": false, "errand": false, "goto": Vector3.ZERO, "come_t": 0.0, "calm_t": 0.0, "tell": false, "chk_t": 0.0, "tell_t": 0.0, "speed": 1.4, "following": false, "follow_t": 0.0, "shadow": false, "look_t": 0.0, "look_pt": Vector3.ZERO, "chk_d": INF, "stuck": 0, "busy": false, "leaving": false, "gone": false, "glance": 0.0,
 		"pic": {"met": false, "told": [], "second": [], "ok": false, "wary": false, "doubt": 0, "checked": false, "told_sec": false, "vouched": false, "asked": [], "concern": {}}}   # their picture of you
 	people.append(p)
 	if late:
@@ -394,7 +403,8 @@ func _walk(p: Dictionary, dt: float) -> void:   # straight there, or veer round 
 		if p.id == "bartender": c = Vector3(7.1, 0, -1.0)
 		var d := c - b.position
 		var mine := player.position - b.position; mine.y = 0
-		if p.glance > 0.0: d = mine                                                   # a look at you
+		if p.look_t > 0.0: d = p.look_pt - b.position; d.y = 0                       # what was that?
+		elif p.glance > 0.0: d = mine                                                   # a look at you
 		elif p.glance < 0.0 or (p.pic.doubt >= 2 and mine.length() < 3.5): d = -mine   # their back to you
 		if d.length() > 0.1: b.rotation.y = lerp_angle(b.rotation.y, atan2(-d.x, -d.z), 1.0 - exp(-5.0 * dt))
 		return
@@ -426,7 +436,7 @@ func _people(dt: float) -> void:
 	for p in people.duplicate():
 		if p.gone: continue
 		p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-		if p.coming or p.errand or p.tell or p.following or p.shadow or (hunting and p.role == "security"): continue   # on their way to you, or to security, or with you
+		if p.coming or p.errand or p.tell or p.following or p.shadow or (hunting and p.role == "security") or (distract_t > 0.0 and p.role == "security"): continue   # on their way to you, or to security, or with you
 		if not p.busy: _walk(p, dt)
 		if p.leaving and p.spot == "elevator" and _at(p):   # into the lift and gone
 			p.gone = true; slots_taken.erase("%s:%d" % [p.spot, p.slot]); p.body.queue_free(); continue
@@ -584,6 +594,80 @@ func _doubters(dt: float) -> void:   # doubt shows in what people do
 				_talk("alarm", [[p, "al_sec"], [sec, "r_yes"]])
 
 
+func _glass_mesh() -> CylinderMesh:
+	var cm := CylinderMesh.new(); cm.top_radius = 0.07; cm.bottom_radius = 0.04; cm.height = 0.2; return cm
+
+
+func _glass_mat() -> StandardMaterial3D:
+	var m := _mat(Color(0.75, 0.15, 0.25)); m.emission_enabled = true; m.emission = Color(0.5, 0.05, 0.12); m.emission_energy_multiplier = 0.5; return m
+
+
+func _throw(at := Vector3.INF) -> void:   # the glass flies ahead of you and smashes: everyone looks there, security goes to see
+	if not glass or done or escorting or not asking.is_empty() or back: return
+	glass = false; glass_prop.visible = false
+	if at == Vector3.INF:
+		var fwd := Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y))
+		at = player.position + fwd * 6.0
+	at.y = 0; at.x = clampf(at.x, -ROOM.x / 2 + 0.6, ROOM.x / 2 - 0.6); at.z = clampf(at.z, -ROOM.y / 2 + 0.6, ROOM.y / 2 - 0.6)
+	for o in people:   # anyone right beside you sees you do it
+		if o.gone or player.position.distance_to(o.body.position) > 2.5: continue
+		_doubt(o, 1); o.glance = 3.0
+	var g := MeshInstance3D.new(); g.mesh = _glass_mesh(); g.material_override = _glass_mat(); add_child(g)
+	var from: Vector3 = player.position + Vector3(0, 1.1, 0)
+	g.position = from
+	var tw := create_tween()
+	tw.tween_method(func(k: float): g.position = from.lerp(at + Vector3(0, 0.1, 0), k) + Vector3(0, 2.4 * k * (1.0 - k), 0); g.rotation.x = k * 9.0, 0.0, 1.0, 0.55)
+	await tw.finished
+	g.queue_free()
+	_smash(at)
+
+
+func _smash(at: Vector3) -> void:
+	played.append("smash"); noise_at = at
+	_plg("CRASH: your glass smashes on the floor %s. Everyone turns to look." % _place(at))
+	for i in 7:   # shards, and a splash of red
+		var sh := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(randf_range(0.04, 0.1), 0.02, randf_range(0.04, 0.1)); sh.mesh = bm
+		sh.material_override = _glass_mat(); sh.position = at + Vector3(randf_range(-0.45, 0.45), 0.02, randf_range(-0.45, 0.45)); sh.rotation.y = randf() * TAU; add_child(sh)
+	var sp := MeshInstance3D.new(); var cy := CylinderMesh.new(); cy.top_radius = 0.5; cy.bottom_radius = 0.5; cy.height = 0.01; sp.mesh = cy
+	sp.material_override = _mat(Color(0.45, 0.05, 0.1)); sp.position = at + Vector3(0, 0.01, 0); add_child(sp)
+	var snd := AudioStreamPlayer3D.new(); snd.stream = _smash_sound(); snd.position = at + Vector3(0, 0.5, 0); snd.unit_size = 8.0; add_child(snd); snd.play()
+	for p in people:
+		if p.gone or p.busy or p.body.position.distance_to(at) > 11.0: continue
+		p.look_t = randf_range(2.0, 3.5); p.look_pt = at; p.glance = 0.0
+	var sec := _find("security")
+	if sec and not sec.busy and not escorting and not done:
+		distract_go = true; distract_t = sec.body.position.distance_to(at) / HUNT + 4.5
+		if not hunting and not sec.shadow: slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
+
+
+func _smash_sound() -> AudioStreamWAV:   # breaking glass, made on the spot
+	var rate := 22050; var n := int(rate * 0.7)
+	var data := PackedByteArray(); data.resize(n * 2)
+	var tone := 0.0
+	for i in n:
+		var t := float(i) / rate
+		if randf() < 0.002: tone = randf_range(2500.0, 5200.0)   # bits of glass ringing
+		var v := (randf() * 2.0 - 1.0) * exp(-t * 10.0) * 0.75 + sin(t * TAU * tone) * exp(-t * 6.0) * 0.25
+		data.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 30000.0))
+	var w := AudioStreamWAV.new(); w.format = AudioStreamWAV.FORMAT_16_BITS; w.mix_rate = rate; w.data = data; return w
+
+
+func _distract(dt: float) -> void:   # heads turn to the noise; security goes over to look at the mess
+	for p in people:
+		if p.look_t > 0.0: p.look_t -= dt
+	if distract_t <= 0.0: return
+	var sec := _find("security")
+	if sec.is_empty() or sec.busy or done or escorting: distract_t = 0.0; return
+	distract_t -= dt
+	var gap: Vector3 = noise_at - sec.body.position; gap.y = 0
+	if distract_go and gap.length() > 1.0:
+		sec.goto = noise_at; sec.speed = HUNT; sec.coming = true; _walk(sec, dt); sec.coming = false
+	else:
+		distract_go = false; sec.body.velocity = Vector3.ZERO
+		if gap.length() > 0.1: sec.body.rotation.y = lerp_angle(sec.body.rotation.y, atan2(-gap.x, -gap.z), 1.0 - exp(-5.0 * dt))
+	if distract_t <= 0.0 and not hunting and not sec.shadow: _send_back(sec)   # back to his post
+
+
 func _room_doubt() -> int:   # everyone's doubt about you, added up
 	var n := 0
 	for p in people:
@@ -608,14 +692,14 @@ func _heat(dt: float) -> void:   # the more of the room doubts you, the closer s
 			_handler("h_heat2"); sec.shadow = true; sec.timer = INF; sec.glance = 4.0
 			slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
 		elif st == 3 and not hunting:
-			_handler("h_heat3"); sec.shadow = false
+			_handler("h_heat3"); sec.shadow = false; hunt_wait = 2.0
 			hunting = true; hunted = true; sec.timer = INF
 			slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
 	elif st < heat_stage and st <= 1 and not hunting:   # it's cooled off
 		if heat_stage >= 2 and sec.shadow:
 			sec.shadow = false; _handler("h_calm"); _send_back(sec)
 		heat_stage = st
-	if sec.shadow and not sec.busy:   # he keeps a few steps off, watching you
+	if sec.shadow and not sec.busy and distract_t <= 0.0:   # he keeps a few steps off, watching you
 		var off: Vector3 = sec.body.position - player.position; off.y = 0
 		if off.length() < 0.1: off = Vector3(0, 0, -1)
 		var spot: Vector3 = player.position + off.normalized() * 3.0
@@ -629,8 +713,12 @@ func _heat(dt: float) -> void:   # the more of the room doubts you, the closer s
 
 func _hunt(dt: float) -> void:   # security comes for you: get to the lift first
 	var sec := _find("security")
-	if not hunting or done or sec.is_empty() or sec.busy: return
+	if not hunting or done or sec.is_empty() or sec.busy or distract_t > 0.0: return
 	var gap: Vector3 = player.position - sec.body.position; gap.y = 0
+	if hunt_wait > 0.0:   # a hand to his earpiece, eyes on you: go, now
+		hunt_wait -= dt; sec.body.velocity = Vector3.ZERO
+		if gap.length() > 0.1: sec.body.rotation.y = lerp_angle(sec.body.rotation.y, atan2(-gap.x, -gap.z), 1.0 - exp(-5.0 * dt))
+		return
 	if gap.length() > 1.1:
 		sec.goto = player.position; sec.speed = HUNT; sec.coming = true; _walk(sec, dt); sec.coming = false
 	else: _caught(sec)
@@ -850,8 +938,9 @@ func _physics_process(dt: float) -> void:
 		for p in people:
 			if p.gone or p.busy: continue
 			p.glance = maxf(0.0, p.glance - dt) if p.glance > 0.0 else minf(0.0, p.glance + dt)
-			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not p.shadow and not (hunting and p.role == "security"): _walk(p, dt)
+			if _at(p) and not p.coming and not p.errand and not p.tell and not p.following and not p.shadow and not (hunting and p.role == "security") and not (distract_t > 0.0 and p.role == "security"): _walk(p, dt)
 	_doubters(dt)
+	_distract(dt)
 	_heat(dt)
 	_hunt(dt)
 	if escorting: _escort(dt); return
@@ -871,6 +960,11 @@ func _physics_process(dt: float) -> void:
 func _process(dt: float) -> void:
 	var focus := player.position + (Vector3(3.4, 0, 0) if phone_open else Vector3.ZERO)   # the phone covers the right: keep you in view
 	cam.position = cam.position.lerp(focus + CAM_OFF, 1.0 - exp(-6.0 * dt)); cam.look_at(cam.position - CAM_OFF, Vector3.UP)
+	if not glass and not done:   # stand at the bar and the bartender hands you another
+		var bt := _find("bartender")
+		if bt and not bt.busy and player.position.distance_to(bt.body.position) < 2.2:
+			glass = true; glass_prop.visible = true; _line(bt, "r_wine")
+	throw_btn.visible = glass and not done and not escorting and not phone_open and asking.is_empty() and not back
 	if not talk_wait.is_empty():   # you asked for them: they turn to you as soon as they're free
 		var tw: Dictionary = talk_wait
 		if tw.gone or done or not asking.is_empty() or back or player.position.distance_to(tw.body.position) > 3.2: talk_wait = {}; talk_btn.text = "Talk"
@@ -935,6 +1029,8 @@ func _screen() -> void:
 	sub.custom_minimum_size = Vector2(840, 0); sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; root.add_child(sub)
 	phone_btn = _btn("Phone", 26, Vector2(150, 70)); phone_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	phone_btn.position = Vector2(-174, 20); root.add_child(phone_btn); phone_btn.pressed.connect(_toggle_phone)
+	throw_btn = _btn("Throw glass", 24, Vector2(150, 70)); throw_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	throw_btn.position = Vector2(-174, 104); root.add_child(throw_btn); throw_btn.pressed.connect(func(): _throw())
 	talk_btn = _btn("Talk", 34, Vector2(200, 110)); root.add_child(talk_btn); talk_btn.pressed.connect(_talk_btn)   # walk up to someone and talk
 	talk_btn.anchor_left = 1; talk_btn.anchor_right = 1; talk_btn.anchor_top = 1; talk_btn.anchor_bottom = 1
 	talk_btn.offset_left = -240; talk_btn.offset_right = -30; talk_btn.offset_top = -170; talk_btn.offset_bottom = -40; talk_btn.visible = false
@@ -1539,8 +1635,10 @@ func _run_test() -> void:
 	var bk := _find("broker"); await _beside(bk)
 	_turn(bk); picked = [["b_job", 0], ["b_job", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(played.has("broker_ans_job"), "ask the broker what he does: 사업합니다, and no more")
-	_reset_pics(); g = grp[0]; await _beside(g)
-	_turn(g); picked = [["b_name", 1], ["b_name", 0]]; var before_huh := played.size(); await _say_it(); await _secs(0.2); await _wait_free()
+	_reset_pics(); g = grp[0]
+	while g.busy: await _secs(0.1)
+	await _beside(g)
+	_talk_to(g); picked = [["b_name", 1], ["b_name", 0]]; var before_huh := played.size(); await _say_it(); await _secs(0.2); await _wait_free()
 	_check(back and played.slice(before_huh).any(func(x): return HUH.any(func(h): return x == _vk(g) + "_" + h)), "a question that doesn't make sense: they try to work out what you meant")
 	picked = [["b_job", 1], ["b_from", 0]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(not back and g.pic.doubt == 1 and played.has(_vk(g) + "_x_cool"), "still no sense: 아... 네., and they wonder about you")
@@ -1833,8 +1931,39 @@ func _run_test() -> void:
 	for i in 20:
 		await _secs(0.05)
 		if heat_stage == 3: break
+	_check(hunt_wait > 0.0, "and he takes a moment on his earpiece first: your head start")
 	_check(heat_stage == 3 and hunting and played.has("h_heat3"), "the whole room doubts you: he comes for you, get to the lift (stage %d hunting=%s escorting=%s doubt %d)" % [heat_stage, hunting, escorting, _room_doubt()])
 	hunting = false; hunted = false; heat_stage = 0; no_heat = true; sh.shadow = false; _send_back(sh); _reset_pics()
+	# the glass: throw it, and security goes to look instead of coming for you
+	_reset_pics(); hold = true
+	for p in people: p.busy = false
+	_check(glass and glass_prop.visible and throw_btn.visible, "you have a glass in your hand, and a Throw glass button")
+	var sd := _find("security")
+	await _put(Vector3(-0.6, 0, 2.0)); sd.body.position = player.position + Vector3(4.5, 0, 0)
+	hunting = true; hunted = true; slots_taken.erase("%s:%d" % [sd.spot, sd.slot]); sd.slot = -1
+	body_mesh.rotation.y = PI / 2   # (facing away from him)
+	var n_before := player.position.distance_to(sd.body.position)
+	await _throw(); await _secs(0.1)
+	_check(not glass and not glass_prop.visible and played.has("smash") and noise_at.x < player.position.x - 3.0, "throw it: it smashes on the floor ahead of you")
+	await _secs(1.2)
+	_check(distract_t > 0.0 and sd.body.position.distance_to(noise_at) < 4.5 + 6.0 - 1.0 and player.position.distance_to(sd.body.position) > 1.1, "security stops coming for you and goes to look at it (%.1f m from the mess)" % sd.body.position.distance_to(noise_at))
+	_check(people.filter(func(o): return o.look_t > 0.0).size() >= 1, "heads turn to the noise")
+	for i in 200:
+		await _secs(0.1)
+		if distract_t <= 0.0: break
+	var n_after := player.position.distance_to(sd.body.position)
+	await _secs(1.0)
+	_check((hunting or escorting) and player.position.distance_to(sd.body.position) < n_after, "a few seconds later he comes for you again: use them to get away (hunting=%s escorting=%s done=%s distract=%.1f %.1f→%.1f m)" % [hunting, escorting, done, distract_t, n_after, player.position.distance_to(sd.body.position)])
+	hunting = false; hunted = false; escorting = false; done = false; end_ui.visible = false; sd.busy = false; _send_back(sd)
+	var btd := _find("bartender"); await _beside(btd); await _secs(0.6)
+	_check(glass and glass_prop.visible and played.has("bartender_r_wine"), "go to the bar: 네, 여기 있습니다, and another glass")
+	var wg: Dictionary = _guest_group()[0]; await _beside(wg)
+	escorting = false; done = false; end_ui.visible = false
+	if not asking.is_empty(): _ask_end("walked")
+	_reset_pics(); glass = true
+	await _throw(); await _secs(0.2)
+	_check(wg.pic.doubt >= 1, "throw it right beside someone: they saw you do it (doubt=%d %.1f m, done=%s escorting=%s)" % [wg.pic.doubt, player.position.distance_to(wg.body.position), done, escorting])
+	_reset_pics(); glass = true; glass_prop.visible = true; distract_t = 0.0
 	# leave by the lift: the debrief
 	hold = true
 	for p in people: p.busy = false
@@ -2018,6 +2147,13 @@ func _do(c: String) -> void:
 			if leave_btn.visible: await _finish(); await _secs(1.5)
 			else: _plg("(no Leave button here: go to the lift first)")
 		"shot": await _shot("agent_" + (w[1] if w.size() > 1 else "x")); _plg("(screenshot saved: build/spy/agent_%s.png)" % (w[1] if w.size() > 1 else "x"))
+		"throw":   # throw toward someone (by letter), or straight ahead
+			if not glass: _plg("(no glass in your hand: the bartender will give you one)"); return
+			var at := Vector3.INF
+			for p in people:
+				if not p.gone and w.size() > 1 and tags.get(p.id, "") == w[1]: at = p.body.position
+			_plg("You throw your glass" + (" toward " + w[1] if at != Vector3.INF else " ahead of you"))
+			await _throw(at); await _secs(0.5)
 		"quit": pass
 		"heat": _plg("(debug) room doubt %d, heat stage %d, hunting=%s, security shadow=%s | " % [_room_doubt(), heat_stage, hunting, _find("security").get("shadow", false)] + ", ".join(people.filter(func(p): return p.id in ASKERS and not p.gone).map(func(p): return "%s=%d" % [tags.get(p.id, "?"), p.pic.doubt])))
 		_: _plg("(unknown command)")

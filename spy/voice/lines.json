@@ -1,0 +1,322 @@
+{
+ "cover/a_appt": [
+  "me",
+  "최 사장님하고 약속 있어요."
+ ],
+ "cover/a_brought": [
+  "me",
+  "가져왔어요."
+ ],
+ "cover/a_item": [
+  "me",
+  "USB요."
+ ],
+ "cover/a_name": [
+  "me",
+  "에릭 신입니다."
+ ],
+ "cover/a_price": [
+  "me",
+  "오천만 원이요."
+ ],
+ "cover/ask_b_appt": [
+  "me",
+  "최 사장님하고 약속 있어요."
+ ],
+ "cover/ask_b_wine": [
+  "me",
+  "와인 한 잔 주세요."
+ ],
+ "cover/h_appt": [
+  "handler",
+  "To get to him, tell his assistant, or the host, that you have an appointment with President Choi."
+ ],
+ "cover/h_brought": [
+  "handler",
+  "And yes, you brought the money."
+ ],
+ "cover/h_deal": [
+  "handler",
+  "Now the deal. Choi, the broker, is selling a USB drive. You're the buyer."
+ ],
+ "cover/h_done": [
+  "handler",
+  "We're here. Be Eric."
+ ],
+ "cover/h_intro": [
+  "handler",
+  "Tonight you're Eric Shin. Learn him on the way."
+ ],
+ "cover/h_item": [
+  "handler",
+  "If he asks what you're after: the USB."
+ ],
+ "cover/h_price": [
+  "handler",
+  "The price is fifty million won."
+ ],
+ "cover/h_style": [
+  "handler",
+  "Eric is confident. Short answers. Steer back to business."
+ ],
+ "cover/t_b_appt_0": [
+  "me",
+  "최 사장님하고"
+ ],
+ "cover/t_b_appt_1": [
+  "me",
+  "약속 있어요"
+ ],
+ "cover/t_b_wine_0": [
+  "me",
+  "와인 한 잔"
+ ],
+ "cover/t_b_wine_1": [
+  "me",
+  "주세요"
+ ],
+ "cover/t_brought_0": [
+  "me",
+  "가져왔어요"
+ ],
+ "cover/t_item_0": [
+  "me",
+  "USB"
+ ],
+ "cover/t_item_1": [
+  "me",
+  "요"
+ ],
+ "cover/t_name_0": [
+  "me",
+  "에릭 신"
+ ],
+ "cover/t_price_0": [
+  "me",
+  "오천만 원"
+ ],
+ "cover/t_price_1": [
+  "me",
+  "이요"
+ ],
+ "gala/assistant_appt_in": [
+  "assistant",
+  "들어가세요."
+ ],
+ "gala/assistant_appt_no": [
+  "assistant",
+  "죄송해요, 지금은 안 돼요."
+ ],
+ "gala/assistant_appt_wait": [
+  "assistant",
+  "잠깐만요."
+ ],
+ "gala/assistant_c_name": [
+  "assistant",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/assistant_g_name": [
+  "assistant",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/assistant_real_huh": [
+  "assistant",
+  "네? 에릭 신 씨는 벌써 오셨는데요..."
+ ],
+ "gala/bartender_x_again": [
+  "bartender",
+  "네? 다시 한 번요?"
+ ],
+ "gala/bartender_x_cool": [
+  "bartender",
+  "아... 네."
+ ],
+ "gala/bartender_x_huh1": [
+  "bartender",
+  "뭐라고요?"
+ ],
+ "gala/bartender_x_huh2": [
+  "bartender",
+  "죄송해요, 잘 못 들었어요."
+ ],
+ "gala/bartender_x_huh3": [
+  "bartender",
+  "무슨 말씀이세요?"
+ ],
+ "gala/broker_appt_asst": [
+  "broker",
+  "비서한테 얘기하세요."
+ ],
+ "gala/broker_c_name": [
+  "broker",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/broker_deal_bad": [
+  "broker",
+  "당신, 누구야?"
+ ],
+ "gala/broker_deal_hi": [
+  "broker",
+  "어서 오세요. 앉으세요."
+ ],
+ "gala/broker_deal_ok": [
+  "broker",
+  "좋습니다. 여기 있습니다."
+ ],
+ "gala/broker_g_name": [
+  "broker",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/broker_q_brought_0": [
+  "broker",
+  "가져오셨어요?"
+ ],
+ "gala/broker_q_item_0": [
+  "broker",
+  "뭐 찾으세요?"
+ ],
+ "gala/broker_q_price_0": [
+  "broker",
+  "얼마 생각하세요?"
+ ],
+ "gala/buyer_b_self": [
+  "buyer",
+  "안녕하세요. 에릭 신입니다. 최 사장님하고 약속 있어요."
+ ],
+ "gala/g1_appt_huh": [
+  "g1",
+  "네? 최 사장님이요?"
+ ],
+ "gala/g1_c_name": [
+  "g1",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/g1_g_name": [
+  "g1",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/g2_appt_huh": [
+  "g2",
+  "네? 최 사장님이요?"
+ ],
+ "gala/g2_c_name": [
+  "g2",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/g2_g_name": [
+  "g2",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/g3_appt_huh": [
+  "g3",
+  "네? 최 사장님이요?"
+ ],
+ "gala/g3_c_name": [
+  "g3",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/g3_g_name": [
+  "g3",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/g4_appt_huh": [
+  "g4",
+  "네? 최 사장님이요?"
+ ],
+ "gala/g4_c_name": [
+  "g4",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/g4_g_name": [
+  "g4",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/g5_appt_huh": [
+  "g5",
+  "네? 최 사장님이요?"
+ ],
+ "gala/g5_c_name": [
+  "g5",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/g5_g_name": [
+  "g5",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/g6_appt_huh": [
+  "g6",
+  "네? 최 사장님이요?"
+ ],
+ "gala/g6_c_name": [
+  "g6",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/g6_g_name": [
+  "g6",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/h_blown": [
+  "handler",
+  "He's talking to them. You're blown. Go, now!"
+ ],
+ "gala/h_calm": [
+  "handler",
+  "Okay. Security's backed off."
+ ],
+ "gala/h_got": [
+  "handler",
+  "That's the drive. Now get out of there."
+ ],
+ "gala/h_heat1": [
+  "handler",
+  "Careful. People are starting to talk about you."
+ ],
+ "gala/h_heat2": [
+  "handler",
+  "Security's watching you now. Keep it clean, or head for the lift."
+ ],
+ "gala/h_heat3": [
+  "handler",
+  "They're onto you. Get to the lift. Now."
+ ],
+ "gala/h_in": [
+  "handler",
+  "You're in. Choi has the drive. Get to him through his assistant, or the host. Then get out."
+ ],
+ "gala/h_real1": [
+  "handler",
+  "Bad news. The real Eric Shin just pulled up downstairs. You've got about a minute."
+ ],
+ "gala/h_real2": [
+  "handler",
+  "He's in the room. Finish it and get out."
+ ],
+ "gala/h_shot": [
+  "handler",
+  "What are you doing?! Get out of there. Now."
+ ],
+ "gala/host_appt_go": [
+  "host",
+  "아, 네! 같이 가요."
+ ],
+ "gala/host_appt_in": [
+  "host",
+  "들어가세요."
+ ],
+ "gala/host_appt_meh": [
+  "host",
+  "글쎄요..."
+ ],
+ "gala/host_c_name": [
+  "host",
+  "에릭 신 씨라고요?"
+ ],
+ "gala/host_g_name": [
+  "host",
+  "저 분, 에릭 신이래요."
+ ],
+ "gala/host_real_huh": [
+  "host",
+  "네? 에릭 신 씨는 벌써 오셨는데요..."
+ ]
+}

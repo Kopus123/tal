@@ -80,7 +80,7 @@ const HANDLER := {"h_in": "You're in. We know their titles, not their faces. Lis
 	"h_out": "Okay, we're out. Let's see what you got.",
 	"h_heat1": "Careful. People are starting to talk about you.", "h_heat2": "Security's watching you now. Keep it clean, or head for the lift.",
 	"h_heat3": "They're onto you. Get to the lift. Now.", "h_calm": "Okay. Security's backed off."}
-const HEAT := [3, 6, 9]          # how much doubt in the room (everyone's added up) before: talk, security watches you, security comes
+const HEAT := [2, 4, 6]          # how much doubt in the room (everyone's added up) before: talk, security watches you, security comes
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
 	"differ": ["네? 다르게 들었는데요.", "Sorry? That's not what I heard."], "fine": ["아, 그렇군요.", "Ah, I see."],
@@ -1341,7 +1341,7 @@ func _say_back() -> void:
 			ask_tries = 1; await _line(who, HUH.pick_random())
 			if asking == who and back: _turn_ui(); ask_busy = false
 			return
-		await _line(who, "x_cool"); _back_end(); return   # they give up, no harm done
+		await _line(who, "x_cool"); _doubt(who, 1); _back_end(); return   # they give up, and wonder about you
 	var k := q.trim_prefix("b_")
 	if k == "go": await _go_ask(who); _back_end(); return
 	if k == "thanks":   # off you go, and thanks
@@ -1531,8 +1531,10 @@ func _run_test() -> void:
 	_check(played.has(_vk(g) + "_ans_name") and "name" in g.pic.asked and not back and asking.is_empty(), "성함이 어떻게 되세요? and they tell you: " + ANS[_vk(g)].name)
 	_turn(g); picked = [["b_name", 0], ["b_name", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(g.pic.doubt == 1 and not back, "ask the same person the same thing twice: now they're curious about you")
-	_turn(g); picked = [["b_name", 0], ["b_name", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
+	while g.busy: await _secs(0.1)
+	_talk_to(g); picked = [["b_name", 0], ["b_name", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(g.pic.doubt == 2, "and a third time: they doubt you (doubt=%d back=%s asking=%s)" % [g.pic.doubt, back, asking.get("id", "")])
+	_doubt(g, -3); g.coming = false   # (before they come over to check you)
 	_reset_pics()
 	var bk := _find("broker"); await _beside(bk)
 	_turn(bk); picked = [["b_job", 0], ["b_job", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
@@ -1541,7 +1543,7 @@ func _run_test() -> void:
 	_turn(g); picked = [["b_name", 1], ["b_name", 0]]; var before_huh := played.size(); await _say_it(); await _secs(0.2); await _wait_free()
 	_check(back and played.slice(before_huh).any(func(x): return HUH.any(func(h): return x == _vk(g) + "_" + h)), "a question that doesn't make sense: they try to work out what you meant")
 	picked = [["b_job", 1], ["b_from", 0]]; await _say_it(); await _secs(0.2); await _wait_free()
-	_check(not back and g.pic.doubt == 0 and played.has(_vk(g) + "_x_cool"), "still no sense: 아... 네., and they let it go (no doubt)")
+	_check(not back and g.pic.doubt == 1 and played.has(_vk(g) + "_x_cool"), "still no sense: 아... 네., and they wonder about you")
 	_turn(g); done_btn.pressed.emit(); await _secs(0.1)
 	_check(not back and asking.is_empty(), "or tap Done and ask nothing")
 	_reset_pics(); skip_turn = true
@@ -1806,17 +1808,18 @@ func _run_test() -> void:
 	for i in 120:
 		await _secs(0.1)
 		if back: break
+		if talk_wait.is_empty() and asking.is_empty() and _talk_target() == tw: talk_btn.pressed.emit()   # (someone else came up to you meanwhile: tap again)
 	_check(back and asking == tw, "then they turn to you: your turn (back=%s asking=%s wait=%s busy=%s %.1f m)" % [back, asking.get("id", ""), talk_wait.get("id", ""), tw.busy, player.position.distance_to(tw.body.position)])
 	_back_end(); await _secs(0.2)
 	# heat: the more people doubt you, the closer security gets
 	_reset_pics(); no_heat = false; heat_stage = 0; hunting = false
 	var sh := _find("security"); var gsh := people.filter(func(o): return o.id in ASKERS and not o.gone)
 	await _put(Vector3(-0.6, 0, 1.6))
-	for i in 4: gsh[i].pic.doubt = 1
+	for i in 2: gsh[i].pic.doubt = 1
 	await _secs(0.3)
 	_check(heat_stage == 1 and played.has("h_heat1") and not sh.shadow, "a few people doubt you: the handler warns you, people are talking")
 	for o in gsh: o.pic.checked = true   # (they'd come over to check you otherwise)
-	for i in 4: gsh[i].pic.doubt = 2
+	for i in 2: gsh[i].pic.doubt = 2
 	for i in 80:
 		await _secs(0.1)
 		if sh.shadow and player.position.distance_to(sh.body.position) < 4.0: break
@@ -2016,4 +2019,5 @@ func _do(c: String) -> void:
 			else: _plg("(no Leave button here: go to the lift first)")
 		"shot": await _shot("agent_" + (w[1] if w.size() > 1 else "x")); _plg("(screenshot saved: build/spy/agent_%s.png)" % (w[1] if w.size() > 1 else "x"))
 		"quit": pass
+		"heat": _plg("(debug) room doubt %d, heat stage %d, hunting=%s, security shadow=%s | " % [_room_doubt(), heat_stage, hunting, _find("security").get("shadow", false)] + ", ".join(people.filter(func(p): return p.id in ASKERS and not p.gone).map(func(p): return "%s=%d" % [tags.get(p.id, "?"), p.pic.doubt])))
 		_: _plg("(unknown command)")

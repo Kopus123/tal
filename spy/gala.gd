@@ -1184,8 +1184,16 @@ func _world_tap(pos: Vector2) -> void:   # a tap on the room: whoever you're off
 		inv.append("drink"); hand = "drink"; _props(); _plg("You pick the glass back up."); return
 
 
+func _on_button(pos: Vector2) -> bool:   # is that spot on one of the buttons? (then it isn't a tap on the room)
+	var bs: Array = [hand_btn, bag_btn, talk_btn, comp_btn, phone_btn, en_btn, leave_btn] + ring_box.get_children() + bag_box.get_children()
+	for b in bs:
+		if b and b.is_visible_in_tree() and b.get_global_rect().grow(6.0).has_point(pos): return true
+	return false
+
+
 func _unhandled_input(ev: InputEvent) -> void:   # short taps on the room (not on buttons)
 	if done or not (ev is InputEventMouseButton) or ev.button_index != MOUSE_BUTTON_LEFT: return
+	if _on_button(ev.position): return
 	if ev.pressed: tap_at = ev.position; tap_t = Time.get_ticks_msec() / 1000.0
 	elif ev.position.distance_to(tap_at) < 24.0 and Time.get_ticks_msec() / 1000.0 - tap_t < 0.4: _world_tap(ev.position)
 
@@ -1246,7 +1254,7 @@ func _items_ui() -> void:   # bottom right, above Talk: the hand button and the 
 	if not show and ring_open: _ring_close()
 	if holding:
 		hold_t += get_process_delta_time() / maxf(Engine.time_scale, 0.01)
-		if hold_t > 0.35 and not ring_open: _ring_show()
+		if hold_t > 0.4 and not ring_open: _ring_show()
 	if ring_open:
 		var pos := touch_pos
 		for b in ring_box.get_children(): b.modulate = Color(1.3, 1.3, 0.8) if b.get_global_rect().has_point(pos) else Color(1, 1, 1, 0.85)
@@ -1633,7 +1641,7 @@ func _screen() -> void:
 	bag_box.anchor_left = 1; bag_box.anchor_right = 1; bag_box.anchor_top = 1; bag_box.anchor_bottom = 1
 	bag_box.offset_left = -760; bag_box.offset_right = -14; bag_box.offset_top = -400; bag_box.offset_bottom = -300
 	bag_box.alignment = BoxContainer.ALIGNMENT_END; bag_box.visible = false
-	ring_box = Control.new(); ring_box.set_anchors_preset(Control.PRESET_FULL_RECT); ring_box.mouse_filter = Control.MOUSE_FILTER_IGNORE   # (its buttons still take taps); root.add_child(ring_box); ring_box.visible = false
+	ring_box = Control.new(); ring_box.set_anchors_preset(Control.PRESET_FULL_RECT); ring_box.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(ring_box); ring_box.visible = false   # (its buttons still take taps)
 	talk_btn = _btn("Talk", 34, Vector2(200, 110)); root.add_child(talk_btn); talk_btn.pressed.connect(_talk_btn)   # walk up to someone and talk
 	talk_btn.anchor_left = 1; talk_btn.anchor_right = 1; talk_btn.anchor_top = 1; talk_btn.anchor_bottom = 1
 	talk_btn.offset_left = -240; talk_btn.offset_right = -30; talk_btn.offset_top = -170; talk_btn.offset_bottom = -40; talk_btn.visible = false
@@ -2159,6 +2167,13 @@ func _right_pieces(f: Dictionary) -> Array:
 	return r
 
 
+func _finger(at: Vector2, hold_for: float) -> void:   # (tester) a real touch, through the screen: down, wait (real time), up
+	var t := InputEventScreenTouch.new(); t.index = 0; t.position = at; t.pressed = true; Input.parse_input_event(t)
+	await get_tree().create_timer(hold_for, true, false, true).timeout
+	var u := InputEventScreenTouch.new(); u.index = 0; u.position = at; u.pressed = false; Input.parse_input_event(u)
+	await get_tree().create_timer(0.1, true, false, true).timeout
+
+
 func _clear_ask() -> void:   # (tester) nobody's in the middle of asking you anything
 	await _wait_free()
 	if not asking.is_empty(): asking.busy = false
@@ -2658,8 +2673,14 @@ func _run_test() -> void:
 	_check(back and tile_map.has("와인 한 잔") and tile_map.has("주세요") and tile_map.size() == 2, "your pieces: 와인 한 잔 · 주세요")
 	picked = [["b_wine", 0], ["b_wine", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
 	_check(hand == "drink" and sips == SIPS and glass_prop.visible and played.has("bartender_r_wine") and hand_btn.text == "Wine\n10/10", "네, 여기 있습니다: the wine's in your hand (10 sips)")
-	hand_btn.button_down.emit(); hand_btn.button_up.emit(); await _secs(0.1)
-	_check(sips == SIPS - 1 and played.has("sip"), "tap the hand button: a sip")
+	await _finger(hand_btn.get_global_rect().get_center(), 0.08)
+	_check(sips == SIPS - 1 and played.has("sip"), "a quick tap with a finger on the hand button: a sip (sips=%d ring=%s)" % [sips, ring_open])
+	await _finger(hand_btn.get_global_rect().get_center(), 0.7)
+	_check(ring_open and sips == SIPS - 1, "hold it with a finger: the ring opens (ring=%s holding=%s hold_t=%.2f)" % [ring_open, holding, hold_t])
+	var opt: Button = ring_box.get_children()[0] if ring_box.get_child_count() > 0 else null
+	if opt: await _finger(opt.get_global_rect().get_center(), 0.08)
+	_check(not ring_open and sips == SIPS - 2, "then tap Sip on the ring with a finger (sips=%d ring=%s)" % [sips, ring_open])
+	sips = SIPS - 1
 	_ring_show()
 	_check(ring_open and ring_box.get_children().map(func(b): return b.text) == ["Sip", "Put down", "Drop", "Throw", "Offer"], "hold it: Sip · Put down · Drop · Throw · Offer")
 	await _shot("g13_ring")

@@ -1,13 +1,13 @@
 extends Node3D
 ## Feature 1: the cover card. In the car on the way to the gala, your handler briefs you out loud on who you are
-## tonight (Daniel Park) while the facts appear. Then a rehearsal: three questions in Korean, answered with word
+## tonight (Eric Shin) while the facts appear. Then a rehearsal: three questions in Korean, answered with word
 ## pieces. Everything stays on your phone, but checking it costs: once there are people, someone waiting notices.
 
 const FACTS := [   # pieces of who you are, not answers to set questions ("~" = joins onto the word before it)
 	# qs: the different ways someone might ask. "yn": a yes/no question, so 아니요 in front fits
-	{"k": "name", "group": "core", "ko": "다니엘 박입니다.", "en": "I'm Daniel Park.",
+	{"k": "name", "group": "core", "ko": "에릭 신입니다.", "en": "I'm Eric Shin.",
 		"qs": [["성함이 어떻게 되세요?", "May I ask your name?"], ["처음 뵙겠습니다. 누구세요?", "We haven't met. Who are you?"]],
-		"chunks": [["다니엘 박", "Daniel Park"], ["~입니다", "I am"]]},
+		"chunks": [["에릭 신", "Eric Shin"], ["~입니다", "I am"]]},
 	{"k": "from", "group": "core", "ko": "LA에서 왔습니다.", "en": "I'm from LA.",
 		"qs": [["어디에서 오셨어요?", "Where are you from?"], ["어디 사세요?", "Where do you live?"]],
 		"chunks": [["LA에서", "from LA"], ["왔습니다", "came"]]},
@@ -30,6 +30,12 @@ const FACTS := [   # pieces of who you are, not answers to set questions ("~" = 
 		"qs": [["한국에 처음 오셨어요?", "Is this your first time in Korea?"], ["한국 자주 오세요?", "Do you come to Korea often?"]],
 		"chunks": [["두 번", "twice"], ["왔습니다", "came"]]},
 ]
+const DEAL := [   # the deal, for the broker's check in the back room (not cover: things only the buyer would know)
+	{"k": "item", "ko": "USB요.", "en": "The USB.", "qs": [["뭐 찾으세요?", "What are you after?"]], "chunks": [["USB", "USB"], ["~요", "(polite)"]]},
+	{"k": "price", "ko": "오천만 원이요.", "en": "Fifty million won.", "qs": [["얼마 생각하세요?", "What price are you thinking?"]], "chunks": [["오천만 원", "50 million won"], ["~이요", "(polite)"]]},
+	{"k": "brought", "yn": true, "ko": "가져왔어요.", "en": "I brought it.", "qs": [["가져오셨어요?", "Did you bring it?"]], "chunks": [["가져왔어요", "brought (it)"]]},
+]
+const APPT := ["최 사장님하고 약속 있어요.", "I have an appointment with President Choi."]
 const YN := {"k": "yn", "chunks": [["네", "yes"], ["아니요", "no"]]}   # always yours to add in front, or not
 const TITLES := [   # who you're there for, and what people call them: the words to listen for at the party
 	["host", "김 대표님", "CEO Kim, the host"], ["broker", "사장님", "boss: the broker"],
@@ -37,17 +43,20 @@ const TITLES := [   # who you're there for, and what people call them: the words
 ]
 const DODGES := [["d_work", "일 얘기는 나중에 하시죠.", "Let's talk work later."], ["d_secret", "비밀입니다.", "That's a secret."], ["d_well", "글쎄요...", "Well..."]]
 const SUBS := {   # what the handler says, as quiet subtitles
-	"h_intro": "Tonight you're Daniel Park. Learn him on the way.", "h_name": "Your name. These are pieces, not a script.", "h_from": "You're from L.A.",
+	"h_intro": "Tonight you're Eric Shin. Learn him on the way.", "h_name": "Your name. These are pieces, not a script.", "h_from": "You're from L.A.",
 	"h_job": "You're an investor. You run money for a fund.", "h_stay": "You're in Seoul for a week.",
 	"h_invited": "Kim, the host, invited you. Call her 김 대표님.", "h_parents": "You grew up in Koreatown. Your parents are from Busan.",
 	"h_korean": "That's why your Korean is rough. Own it.", "h_twice": "And you've been to Seoul twice before.",
-	"h_style": "Daniel is confident. Short answers. Steer back to business.", "h_dodge": "If they ask something you don't know, dodge it.",
+	"h_style": "Eric is confident. Short answers. Steer back to business.", "h_dodge": "If they ask something you don't know, dodge it.",
 	"h_phone": "It's all on your phone. But checking it while someone waits for an answer looks bad.",
 	"h_practice": "Let's practice. Nobody asks the same way twice. Use the pieces. Yes or no is up to you.", "h_good": "Good.", "h_good2": "That's it.", "h_close": "Close. Listen.",
 	"h_listen": "Now the people you're here for. We have their titles, not their faces. Listen for what they're called.", "h_t_host": "The host is Kim. People call him...",
 	"h_t_broker": "The broker is Choi. His people call him...", "h_t_assistant": "His assistant is Yoon. He calls her...",
 	"h_t_security": "The head of security gets called...", "h_t_bartender": "And the bartender is the one behind the bar.",
-	"h_no": "No. It's this.", "h_noticed": "Fine in here. At the party, someone waiting would notice that.", "h_done": "We're here. Be Daniel.",
+	"h_no": "No. It's this.", "h_noticed": "Fine in here. At the party, someone waiting would notice that.", "h_done": "We're here. Be Eric.",
+	"h_deal": "Now the deal. Choi, the broker, is selling a USB drive. You're the buyer.", "h_item": "If he asks what you're after: the USB.",
+	"h_price": "The price is fifty million won.", "h_brought": "And yes, you brought the money.",
+	"h_appt": "To get to him, tell his assistant, or the host, that you have an appointment with President Choi.",
 }
 const STYLE := "Confident. Short answers. Steer back to business."
 const SEEN_FILE := "user://cover_seen"
@@ -100,7 +109,9 @@ func _ready() -> void:
 	side = AudioStreamPlayer.new(); add_child(side)
 	side.finished.connect(func(): voice.stream_paused = false)
 	var ids := ["h_intro", "h_name", "h_from", "h_job", "h_stay", "h_invited", "h_parents", "h_korean", "h_twice", "h_style", "h_dodge",
-		"h_phone", "h_practice", "h_good", "h_good2", "h_close", "h_no", "h_noticed", "h_done", "d_work", "d_secret", "d_well", "h_listen", "h_t_bartender"]
+		"h_phone", "h_practice", "h_good", "h_good2", "h_close", "h_no", "h_noticed", "h_done", "d_work", "d_secret", "d_well", "h_listen", "h_t_bartender",
+		"h_deal", "h_appt", "a_appt"]
+	for f in DEAL: ids += ["h_" + f.k, "a_" + f.k]
 	for t in TITLES: ids += ["h_t_" + t[0], "k_t_" + t[0]]
 	for f in FACTS:
 		ids.append("a_" + f.k)
@@ -221,7 +232,7 @@ func _phone_screen(root: Control) -> void:   # your cover, all of it, with a Hea
 	phone_ui.offset_left = -560; phone_ui.offset_right = -16; phone_ui.offset_top = 100; phone_ui.offset_bottom = -16
 	var sc := ScrollContainer.new(); sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; phone_ui.add_child(sc)
 	var box := VBoxContainer.new(); box.size_flags_horizontal = Control.SIZE_EXPAND_FILL; box.add_theme_constant_override("separation", 6); sc.add_child(box)
-	var t := _label(30); t.text = "Daniel Park (다니엘 박)"; box.add_child(t)
+	var t := _label(30); t.text = "Eric Shin (에릭 신)"; box.add_child(t)
 	var s := _label(20); s.text = STYLE; s.modulate = Color(0.8, 0.8, 0.8); box.add_child(s)
 	for group in ["core", "background"]:
 		var h := _label(22); h.text = "What anyone might ask" if group == "core" else "If it gets personal"; h.modulate = Color(1, 0.8, 0.4); box.add_child(h)
@@ -229,6 +240,9 @@ func _phone_screen(root: Control) -> void:   # your cover, all of it, with a Hea
 			if f.group == group: box.add_child(_phone_line("a_" + f.k, f.ko, f.en))
 	var hd := _label(22); hd.text = "When you don't know: dodge"; hd.modulate = Color(1, 0.8, 0.4); box.add_child(hd)
 	for d in DODGES: box.add_child(_phone_line(d[0], d[1], d[2]))
+	var hl := _label(22); hl.text = "The deal: get the USB"; hl.modulate = Color(1, 0.8, 0.4); box.add_child(hl)
+	for f in DEAL: box.add_child(_phone_line("a_" + f.k, f.ko, f.en))
+	box.add_child(_phone_line("a_appt", APPT[0], APPT[1]))
 	var ht := _label(22); ht.text = "Who to listen for"; ht.modulate = Color(1, 0.8, 0.4); box.add_child(ht)
 	for tt in TITLES: box.add_child(_phone_line("k_t_" + tt[0], tt[1], tt[2]))
 	phone_ui.visible = false
@@ -336,7 +350,7 @@ func _heading(t: String) -> void:   # a new section: the last one leaves the scr
 
 func _brief(n: int) -> void:
 	if not await _speak("h_intro", n): return
-	_heading("Daniel Park: " + STYLE)
+	_heading("Eric Shin: " + STYLE)
 	for f in FACTS:   # the handler says it in English, then you hear it the way you'll say it, and it goes on the card
 		if f.k == "parents": _heading("If it gets personal")
 		if not await _speak("h_" + f.k, n): return
@@ -349,6 +363,17 @@ func _brief(n: int) -> void:
 	for d in DODGES:
 		_card(d[1], d[2])
 		if not await _speak(d[0], n): return
+	# the deal: what the broker will check, and how to reach him
+	if not await _speak("h_deal", n): return
+	_heading("The deal: get the USB")
+	for f in DEAL:
+		if not await _speak("h_" + f.k, n): return
+		_card(f.ko, f.en)
+		if not await _speak("a_" + f.k, n): return
+		await get_tree().create_timer(0.3).timeout
+	if not await _speak("h_appt", n): return
+	_card(APPT[0], APPT[1])
+	if not await _speak("a_appt", n): return
 	# who you're there for: the titles to listen for (said in English, then in Korean)
 	if not await _speak("h_listen", n): return
 	_heading("Who to listen for")
@@ -441,7 +466,7 @@ func _clear_pick() -> void:
 	picked.clear(); _show_pick()
 
 
-func _joined(ts: Array) -> String:   # "다니엘 박" + "~이에요" = "다니엘 박이에요"
+func _joined(ts: Array) -> String:   # "에릭 신" + "~입니다" = "에릭 신입니다"
 	var s := ""
 	for t in ts:
 		var w: String = _chunk(t)[0]
@@ -504,7 +529,7 @@ func _finish(n: int) -> void:
 	talk_ui.visible = false
 	if not await _speak("h_done", n): return
 	state = "done"; sub.text = ""
-	var t := "You're Daniel Park.\nRehearsal: %d of 3 clean." % clean
+	var t := "You're Eric Shin.\nRehearsal: %d of 3 clean." % clean
 	if phone_checks > 0: t += "\nYou checked your phone mid-answer %d time%s." % [phone_checks, "" if phone_checks == 1 else "s"]
 	end_text.text = t
 	end_ui.visible = true
@@ -641,7 +666,7 @@ func _run_test() -> void:
 	_check(_judge([["yn", 0], ["name", 0], ["name", 1]], nm) == "good" and _judge([["yn", 1], ["name", 0], ["name", 1]], nm) == "wrong", "네 fits in front of anything; 아니요 only answers a yes/no question")
 	_check(FACTS.all(func(x): return x.qs.size() >= 2 and not x.ko.begins_with("아니요") and (x.ko.ends_with("니다.") or x.ko.ends_with("습니다."))), "every line is formal, has 2+ ways to be asked, and none starts with 아니요")
 	_check(_judge([["korean", 1], ["korean", 0]], kor) == "order", "and the wrong order is still caught")
-	_check(_joined([["name", 0], ["name", 1]]) == "다니엘 박입니다" and _joined([["parents", 0], ["parents", 1], ["parents", 2]]) == "부모님은 부산 분이십니다", "pieces join like real Korean (입니다 sticks to the word before)")
+	_check(_joined([["name", 0], ["name", 1]]) == "에릭 신입니다" and _joined([["parents", 0], ["parents", 1], ["parents", 2]]) == "부모님은 부산 분이십니다", "pieces join like real Korean (입니다 sticks to the word before)")
 	await _answer([[other.k, 0]])
 	_check(last_result == "wrong" and said_label.text.begins_with(f2.ko), "a wrong answer: the handler gives you the right line")
 	for i in 200:

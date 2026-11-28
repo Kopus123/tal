@@ -150,7 +150,8 @@ var heat_stage := 0               # 0 calm · 1 people talk · 2 security shadow
 var no_heat := false              # (tester) doubt in the room doesn't bring security
 var talk_wait := {}               # you tapped Talk while they were mid-chat: they turn to you when it's done
 var hunt_wait := 0.0              # he checks in on his earpiece before he comes: your head start
-var ammo := 2                     # a silenced pistol, two shots: whoever you hit goes down
+const MAG := 8
+var ammo := MAG                   # a silenced pistol: whoever you hit goes down
 var gun_prop: MeshInstance3D
 var shoot_btn: Button
 var downed: Array = []            # who you took down
@@ -1099,7 +1100,7 @@ func _screen() -> void:
 	phone_btn.position = Vector2(-174, 20); root.add_child(phone_btn); phone_btn.pressed.connect(_toggle_phone)
 	throw_btn = _btn("Throw glass", 24, Vector2(150, 70)); throw_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	throw_btn.position = Vector2(-174, 104); root.add_child(throw_btn); throw_btn.pressed.connect(func(): _throw()); throw_btn.visible = false
-	shoot_btn = _btn("Shoot (2)", 24, Vector2(150, 70)); shoot_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	shoot_btn = _btn("Shoot (%d)" % MAG, 24, Vector2(150, 70)); shoot_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	shoot_btn.position = Vector2(-174, 104); root.add_child(shoot_btn); shoot_btn.pressed.connect(func(): _shoot())
 	talk_btn = _btn("Talk", 34, Vector2(200, 110)); root.add_child(talk_btn); talk_btn.pressed.connect(_talk_btn)   # walk up to someone and talk
 	talk_btn.anchor_left = 1; talk_btn.anchor_right = 1; talk_btn.anchor_top = 1; talk_btn.anchor_bottom = 1
@@ -2008,27 +2009,27 @@ func _run_test() -> void:
 	# the pistol: two shots, whoever you hit drops; anyone who sees it panics
 	_reset_pics(); hold = true
 	for p in people: p.busy = false
-	_check(ammo == 2 and gun_prop.visible and shoot_btn.visible and shoot_btn.text == "Shoot (2)", "you carry a pistol: a Shoot (2) button")
+	_check(ammo == MAG and gun_prop.visible and shoot_btn.visible and shoot_btn.text == "Shoot (%d)" % MAG, "you carry a pistol: a Shoot (%d) button" % MAG)
 	var sd := _find("security")
 	await _put(Vector3(-0.6, 0, 2.0)); sd.body.position = player.position + Vector3(4.5, 0, 0)
 	hunting = true; hunted = true; slots_taken.erase("%s:%d" % [sd.spot, sd.slot]); sd.slot = -1
 	body_mesh.rotation.y = PI / 2   # (facing away: you still get him, he's the one after you)
 	var wit: Array = people.filter(func(o): return not o.gone and o != sd and o.id in ASKERS and o.body.position.distance_to(player.position) < 10.0)
 	_shoot(); await _secs(0.5)
-	_check(sd.gone and "security" in downed and not hunting and ammo == 1 and played.has("shot"), "shoot: security drops, and he's not coming for you any more")
+	_check(sd.gone and "security" in downed and not hunting and ammo == MAG - 1 and played.has("shot"), "shoot: security drops, and he's not coming for you any more")
 	_check(sd.body.rotation.x < -1.0, "he's lying on the floor")
 	_check(wit.is_empty() or wit.all(func(o): return o.pic.doubt == 3), "everyone who saw it is alarmed (%d of them)" % wit.size())
 	_check(played.has("h_shot"), "and your handler: what are you doing?! get out")
 	var tg2: Dictionary = _guest_group()[0]; await _put(tg2.body.position + Vector3(0, 0, 3.0)); var to2: Vector3 = tg2.body.position - player.position
 	body_mesh.rotation.y = atan2(-to2.x, -to2.z)
-	_shoot(); await _secs(0.3)
-	_check(tg2.gone and ammo == 0 and not shoot_btn.visible, "the second shot: whoever's in front of you, and then you're out (hit %s)" % [downed])
+	ammo = 1; _shoot(); await _secs(0.3)
+	_check(tg2.gone and ammo == 0 and not shoot_btn.visible, "the next shot: whoever's in front of you; the last one, and you're out (hit %s)" % [downed])
 	await _shot("g9_gun")
 	# (put them back up for the rest of the tests)
 	for q in [sd, tg2]:
 		q.gone = false; q.busy = false; q.body.rotation.x = 0.0; q.body.position.y = 0.0; q.body.collision_layer = 8
 		_send_back(q)
-	downed.clear(); ammo = 2; hunting = false; hunted = false; heat_stage = 0; _reset_pics()
+	downed.clear(); ammo = MAG; hunting = false; hunted = false; heat_stage = 0; _reset_pics()
 	# leave by the lift: the debrief
 	hold = true
 	for p in people: p.busy = false

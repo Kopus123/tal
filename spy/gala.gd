@@ -79,7 +79,8 @@ const SMALL := ["cold", "food", "view", "busy", "wine", "know"]
 const HANDLER := {"h_in": "You're in. We know their titles, not their faces. Listen, and mark who's who on your phone.",
 	"h_out": "Okay, we're out. Let's see what you got.",
 	"h_heat1": "Careful. People are starting to talk about you.", "h_heat2": "Security's watching you now. Keep it clean, or head for the lift.",
-	"h_heat3": "They're onto you. Get to the lift. Now.", "h_calm": "Okay. Security's backed off."}
+	"h_heat3": "They're onto you. Get to the lift. Now.", "h_calm": "Okay. Security's backed off.",
+	"h_shot": "What are you doing?! Get out of there. Now."}
 const HEAT := [2, 4, 6]          # how much doubt in the room (everyone's added up) before: talk, security watches you, security comes
 const ASKERS := ["host", "broker", "assistant", "g1", "g2", "g3", "g4", "g5", "g6"]   # who might ask who you are
 const REACT := {"ok": ["아, 반갑습니다.", "Ah, nice to meet you."], "again": ["네? 다시 한 번요?", "Sorry? Once more?"], "cool": ["아... 네.", "Ah... right."],
@@ -149,7 +150,11 @@ var heat_stage := 0               # 0 calm · 1 people talk · 2 security shadow
 var no_heat := false              # (tester) doubt in the room doesn't bring security
 var talk_wait := {}               # you tapped Talk while they were mid-chat: they turn to you when it's done
 var hunt_wait := 0.0              # he checks in on his earpiece before he comes: your head start
-var glass := true                 # a wine glass in your hand: throw it and everyone looks where it smashes
+var ammo := 2                     # a silenced pistol, two shots: whoever you hit goes down
+var gun_prop: MeshInstance3D
+var shoot_btn: Button
+var downed: Array = []            # who you took down
+var glass := false                # a wine glass in your hand: throw it and everyone looks where it smashes
 var glass_prop: MeshInstance3D
 var throw_btn: Button
 var noise_at := Vector3.ZERO      # where it smashed
@@ -271,7 +276,9 @@ func _room() -> void:
 	var pmat := _mat(Color(0.4, 0.8, 1.0)); pmat.emission_enabled = true; pmat.emission = Color(0.3, 0.6, 0.9); phone_prop.material_override = pmat
 	phone_prop.position = Vector3(0, 1.05, -0.4); phone_prop.visible = false; body_mesh.add_child(phone_prop)
 	glass_prop = MeshInstance3D.new(); glass_prop.mesh = _glass_mesh(); glass_prop.material_override = _glass_mat()
-	glass_prop.position = Vector3(0.34, 1.0, -0.15); body_mesh.add_child(glass_prop)
+	glass_prop.position = Vector3(0.34, 1.0, -0.15); body_mesh.add_child(glass_prop); glass_prop.visible = false
+	gun_prop = MeshInstance3D.new(); var gb := BoxMesh.new(); gb.size = Vector3(0.08, 0.1, 0.42); gun_prop.mesh = gb
+	gun_prop.material_override = _mat(Color(0.08, 0.08, 0.09)); gun_prop.position = Vector3(0.34, 1.0, -0.3); body_mesh.add_child(gun_prop)
 	var ear := AudioListener3D.new(); ear.position.y = 1.5; player.add_child(ear); ear.make_current()   # you hear from where you stand
 	player.position = START
 	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.42; tm.outer_radius = 0.55; ring.mesh = tm
@@ -668,6 +675,69 @@ func _distract(dt: float) -> void:   # heads turn to the noise; security goes ov
 	if distract_t <= 0.0 and not hunting and not sec.shadow: _send_back(sec)   # back to his post
 
 
+func _aim() -> Dictionary:   # who you'd hit: security first if he's after you, else whoever's in front of you, else whoever's nearest
+	var sec := _find("security")
+	if sec and (hunting or sec.shadow) and player.position.distance_to(sec.body.position) < 14.0: return sec
+	var fwd := Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y))
+	var best := {}; var bd := INF
+	for p in people:
+		if p.gone: continue
+		var to: Vector3 = p.body.position - player.position; to.y = 0
+		var d := to.length()
+		if d > 14.0 or d < 0.05: continue
+		var score := d if fwd.dot(to / d) > 0.75 else d + 100.0   # in front of you counts first
+		if score < bd: bd = score; best = p
+	if bd > 100.0 and bd - 100.0 > 8.0: return {}
+	return best
+
+
+func _shoot() -> void:   # pfft: they drop. Anyone who sees it panics, and security comes for you
+	if ammo <= 0 or done or escorting or not asking.is_empty() or back: return
+	var p := _aim()
+	ammo -= 1
+	var to: Vector3 = (p.body.position if p else player.position + Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y)) * 5.0) - player.position
+	body_mesh.rotation.y = atan2(-to.x, -to.z)
+	var flash := MeshInstance3D.new(); var fm := SphereMesh.new(); fm.radius = 0.12; fm.height = 0.24; flash.mesh = fm
+	var fmat := _mat(Color(1.0, 0.85, 0.4)); fmat.emission_enabled = true; fmat.emission = Color(1.0, 0.7, 0.3); fmat.emission_energy_multiplier = 4.0; flash.material_override = fmat
+	flash.position = gun_prop.position + Vector3(0, 0, -0.3); body_mesh.add_child(flash)
+	get_tree().create_timer(0.08).timeout.connect(flash.queue_free)
+	var snd := AudioStreamPlayer3D.new(); snd.stream = _shot_sound(); snd.position = player.position + Vector3(0, 1.0, 0); add_child(snd); snd.play()
+	played.append("shot")
+	if p.is_empty(): _plg("You fire. Nobody there."); return
+	_plg("You fire at %s. They drop." % _desc(p))
+	_drop(p)
+	_handler("h_shot")
+	var sec := _find("security")
+	for o in people:   # everyone who saw: alarmed, and they look at you
+		if o.gone or o.body.position.distance_to(player.position) > 10.0: continue
+		_doubt(o, 3); o.glance = 5.0; o.look_t = 0.0
+	if sec and not hunting and not done:   # he heard it: he comes for you, no waiting
+		hunting = true; hunted = true; hunt_wait = 0.6; sec.shadow = false; sec.timer = INF; heat_stage = 3
+		slots_taken.erase("%s:%d" % [sec.spot, sec.slot]); sec.slot = -1
+
+
+func _drop(p: Dictionary) -> void:   # down on the floor, out of the party
+	if asking == p: _ask_end("walked")
+	p.gone = true; p.busy = true; p.following = false; p.shadow = false; p.coming = false
+	if p.slot >= 0: slots_taken.erase("%s:%d" % [p.spot, p.slot])
+	downed.append(p.id)
+	var b: CharacterBody3D = p.body
+	b.velocity = Vector3.ZERO; b.collision_layer = 0; p.audio.stop(); p.ko.text = ""
+	if p.role == "security": hunting = false; distract_t = 0.0
+	create_tween().tween_property(b, "rotation:x", -PI / 2, 0.35)
+	var pos := b.position; create_tween().tween_property(b, "position:y", 0.3, 0.35).from(pos.y)
+
+
+func _shot_sound() -> AudioStreamWAV:   # a suppressed shot: a hard thump and a hiss
+	var rate := 22050; var n := int(rate * 0.3)
+	var data := PackedByteArray(); data.resize(n * 2)
+	for i in n:
+		var t := float(i) / rate
+		var v := sin(t * TAU * 90.0) * exp(-t * 30.0) * 0.9 + (randf() * 2.0 - 1.0) * exp(-t * 40.0) * 0.6
+		data.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 30000.0))
+	var w := AudioStreamWAV.new(); w.format = AudioStreamWAV.FORMAT_16_BITS; w.mix_rate = rate; w.data = data; return w
+
+
 func _room_doubt() -> int:   # everyone's doubt about you, added up
 	var n := 0
 	for p in people:
@@ -960,11 +1030,9 @@ func _physics_process(dt: float) -> void:
 func _process(dt: float) -> void:
 	var focus := player.position + (Vector3(3.4, 0, 0) if phone_open else Vector3.ZERO)   # the phone covers the right: keep you in view
 	cam.position = cam.position.lerp(focus + CAM_OFF, 1.0 - exp(-6.0 * dt)); cam.look_at(cam.position - CAM_OFF, Vector3.UP)
-	if not glass and not done:   # stand at the bar and the bartender hands you another
-		var bt := _find("bartender")
-		if bt and not bt.busy and player.position.distance_to(bt.body.position) < 2.2:
-			glass = true; glass_prop.visible = true; _line(bt, "r_wine")
-	throw_btn.visible = glass and not done and not escorting and not phone_open and asking.is_empty() and not back
+	throw_btn.visible = false
+	shoot_btn.visible = ammo > 0 and not done and not escorting and not phone_open and asking.is_empty() and not back
+	shoot_btn.text = "Shoot (%d)" % ammo
 	if not talk_wait.is_empty():   # you asked for them: they turn to you as soon as they're free
 		var tw: Dictionary = talk_wait
 		if tw.gone or done or not asking.is_empty() or back or player.position.distance_to(tw.body.position) > 3.2: talk_wait = {}; talk_btn.text = "Talk"
@@ -1030,7 +1098,9 @@ func _screen() -> void:
 	phone_btn = _btn("Phone", 26, Vector2(150, 70)); phone_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	phone_btn.position = Vector2(-174, 20); root.add_child(phone_btn); phone_btn.pressed.connect(_toggle_phone)
 	throw_btn = _btn("Throw glass", 24, Vector2(150, 70)); throw_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	throw_btn.position = Vector2(-174, 104); root.add_child(throw_btn); throw_btn.pressed.connect(func(): _throw())
+	throw_btn.position = Vector2(-174, 104); root.add_child(throw_btn); throw_btn.pressed.connect(func(): _throw()); throw_btn.visible = false
+	shoot_btn = _btn("Shoot (2)", 24, Vector2(150, 70)); shoot_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	shoot_btn.position = Vector2(-174, 104); root.add_child(shoot_btn); shoot_btn.pressed.connect(func(): _shoot())
 	talk_btn = _btn("Talk", 34, Vector2(200, 110)); root.add_child(talk_btn); talk_btn.pressed.connect(_talk_btn)   # walk up to someone and talk
 	talk_btn.anchor_left = 1; talk_btn.anchor_right = 1; talk_btn.anchor_top = 1; talk_btn.anchor_bottom = 1
 	talk_btn.offset_left = -240; talk_btn.offset_right = -30; talk_btn.offset_top = -170; talk_btn.offset_bottom = -40; talk_btn.visible = false
@@ -1135,6 +1205,7 @@ func _finish(walked_out := false) -> void:   # into the lift: the debrief
 	await get_tree().create_timer(1.2).timeout
 	var t := "Debrief\n\n"
 	if walked_out: t += "Escorted out.\n\n"
+	if downed: t += "You took down: %s.\n\n" % ", ".join(downed.map(func(id): var q := _who_is(id); return "a guest" if q.role == "guest" else ROLE_NAME[q.role][1]))
 	elif hunted: t += "You got out before security reached you.\n\n"
 	var right := 0
 	for r in ROLES:
@@ -1934,36 +2005,30 @@ func _run_test() -> void:
 	_check(hunt_wait > 0.0, "and he takes a moment on his earpiece first: your head start")
 	_check(heat_stage == 3 and hunting and played.has("h_heat3"), "the whole room doubts you: he comes for you, get to the lift (stage %d hunting=%s escorting=%s doubt %d)" % [heat_stage, hunting, escorting, _room_doubt()])
 	hunting = false; hunted = false; heat_stage = 0; no_heat = true; sh.shadow = false; _send_back(sh); _reset_pics()
-	# the glass: throw it, and security goes to look instead of coming for you
+	# the pistol: two shots, whoever you hit drops; anyone who sees it panics
 	_reset_pics(); hold = true
 	for p in people: p.busy = false
-	_check(glass and glass_prop.visible and throw_btn.visible, "you have a glass in your hand, and a Throw glass button")
+	_check(ammo == 2 and gun_prop.visible and shoot_btn.visible and shoot_btn.text == "Shoot (2)", "you carry a pistol: a Shoot (2) button")
 	var sd := _find("security")
 	await _put(Vector3(-0.6, 0, 2.0)); sd.body.position = player.position + Vector3(4.5, 0, 0)
 	hunting = true; hunted = true; slots_taken.erase("%s:%d" % [sd.spot, sd.slot]); sd.slot = -1
-	body_mesh.rotation.y = PI / 2   # (facing away from him)
-	var n_before := player.position.distance_to(sd.body.position)
-	await _throw(); await _secs(0.1)
-	_check(not glass and not glass_prop.visible and played.has("smash") and noise_at.x < player.position.x - 3.0, "throw it: it smashes on the floor ahead of you")
-	await _secs(1.2)
-	_check(distract_t > 0.0 and sd.body.position.distance_to(noise_at) < 4.5 + 6.0 - 1.0 and player.position.distance_to(sd.body.position) > 1.1, "security stops coming for you and goes to look at it (%.1f m from the mess)" % sd.body.position.distance_to(noise_at))
-	_check(people.filter(func(o): return o.look_t > 0.0).size() >= 1, "heads turn to the noise")
-	for i in 200:
-		await _secs(0.1)
-		if distract_t <= 0.0: break
-	var n_after := player.position.distance_to(sd.body.position)
-	await _secs(1.0)
-	_check((hunting or escorting) and player.position.distance_to(sd.body.position) < n_after, "a few seconds later he comes for you again: use them to get away (hunting=%s escorting=%s done=%s distract=%.1f %.1f→%.1f m)" % [hunting, escorting, done, distract_t, n_after, player.position.distance_to(sd.body.position)])
-	hunting = false; hunted = false; escorting = false; done = false; end_ui.visible = false; sd.busy = false; _send_back(sd)
-	var btd := _find("bartender"); await _beside(btd); await _secs(0.6)
-	_check(glass and glass_prop.visible and played.has("bartender_r_wine"), "go to the bar: 네, 여기 있습니다, and another glass")
-	var wg: Dictionary = _guest_group()[0]; await _beside(wg)
-	escorting = false; done = false; end_ui.visible = false
-	if not asking.is_empty(): _ask_end("walked")
-	_reset_pics(); glass = true
-	await _throw(); await _secs(0.2)
-	_check(wg.pic.doubt >= 1, "throw it right beside someone: they saw you do it (doubt=%d %.1f m, done=%s escorting=%s)" % [wg.pic.doubt, player.position.distance_to(wg.body.position), done, escorting])
-	_reset_pics(); glass = true; glass_prop.visible = true; distract_t = 0.0
+	body_mesh.rotation.y = PI / 2   # (facing away: you still get him, he's the one after you)
+	var wit: Array = people.filter(func(o): return not o.gone and o != sd and o.id in ASKERS and o.body.position.distance_to(player.position) < 10.0)
+	_shoot(); await _secs(0.5)
+	_check(sd.gone and "security" in downed and not hunting and ammo == 1 and played.has("shot"), "shoot: security drops, and he's not coming for you any more")
+	_check(sd.body.rotation.x < -1.0, "he's lying on the floor")
+	_check(wit.is_empty() or wit.all(func(o): return o.pic.doubt == 3), "everyone who saw it is alarmed (%d of them)" % wit.size())
+	_check(played.has("h_shot"), "and your handler: what are you doing?! get out")
+	var tg2: Dictionary = _guest_group()[0]; await _put(tg2.body.position + Vector3(0, 0, 3.0)); var to2: Vector3 = tg2.body.position - player.position
+	body_mesh.rotation.y = atan2(-to2.x, -to2.z)
+	_shoot(); await _secs(0.3)
+	_check(tg2.gone and ammo == 0 and not shoot_btn.visible, "the second shot: whoever's in front of you, and then you're out (hit %s)" % [downed])
+	await _shot("g9_gun")
+	# (put them back up for the rest of the tests)
+	for q in [sd, tg2]:
+		q.gone = false; q.busy = false; q.body.rotation.x = 0.0; q.body.position.y = 0.0; q.body.collision_layer = 8
+		_send_back(q)
+	downed.clear(); ammo = 2; hunting = false; hunted = false; heat_stage = 0; _reset_pics()
 	# leave by the lift: the debrief
 	hold = true
 	for p in people: p.busy = false
@@ -2147,6 +2212,12 @@ func _do(c: String) -> void:
 			if leave_btn.visible: await _finish(); await _secs(1.5)
 			else: _plg("(no Leave button here: go to the lift first)")
 		"shot": await _shot("agent_" + (w[1] if w.size() > 1 else "x")); _plg("(screenshot saved: build/spy/agent_%s.png)" % (w[1] if w.size() > 1 else "x"))
+		"shoot":   # at someone (by letter), or whoever's in front of you
+			if ammo <= 0: _plg("(no shots left)"); return
+			for p in people:
+				if not p.gone and w.size() > 1 and tags.get(p.id, "") == w[1]:
+					var to: Vector3 = p.body.position - player.position; body_mesh.rotation.y = atan2(-to.x, -to.z)
+			_shoot(); await _secs(0.5)
 		"throw":   # throw toward someone (by letter), or straight ahead
 			if not glass: _plg("(no glass in your hand: the bartender will give you one)"); return
 			var at := Vector3.INF

@@ -417,7 +417,7 @@ func _ask(n: int) -> void:
 	var f: Dictionary = questions[q_i]
 	talk_ui.visible = true; said_label.text = ""; picked.clear()
 	q_n = randi() % f.qs.size()
-	q_label.text = f.qs[q_n][0]; gloss.text = f.qs[q_n][1]; gloss.visible = false; gloss_t = 3.0
+	q_label.text = f.qs[q_n][0]; gloss.text = f.qs[q_n][1]; gloss.visible = FileAccess.file_exists("user://english"); gloss_t = 3.0
 	# the pieces: this answer's, mixed with pieces of two others
 	var tiles := []
 	for i in f.chunks.size(): tiles.append([f.k, i])

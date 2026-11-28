@@ -78,6 +78,26 @@ const ANS := {   # what each of them says when you ask (the broker gives little 
 	"g5": {"name": "강태호입니다.", "job": "은행에서 일해요.", "from": "대전에서 왔어요.", "host": "사업 파트너예요."},
 	"g6": {"name": "오수진입니다.", "job": "기자예요.", "from": "광주에서 왔어요.", "host": "옛날 이웃이에요."},
 }
+const EN_MORE := {   # (English mode) what the lines with no English beside them mean
+	"에릭 신 씨라고요?": "Eric Shin, I hear?", "LA에서 오셨다고요?": "From LA, I hear?", "투자자시라고요?": "An investor, I hear?", "일주일 계신다고요?": "Here a week, I hear?",
+	"김 대표님이 초대하셨다고요?": "CEO Kim invited you, I hear?", "부모님이 부산 분이시라고요?": "Your parents are from Busan, I hear?",
+	"한국어 잘 못하신다고요?": "Your Korean's not good, I hear?", "두 번 오셨다고요?": "You've been twice, I hear?",
+	"김지현입니다. 오늘 파티 주최자예요.": "I'm Kim Ji-hyun. I'm hosting tonight.", "회사 대표입니다.": "I run a company.", "서울에서 태어났어요.": "I was born in Seoul.", "제가 대표예요. 하하.": "I'm the CEO. Ha ha.",
+	"최입니다.": "Choi.", "사업합니다.": "I'm in business.", "그건 왜요?": "Why do you ask?", "김 대표님하고는 오래 알았어요.": "I've known CEO Kim a long time.",
+	"윤서연입니다. 최 사장님 비서예요.": "I'm Yoon Seo-yeon. President Choi's assistant.", "최 사장님 비서입니다.": "I'm President Choi's assistant.", "부산에서 왔어요.": "I'm from Busan.", "사장님 덕분에 알게 됐어요.": "I know her through my boss.",
+	"이민지입니다.": "I'm Lee Min-ji.", "의사예요.": "I'm a doctor.", "대구에서 왔어요.": "I'm from Daegu.", "대학교 친구예요.": "We're friends from university.",
+	"박준호입니다.": "I'm Park Jun-ho.", "변호사예요.": "I'm a lawyer.", "서울 사람이에요.": "I'm from Seoul.", "같이 일했어요.": "We worked together.",
+	"정우진입니다.": "I'm Jung Woo-jin.", "IT 회사 다녀요.": "I work at an IT company.", "인천에서 왔어요.": "I'm from Incheon.", "골프 친구예요.": "Golf buddies.",
+	"한소희입니다.": "I'm Han So-hee.", "디자이너예요.": "I'm a designer.", "제주도에서 왔어요.": "I'm from Jeju.", "언니 친구예요.": "She's my sister's friend.",
+	"강태호입니다.": "I'm Kang Tae-ho.", "은행에서 일해요.": "I work at a bank.", "대전에서 왔어요.": "I'm from Daejeon.", "사업 파트너예요.": "Business partners.",
+	"오수진입니다.": "I'm Oh Su-jin.", "기자예요.": "I'm a journalist.", "광주에서 왔어요.": "I'm from Gwangju.", "옛날 이웃이에요.": "We used to be neighbours.",
+	"성함이": "your name", "어떻게 되세요?": "is...?", "무슨 일": "what work", "하세요?": "do you do?", "어디에서": "where", "오셨어요?": "are you from?",
+	"대표님하고": "the CEO,", "어떻게 아세요?": "how do you know her?", "최 사장님하고": "with President Choi", "약속 있어요": "I have an appointment",
+	"같이": "together", "가요": "let's go", "감사합니다": "thank you", "네": "yes", "아니요": "no",
+}
+var english := false              # text in English (the voices stay Korean): for testing what things do
+var en_btn: Button
+var EN := {}
 const CHECK := {   # "I heard you're…?": they check what someone told them
 	"name": "에릭 신 씨라고요?", "from": "LA에서 오셨다고요?", "job": "투자자시라고요?", "stay": "일주일 계신다고요?",
 	"invited": "김 대표님이 초대하셨다고요?", "parents": "부모님이 부산 분이시라고요?", "korean": "한국어 잘 못하신다고요?", "twice": "두 번 오셨다고요?"}
@@ -211,6 +231,7 @@ var joy_touch := -1
 func _ready() -> void:
 	test = "--test" in OS.get_cmdline_user_args()
 	playing = "--play" in OS.get_cmdline_user_args()
+	_en_map()
 	if playing: test = true
 	randomize()
 	hvoice = AudioStreamPlayer.new(); add_child(hvoice)
@@ -1251,8 +1272,8 @@ func _process(dt: float) -> void:
 		var d := player.position.distance_to(p.body.position)
 		var said: String = p.get("said", "")
 		if d >= READ: p.ko.text = ""
-		elif line != "" and LINES.has(line): p.ko.text = LINES[line][0]
-		else: p.ko.text = said
+		elif line != "" and LINES.has(line): p.ko.text = _en(LINES[line][0])
+		else: p.ko.text = _en(said)
 		p.audio.volume_db = -12.0 if p.pic.wary and d < 4.5 else 0.0   # wary of you: they lower their voices
 	sub_t -= dt
 	if sub_t <= 0.0: sub.text = ""
@@ -1298,6 +1319,7 @@ func _screen() -> void:
 	joy_draw = Control.new(); joy_draw.set_anchors_preset(Control.PRESET_FULL_RECT); joy_draw.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(joy_draw)
 	joy_draw.draw.connect(_draw_joy)
 	goal = _label(26); goal.position = Vector2(24, 20); root.add_child(goal)
+	en_btn = _btn("English: on" if english else "English: off", 18, Vector2(150, 48)); en_btn.position = Vector2(24, 64); root.add_child(en_btn); en_btn.pressed.connect(_toggle_en)
 	sub = _label(26); sub.anchor_left = 0.5; sub.anchor_right = 0.5; sub.anchor_top = 1; sub.anchor_bottom = 1
 	sub.offset_left = -420; sub.offset_right = 420; sub.offset_top = -80; sub.offset_bottom = -40
 	sub.custom_minimum_size = Vector2(840, 0); sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; root.add_child(sub)
@@ -1506,7 +1528,7 @@ func _pick_fact(p: Dictionary) -> Dictionary:   # something about you they don't
 func _question() -> void:
 	var p: Dictionary = asking
 	ask_t = 15.0; picked.clear(); _show_pick()
-	ask_label.text = ask_text; hear_btn.visible = true; done_btn.visible = false
+	ask_label.text = _en(ask_text); hear_btn.visible = true; done_btn.visible = false
 	var tiles := []
 	for i in ask_fact.chunks.size(): tiles.append([ask_fact.k, i])
 	tiles += [["yn", 0], ["yn", 1]]
@@ -1520,8 +1542,9 @@ func _question() -> void:
 	for c in tile_box.get_children(): c.queue_free()
 	tile_map.clear()
 	for t in deck:   # Korean only in here
-		var b := _btn(_chunk(t)[0].trim_prefix("~"), 26, Vector2(104, 80)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
-		tile_map[b.text] = t
+		var kt: String = _chunk(t)[0].trim_prefix("~")
+		var b := _btn(_en(kt), 22 if english else 26, Vector2(104, 80)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
+		tile_map[kt] = t
 	ask_ui.visible = true
 	_plg("ASKED: %s speaks to you, waiting for your answer (15 s). Your pieces: %s" % [_desc(p), " | ".join(tile_map.keys())])
 	ask_busy = true
@@ -1562,6 +1585,32 @@ func _ask_screen(root: Control) -> void:   # answering someone: build it from yo
 	ask_ui.visible = false
 
 
+func _en_map() -> void:   # every Korean line and piece, to its English
+	for l in LINES.values(): EN[l[0]] = l[1]
+	for l in REACT.values(): EN[l[0]] = l[1]
+	for f in Cover.FACTS + Cover.DEAL + [Cover.YN]:
+		if f.has("ko"): EN[f.ko] = f.en
+		for q in f.get("qs", []): EN[q[0]] = q[1]
+		for c in f.chunks: EN[c[0].trim_prefix("~")] = c[1]
+	for k in EN_MORE: EN[k] = EN_MORE[k]
+	english = FileAccess.file_exists("user://english")
+
+
+func _en(ko: String) -> String:
+	if not english or ko == "": return ko
+	return EN.get(ko, EN.get(ko.trim_suffix("."), ko))
+
+
+func _toggle_en() -> void:
+	english = not english
+	if english: FileAccess.open("user://english", FileAccess.WRITE).store_string("1")
+	elif FileAccess.file_exists("user://english"): DirAccess.remove_absolute("user://english")
+	en_btn.text = "English: on" if english else "English: off"
+	if not asking.is_empty():
+		if back: _turn_ui()
+		else: ask_label.text = _en(ask_text); _show_pick()
+
+
 func _fact(k: String) -> Dictionary:
 	if BACK.has(k): return BACK[k]
 	for f in Cover.DEAL:
@@ -1594,7 +1643,7 @@ func _joined(ts: Array) -> String:
 
 func _show_pick() -> void:
 	if ans_label == null: return
-	ans_label.text = _joined(picked) if picked else ("Tap the pieces to ask" if back else "Tap the pieces to answer")
+	ans_label.text = (_joined(picked) if not english else " ".join(picked.map(func(t): return _en(_chunk(t)[0].trim_prefix("~"))))) if picked else ("Tap the pieces to ask" if back else "Tap the pieces to answer")
 	ans_label.modulate = Color.WHITE if picked else Color(1, 1, 1, 0.45)
 	say_btn.disabled = picked.is_empty()
 
@@ -1698,8 +1747,9 @@ func _turn_ui() -> void:   # every question piece you know, mixed up
 	for c in tile_box.get_children(): c.queue_free()
 	tile_map.clear()
 	for t in deck:
-		var b := _btn(_chunk(t)[0], 24, Vector2(104, 80)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
-		tile_map[b.text] = t
+		var kt: String = _chunk(t)[0]
+		var b := _btn(_en(kt), 20 if english else 24, Vector2(104, 80)); b.pressed.connect(_pick.bind(t)); tile_box.add_child(b)
+		tile_map[kt] = t
 	ask_ui.visible = true
 	_plg("YOUR TURN to ask %s something (12 s). Pieces: %s. Or: done" % [_desc(asking), " | ".join(tile_map.keys())])
 
@@ -1818,6 +1868,7 @@ func _facing_away(p: Dictionary) -> bool:
 func _run_test() -> void:
 	AudioServer.set_bus_mute(0, true)
 	skip_turn = true; no_heat = true
+	english = false; en_btn.text = "English: off"
 	Engine.time_scale = FAST; Engine.physics_ticks_per_second = int(60 * FAST); Engine.max_physics_steps_per_frame = int(8 * FAST)   # same small steps, just more of them
 	get_window().position = Vector2i(-3000, 60)
 	await _secs(0.5)
@@ -2260,6 +2311,14 @@ func _run_test() -> void:
 		q.gone = false; q.busy = false; q.body.rotation.x = 0.0; q.body.position.y = 0.0; q.body.collision_layer = 8
 		_send_back(q)
 	downed.clear(); ammo = MAG; hunting = false; hunted = false; heat_stage = 0; _reset_pics()
+	# English mode: the words on screen in English (the voices stay Korean)
+	_reset_pics(); var eg: Dictionary = _guest_group()[0]; await _beside(eg)
+	var _we := clock
+	while eg.busy and clock - _we < 30.0: await _secs(0.1)
+	english = true; ask_busy = false; _ask(eg, [eg], "", "from", 0); await _secs(0.1)
+	_check(ask_label.text == "Where are you from?" and tile_box.get_children().any(func(b): return b.text == "from LA"), "English mode: their question and your pieces in English (%s)" % ask_label.text)
+	await _shot("g11_english")
+	await _wait_free(); asking = {}; ask_ui.visible = false; ask_busy = false; eg.busy = false; english = false; await _secs(0.2); _reset_pics()
 	# the mission: through the assistant, into the back room, the broker's check, the drive
 	_reset_pics(); hold = true
 	for p in people: p.busy = false

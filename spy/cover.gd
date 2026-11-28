@@ -290,16 +290,17 @@ func _aside(id: String) -> void:   # you play a line: the handler pauses mid-sen
 
 
 func _done() -> void:
+	if not is_inside_tree(): return
 	await get_tree().process_frame
-	while voice.playing or voice.stream_paused or side.playing: await get_tree().process_frame
+	while is_inside_tree() and (voice.playing or voice.stream_paused or side.playing): await get_tree().process_frame
 
 
 func _speak(id: String, n: int) -> bool:   # say a line and wait; false if the run moved on meanwhile
 	if n != run_n: return false
-	while side.playing: await get_tree().process_frame   # let your own line finish first
-	if n != run_n: return false
+	while side.playing and is_inside_tree(): await get_tree().process_frame   # let your own line finish first
+	if n != run_n or not is_inside_tree(): return false
 	_play(id); await _done()
-	return n == run_n
+	return n == run_n and is_inside_tree()   # (gone to the party meanwhile: stop)
 
 
 func _unhandled_input(e: InputEvent) -> void:   # tap the screen (not a button): skip the line he's on
@@ -536,6 +537,7 @@ func _finish(n: int) -> void:
 
 
 func _go_in() -> void:   # out of the car and up to the party
+	run_n += 1; voice.stop(); side.stop()   # the briefing stops here
 	get_tree().change_scene_to_file("res://gala.tscn")
 
 

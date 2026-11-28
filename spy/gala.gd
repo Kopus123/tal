@@ -67,6 +67,7 @@ const BACK := {   # your turn: what you can ask (you've heard each of these aske
 	"b_name": {"k": "b_name", "chunks": [["성함이", ""], ["어떻게 되세요?", ""]]}, "b_job": {"k": "b_job", "chunks": [["무슨 일", ""], ["하세요?", ""]]},
 	"b_from": {"k": "b_from", "chunks": [["어디에서", ""], ["오셨어요?", ""]]}, "b_host": {"k": "b_host", "chunks": [["대표님하고", ""], ["어떻게 아세요?", ""]]},
 	"b_appt": {"k": "b_appt", "chunks": [["최 사장님하고", ""], ["약속 있어요", ""]]},
+	"b_wine": {"k": "b_wine", "chunks": [["와인 한 잔", ""], ["주세요", ""]]},
 	"b_go": {"k": "b_go", "chunks": [["같이", ""], ["가요", ""]]}, "b_thanks": {"k": "b_thanks", "chunks": [["감사합니다", ""]]}}
 const HUH := ["x_again", "x_huh1", "x_huh2", "x_huh3"]   # they didn't quite get you
 const ANS := {   # what each of them says when you ask (the broker gives little away)
@@ -95,7 +96,7 @@ const EN_MORE := {   # (English mode) what the lines with no English beside them
 	"오수진입니다.": "I'm Oh Su-jin.", "기자예요.": "I'm a journalist.", "광주에서 왔어요.": "I'm from Gwangju.", "옛날 이웃이에요.": "We used to be neighbours.",
 	"성함이": "your name", "어떻게 되세요?": "is...?", "무슨 일": "what work", "하세요?": "do you do?", "어디에서": "where", "오셨어요?": "are you from?",
 	"대표님하고": "the CEO,", "어떻게 아세요?": "how do you know her?", "최 사장님하고": "with President Choi", "약속 있어요": "I have an appointment",
-	"같이": "together", "가요": "let's go", "감사합니다": "thank you", "네": "yes", "아니요": "no",
+	"같이": "together", "가요": "let's go", "와인 한 잔": "a glass of wine", "주세요": "please", "감사합니다": "thank you", "네": "yes", "아니요": "no",
 }
 var english := false              # text in English (the voices stay Korean): for testing what things do
 var en_btn: Button
@@ -204,6 +205,24 @@ var no_real := false               # (tester) he doesn't come unless a test send
 var blown := false
 var blow_t := 0.0                  # word reaches the broker in the back room
 var right_btn: Button
+const SIPS := 10
+var inv: Array = ["gun"]           # what you carry (the gun starts in the bag)
+var hand := ""                     # what's in your hand: "" · drink · gun · drive
+var sips := 0
+var hand_btn: Button               # tap: the obvious thing · hold: a ring of options
+var bag_btn: Button
+var bag_box: HBoxContainer         # the bag open: your items, and Back
+var bag_open := false
+var ring_box: Control
+var ring_open := false
+var holding := false
+var hold_t := 0.0
+var placed: Array = []             # glasses you put down: {node, sips}
+var offer_mode := false
+var offer_rings: Array = []        # [person, ring]
+var tap_at := Vector2.ZERO
+var tap_t := 0.0
+var touch_pos := Vector2.ZERO      # where your finger is (or last was)
 var gate := ""                    # who's taking you to the broker: "assistant" or "host"
 var gate_by := {}
 var gate_check := false           # the assistant is checking who you are
@@ -673,8 +692,8 @@ func _glass_mat() -> StandardMaterial3D:
 
 
 func _throw(at := Vector3.INF) -> void:   # the glass flies ahead of you and smashes: everyone looks there, security goes to see
-	if not glass or done or escorting or not asking.is_empty() or back: return
-	glass = false; glass_prop.visible = false
+	if hand != "drink" or done or escorting or not asking.is_empty() or back: return
+	inv.erase("drink"); hand = ""; _props()
 	if at == Vector3.INF:
 		var fwd := Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y))
 		at = player.position + fwd * 6.0
@@ -1012,7 +1031,7 @@ func _deal_answer(how: String) -> void:   # right, and he moves on; wrong, and y
 		deal_step += 1
 		if deal_step < Cover.DEAL.size(): ask_busy = false; _deal_ask(); return
 		await _line(br, "deal_ok")
-		has_drive = true; drive_prop.visible = true; ask_busy = false; br.busy = true
+		has_drive = true; inv.append("drive"); hand = "drive"; _props(); ask_busy = false; br.busy = true
 		_handler("h_got"); _plg("He slides a USB drive across the table. You have the drive.")
 		return
 	await _line(br, "deal_bad")
@@ -1031,6 +1050,206 @@ func _killed(br: Dictionary) -> void:   # he shoots you, and your body goes in t
 	create_tween().tween_property(fade, "color:a", 0.0, 0.8)
 	await get_tree().create_timer(1.2).timeout
 	_finish()
+
+
+# ---------------------------------------------------------------- your things: the hand button, the ring, the bag
+
+const SURFACES := [   # where a glass can be put down: [centre, half size (x, z), top]
+	[Vector3(8.2, 0, -1.0), Vector2(0.4, 2.1), 1.1], [Vector3(-4.0, 0, -1.6), Vector2(1.5, 0.5), 0.9], [Vector3(3.6, 0, 3.6), Vector2(0.5, 0.5), 0.4],
+	[BR + Vector3(-1.5, 0, 0), Vector2(0.9, 0.5), 0.42], [BR + Vector3(3.2, 0, 0), Vector2(0.4, 1.0), 1.0]]
+
+
+func _props() -> void:   # what you're holding shows in your hand
+	glass_prop.visible = hand == "drink"; gun_prop.visible = hand == "gun"; drive_prop.visible = hand == "drive"
+	if hand_btn: hand_btn.text = _hand_text()
+
+
+func _hand_text() -> String:
+	match hand:
+		"drink": return "Wine\n%d/%d" % [sips, SIPS] if sips > 0 else "Glass\nempty"
+		"gun": return "Gun\n%d" % ammo
+		"drive": return "USB"
+	return "Hand\nempty"
+
+
+func _item_text(it: String) -> String:
+	match it:
+		"drink": return "Wine (%d/%d)" % [sips, SIPS]
+		"gun": return "Gun (%d)" % ammo
+		"drive": return "USB"
+	return it
+
+
+func _actions() -> Array:   # what you can do with what's in your hand: [label, action]; the first is the tap
+	match hand:
+		"drink": return [["Sip", "sip"], ["Put down", "put"], ["Drop", "drop"], ["Throw", "throw"], ["Offer", "offer"]]
+		"gun": return [["Shoot", "shoot"]]
+	return []
+
+
+func _hand_up() -> void:   # let go: over a ring option, or a plain tap
+	holding = false
+	if ring_open: _ring_release()
+	else: _hand_tap()
+
+
+func _hand_tap() -> void:
+	var a := _actions()
+	if a: _act(a[0][1])
+
+
+func _act(a: String) -> void:
+	if done or killed or escorting or not asking.is_empty() or back: return
+	match a:
+		"sip":
+			if hand != "drink" or sips <= 0: return
+			sips -= 1; played.append("sip"); _plg("You sip your wine (%d left)." % sips)
+			var tw := create_tween(); tw.tween_property(glass_prop, "position:y", 1.45, 0.2); tw.tween_property(glass_prop, "position:y", 1.0, 0.25)
+		"put": _put_down()
+		"drop": await _drop_glass()
+		"throw": await _throw()
+		"offer": _offer_start()
+		"shoot": _shoot()
+	_props()
+
+
+func _put_down() -> void:   # on the nearest table if there's one in reach, or on the floor at your feet
+	if hand != "drink": return
+	var at: Vector3 = player.position + Vector3(-sin(body_mesh.rotation.y), 0, -cos(body_mesh.rotation.y)) * 0.5; at.y = 0.0
+	var bd := 1.6
+	for sf in SURFACES:
+		var c: Vector3 = sf[0]; var h: Vector2 = sf[1]
+		var q := Vector3(clampf(player.position.x, c.x - h.x + 0.1, c.x + h.x - 0.1), sf[2], clampf(player.position.z, c.z - h.y + 0.1, c.z + h.y - 0.1))
+		var d := Vector2(q.x - player.position.x, q.z - player.position.z).length()
+		if d < bd: bd = d; at = q
+	var g := MeshInstance3D.new(); g.mesh = _glass_mesh(); g.material_override = _glass_mat(); g.position = at + Vector3(0, 0.1, 0); add_child(g)
+	placed.append({"node": g, "sips": sips})
+	inv.erase("drink"); hand = ""
+	_plg("You put your glass down %s." % ("on the floor" if at.y == 0.0 else "on the table"))
+
+
+func _drop_glass() -> void:   # straight down from your hand, and it smashes
+	if hand != "drink": return
+	inv.erase("drink"); hand = ""; _props()
+	var at: Vector3 = player.position; at.y = 0.0
+	var g := MeshInstance3D.new(); g.mesh = _glass_mesh(); g.material_override = _glass_mat(); g.position = at + Vector3(0, 1.0, 0); add_child(g)
+	var tw := create_tween(); tw.tween_property(g, "position:y", 0.1, 0.3); await tw.finished
+	g.queue_free(); _smash(at)
+
+
+func _offer_start() -> void:   # rings under everyone close enough: tap the one to give it to
+	if hand != "drink": return
+	_offer_end()
+	for p in people:
+		if p.gone or p.away or player.position.distance_to(p.body.position) > 2.6: continue
+		var r := MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.42; tm.outer_radius = 0.55; r.mesh = tm
+		var m := _mat(Color(0.4, 1.0, 0.5)); m.emission_enabled = true; m.emission = Color(0.3, 0.9, 0.4); r.material_override = m
+		r.position = p.body.position + Vector3(0, 0.05, 0); add_child(r); offer_rings.append([p, r])
+	if offer_rings.is_empty(): sub.text = "Nobody close enough to offer it to"; sub_t = 2.0; return
+	offer_mode = true; sub.text = "Tap who to give it to"; sub_t = 3.0
+	_plg("OFFER: tap who to give it to: " + ", ".join(offer_rings.map(func(x): return _desc(x[0]))))
+
+
+func _offer_end() -> void:
+	for x in offer_rings: x[1].queue_free()
+	offer_rings.clear(); offer_mode = false
+
+
+func _give(p: Dictionary) -> void:   # they take your glass: 감사합니다
+	_offer_end()
+	if hand != "drink" or p.gone: return
+	inv.erase("drink"); hand = ""; _props()
+	var g := MeshInstance3D.new(); g.mesh = _glass_mesh(); g.material_override = _glass_mat(); g.position = Vector3(0.34, 1.0, -0.15); p.look.add_child(g)
+	var d: Vector3 = player.position - p.body.position; p.body.rotation.y = atan2(-d.x, -d.z)
+	_plg("You hand your glass to %s." % _desc(p))
+	if not p.busy: _line(p, "r_thanks")
+
+
+func _world_tap(pos: Vector2) -> void:   # a tap on the room: whoever you're offering to, or a glass to pick up
+	if ring_open: _ring_close(); return
+	if offer_mode:
+		var best := {}; var bd := 110.0
+		for x in offer_rings:
+			var sp := cam.unproject_position(x[0].body.position + Vector3(0, 0.8, 0))
+			if sp.distance_to(pos) < bd: bd = sp.distance_to(pos); best = x[0]
+		if best: _give(best)
+		else: _offer_end()
+		return
+	for g in placed:
+		var sp := cam.unproject_position(g.node.global_position)
+		if sp.distance_to(pos) > 80.0: continue
+		if player.position.distance_to(Vector3(g.node.position.x, 0, g.node.position.z)) > 2.6: sub.text = "Too far: walk up to it"; sub_t = 1.5; return
+		if hand == "drink" or "drink" in inv: sub.text = "You've already got a glass"; sub_t = 1.5; return
+		sips = g.sips; g.node.queue_free(); placed.erase(g)
+		inv.append("drink"); hand = "drink"; _props(); _plg("You pick the glass back up."); return
+
+
+func _unhandled_input(ev: InputEvent) -> void:   # short taps on the room (not on buttons)
+	if done or not (ev is InputEventMouseButton) or ev.button_index != MOUSE_BUTTON_LEFT: return
+	if ev.pressed: tap_at = ev.position; tap_t = Time.get_ticks_msec() / 1000.0
+	elif ev.position.distance_to(tap_at) < 24.0 and Time.get_ticks_msec() / 1000.0 - tap_t < 0.4: _world_tap(ev.position)
+
+
+func _ring_show() -> void:   # hold the hand button: a ring of everything you can do with it
+	var a := _actions()
+	if a.is_empty(): return
+	for c in ring_box.get_children(): ring_box.remove_child(c); c.queue_free()
+	var centre: Vector2 = hand_btn.get_global_rect().get_center()
+	for i in a.size():
+		var ang: float = deg_to_rad(175.0 + 100.0 * (float(i) / maxf(1.0, float(a.size() - 1)))) if a.size() > 1 else PI   # an arc, left and up from your thumb (clear of Talk)
+		var b := _btn(a[i][0], 22, Vector2(124, 64)); b.set_meta("act", a[i][1]); b.pressed.connect(_ring_pick.bind(a[i][1]))
+		b.position = centre + Vector2(cos(ang), sin(ang)) * 270.0 - Vector2(62, 32)
+		b.position.y = maxf(b.position.y, 100.0); ring_box.add_child(b)
+	ring_open = true; ring_box.visible = true
+
+
+func _ring_release() -> void:   # let go over an option to do it; let go anywhere else and the ring stays open to tap
+	var chosen := ""
+	for b in ring_box.get_children():
+		if b.get_global_rect().has_point(touch_pos): chosen = b.get_meta("act")
+	if chosen != "": _ring_pick(chosen)
+
+
+func _ring_pick(a: String) -> void:
+	_ring_close(); _act(a)
+
+
+func _ring_close() -> void:
+	ring_open = false; ring_box.visible = false
+	for c in ring_box.get_children(): ring_box.remove_child(c); c.queue_free()
+
+
+func _bag_show() -> void:   # the bag open: your items and Back, the hand button out of the way
+	for c in bag_box.get_children(): c.queue_free()
+	for it in inv:
+		var b := _btn(_item_text(it), 22, Vector2(130, 90)); b.pressed.connect(_bag_pick.bind(it)); bag_box.add_child(b)
+	var fb := _btn("Hands free", 22, Vector2(130, 90)); fb.pressed.connect(_bag_pick.bind("")); bag_box.add_child(fb)
+	var bk := _btn("Back", 22, Vector2(100, 90)); bk.pressed.connect(_bag_back); bag_box.add_child(bk)
+	bag_open = true
+
+
+func _bag_pick(it: String) -> void:   # that one, in your hand
+	hand = it; bag_open = false; _props()
+	_plg("You take %s in your hand." % (_item_text(it) if it != "" else "nothing: hands free"))
+
+
+func _bag_back() -> void:
+	bag_open = false
+
+
+func _items_ui() -> void:   # bottom right, above Talk: the hand button and the bag
+	_props()
+	var show := not done and not killed and not escorting and not phone_open and asking.is_empty() and not back and not ask_ui.visible
+	hand_btn.visible = show and not bag_open
+	bag_btn.visible = show and not bag_open
+	bag_box.visible = show and bag_open
+	if not show and ring_open: _ring_close()
+	if holding:
+		hold_t += get_process_delta_time() / maxf(Engine.time_scale, 0.01)
+		if hold_t > 0.35 and not ring_open: _ring_show()
+	if ring_open:
+		var pos := touch_pos
+		for b in ring_box.get_children(): b.modulate = Color(1.3, 1.3, 0.8) if b.get_global_rect().has_point(pos) else Color(1, 1, 1, 0.85)
 
 
 func _room_doubt() -> int:   # everyone's doubt about you, added up
@@ -1134,7 +1353,7 @@ func _go_together(p: Dictionary, m: Dictionary, sp: String) -> void:   # "같이
 func _talk_target() -> Dictionary:   # who the Talk button would talk to
 	if not asking.is_empty() or back or done or escorting or in_back or killed: return {}
 	var n := _nearest()
-	if n.is_empty() or not (n.id in ASKERS) or n.leaving or n.coming or n.tell or n.following: return {}
+	if n.is_empty() or not (n.id in ASKERS or n.role == "bartender") or n.leaving or n.coming or n.tell or n.following: return {}
 	return n
 
 
@@ -1161,6 +1380,7 @@ func _talk_to(p: Dictionary) -> void:
 
 
 func _turn_keys(who: Dictionary) -> Array:
+	if who.role == "bartender": return ["b_wine"]
 	return ["b_name", "b_job", "b_from", "b_appt", "b_thanks" if who.get("following", false) else "b_go"]
 
 
@@ -1260,10 +1480,10 @@ func _talk(kind: String, lines: Array) -> void:
 		var p: Dictionary = l[0]
 		if p.gone: break
 		for o in who:   # face whoever's speaking (the speaker faces the group)
-			if o != p:
+			if o != p and not o.gone and is_instance_valid(o.body):
 				var d: Vector3 = p.body.position - o.body.position
 				o.body.rotation.y = atan2(-d.x, -d.z)
-		if who.size() > 1:
+		if who.size() > 1 and not (who[1] if who[0] == p else who[0]).gone:   # (they might have left mid-chat)
 			var other: Dictionary = who[1] if who[0] == p else who[0]
 			var d2: Vector3 = other.body.position - p.body.position
 			p.body.rotation.y = atan2(-d2.x, -d2.z)
@@ -1329,8 +1549,8 @@ func _process(dt: float) -> void:
 	var focus := player.position + (Vector3(3.4, 0, 0) if phone_open else Vector3.ZERO)   # the phone covers the right: keep you in view
 	cam.position = cam.position.lerp(focus + CAM_OFF, 1.0 - exp(-6.0 * dt)); cam.look_at(cam.position - CAM_OFF, Vector3.UP)
 	throw_btn.visible = false
-	shoot_btn.visible = ammo > 0 and not done and not escorting and not phone_open and asking.is_empty() and not back
-	shoot_btn.text = "Shoot (%d)" % ammo
+	shoot_btn.visible = false
+	_items_ui()
 	if not talk_wait.is_empty():   # you asked for them: they turn to you as soon as they're free
 		var tw: Dictionary = talk_wait
 		if tw.gone or done or not asking.is_empty() or back or player.position.distance_to(tw.body.position) > 3.2: talk_wait = {}; talk_btn.text = "Talk"
@@ -1400,7 +1620,20 @@ func _screen() -> void:
 	throw_btn = _btn("Throw glass", 24, Vector2(150, 70)); throw_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	throw_btn.position = Vector2(-174, 104); root.add_child(throw_btn); throw_btn.pressed.connect(func(): _throw()); throw_btn.visible = false
 	shoot_btn = _btn("Shoot (%d)" % MAG, 24, Vector2(150, 70)); shoot_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	shoot_btn.position = Vector2(-174, 104); root.add_child(shoot_btn); shoot_btn.pressed.connect(func(): _shoot())
+	shoot_btn.position = Vector2(-174, 104); root.add_child(shoot_btn); shoot_btn.pressed.connect(func(): _shoot()); shoot_btn.visible = false
+	hand_btn = _btn(_hand_text(), 24, Vector2(150, 110)); root.add_child(hand_btn)
+	hand_btn.anchor_left = 1; hand_btn.anchor_right = 1; hand_btn.anchor_top = 1; hand_btn.anchor_bottom = 1
+	hand_btn.offset_left = -240; hand_btn.offset_right = -90; hand_btn.offset_top = -400; hand_btn.offset_bottom = -290
+	hand_btn.button_down.connect(func(): holding = true; hold_t = 0.0)
+	hand_btn.button_up.connect(_hand_up)
+	bag_btn = _btn("Bag", 22, Vector2(70, 110)); root.add_child(bag_btn); bag_btn.pressed.connect(_bag_show)
+	bag_btn.anchor_left = 1; bag_btn.anchor_right = 1; bag_btn.anchor_top = 1; bag_btn.anchor_bottom = 1
+	bag_btn.offset_left = -84; bag_btn.offset_right = -14; bag_btn.offset_top = -400; bag_btn.offset_bottom = -290
+	bag_box = HBoxContainer.new(); bag_box.add_theme_constant_override("separation", 8); root.add_child(bag_box)
+	bag_box.anchor_left = 1; bag_box.anchor_right = 1; bag_box.anchor_top = 1; bag_box.anchor_bottom = 1
+	bag_box.offset_left = -760; bag_box.offset_right = -14; bag_box.offset_top = -400; bag_box.offset_bottom = -300
+	bag_box.alignment = BoxContainer.ALIGNMENT_END; bag_box.visible = false
+	ring_box = Control.new(); ring_box.set_anchors_preset(Control.PRESET_FULL_RECT); ring_box.mouse_filter = Control.MOUSE_FILTER_IGNORE   # (its buttons still take taps); root.add_child(ring_box); ring_box.visible = false
 	talk_btn = _btn("Talk", 34, Vector2(200, 110)); root.add_child(talk_btn); talk_btn.pressed.connect(_talk_btn)   # walk up to someone and talk
 	talk_btn.anchor_left = 1; talk_btn.anchor_right = 1; talk_btn.anchor_top = 1; talk_btn.anchor_bottom = 1
 	talk_btn.offset_left = -240; talk_btn.offset_right = -30; talk_btn.offset_top = -170; talk_btn.offset_bottom = -40; talk_btn.visible = false
@@ -1444,6 +1677,7 @@ func _draw_joy() -> void:
 
 
 func _input(ev: InputEvent) -> void:
+	if ev is InputEventScreenTouch or ev is InputEventScreenDrag or ev is InputEventMouse: touch_pos = ev.position
 	if done: return
 	if ev is InputEventScreenTouch:
 		var vs := get_viewport().get_visible_rect().size
@@ -1852,6 +2086,11 @@ func _say_back() -> void:
 			return
 		await _line(who, "x_cool"); _doubt(who, 1); _back_end(); return   # they give up, and wonder about you
 	if q == "b_appt": await _appt(who); return
+	if q == "b_wine":   # 네, 여기 있습니다: you face her and take the glass
+		await _line(who, "r_wine")
+		var d: Vector3 = who.body.position - player.position; body_mesh.rotation.y = atan2(-d.x, -d.z)
+		if not ("drink" in inv): inv.append("drink")
+		sips = SIPS; hand = "drink"; _props(); _back_end(); return
 	var k := q.trim_prefix("b_")
 	if k == "go": await _go_ask(who); _back_end(); return
 	if k == "thanks":   # off you go, and thanks
@@ -1918,6 +2157,12 @@ func _right_pieces(f: Dictionary) -> Array:
 	var r := []
 	for i in f.chunks.size(): r.append([f.k, i])
 	return r
+
+
+func _clear_ask() -> void:   # (tester) nobody's in the middle of asking you anything
+	await _wait_free()
+	if not asking.is_empty(): asking.busy = false
+	asking = {}; back = false; ask_ui.visible = false; ask_busy = false
 
 
 func _reset_pics() -> void:
@@ -2365,27 +2610,28 @@ func _run_test() -> void:
 	# the pistol: two shots, whoever you hit drops; anyone who sees it panics
 	_reset_pics(); hold = true
 	for p in people: p.busy = false
-	_check(ammo == MAG and gun_prop.visible and shoot_btn.visible and shoot_btn.text == "Shoot (%d)" % MAG, "you carry a pistol: a Shoot (%d) button" % MAG)
+	_bag_pick("gun")
+	_check(ammo == MAG and gun_prop.visible and hand_btn.text == "Gun\n%d" % MAG, "take the gun from the bag: the hand button says Gun %d" % MAG)
 	var sd := _find("security")
 	await _put(Vector3(-0.6, 0, 2.0)); sd.body.position = player.position + Vector3(4.5, 0, 0)
 	hunting = true; hunted = true; slots_taken.erase("%s:%d" % [sd.spot, sd.slot]); sd.slot = -1
 	body_mesh.rotation.y = PI / 2   # (facing away: you still get him, he's the one after you)
 	var wit: Array = people.filter(func(o): return not o.gone and o != sd and o.id in ASKERS and o.body.position.distance_to(player.position) < 10.0)
-	_shoot(); await _secs(0.5)
+	_act("shoot"); await _secs(0.5)
 	_check(sd.gone and "security" in downed and not hunting and ammo == MAG - 1 and played.has("shot"), "shoot: security drops, and he's not coming for you any more")
 	_check(sd.body.rotation.x < -1.0, "he's lying on the floor")
 	_check(wit.is_empty() or wit.all(func(o): return o.pic.doubt == 3), "everyone who saw it is alarmed (%d of them)" % wit.size())
 	_check(played.has("h_shot"), "and your handler: what are you doing?! get out")
 	var tg2: Dictionary = _guest_group()[0]; await _put(tg2.body.position + Vector3(0, 0, 3.0)); var to2: Vector3 = tg2.body.position - player.position
 	body_mesh.rotation.y = atan2(-to2.x, -to2.z)
-	ammo = 1; _shoot(); await _secs(0.3)
-	_check(downed.size() == 2 and ammo == 0 and not shoot_btn.visible, "the next shot: whoever's in front of you; the last one, and you're out (hit %s)" % [downed])
+	ammo = 1; _act("shoot"); await _secs(0.3)
+	_check(downed.size() == 2 and ammo == 0, "the next shot: whoever's in front of you; the last one, and you're out (hit %s)" % [downed])
 	await _shot("g9_gun")
 	# (put them back up for the rest of the tests)
 	for q in downed.map(func(id): return _who_is(id)):
 		q.gone = false; q.busy = false; q.body.rotation.x = 0.0; q.body.position.y = 0.0; q.body.collision_layer = 8
 		_send_back(q)
-	downed.clear(); ammo = MAG; hunting = false; hunted = false; heat_stage = 0; _reset_pics()
+	_bag_pick(""); downed.clear(); ammo = MAG; hunting = false; hunted = false; heat_stage = 0; _reset_pics()
 	# English mode: the words on screen in English (the voices stay Korean)
 	_reset_pics(); hold = true; var eg: Dictionary = _guest_group()[0]; await _beside(eg)
 	var _we := clock
@@ -2397,6 +2643,57 @@ func _run_test() -> void:
 	await _wait_free(); right_btn.pressed.emit(); await _secs(0.2); await _wait_free()
 	_check(played.has(_vk(eg) + "_x_ok") and eg.pic.ok, "tap it: you say the right answer, and they take to you (asking=%s back=%s %.1f m)" % [asking.get("id", ""), back, player.position.distance_to(eg.body.position)])
 	asking = {}; back = false; ask_ui.visible = false; ask_busy = false; eg.busy = false; english = false; await _secs(0.2); _reset_pics()
+	# your things: the bag, the bartender's wine, the hand button
+	_reset_pics(); hold = true; await _wait_free(); asking = {}; back = false; ask_busy = false; ask_ui.visible = false
+	_check(hand == "" and inv == ["gun"] and hand_btn.visible and hand_btn.text == "Hand\nempty" and not gun_prop.visible, "your hand's empty, and the gun's in your bag")
+	bag_btn.pressed.emit(); await _secs(0.15)
+	_check(bag_open and bag_box.visible and not hand_btn.visible and bag_box.get_children().any(func(b): return b.text.begins_with("Gun")) and bag_box.get_children().any(func(b): return b.text == "Back"),
+		"open the bag: your things and Back, and the hand button's out of the way")
+	_bag_back(); await _secs(0.1)
+	_check(not bag_open and hand_btn.visible, "Back: the hand button again")
+	var bart := _find("bartender"); await _beside(bart); await _wait_free()
+	if not asking.is_empty(): asking.busy = false; asking = {}; ask_ui.visible = false; ask_busy = false
+	_check(_talk_target() == bart, "at the bar you can Talk to the bartender")
+	_talk_to(bart); await _secs(0.1)
+	_check(back and tile_map.has("와인 한 잔") and tile_map.has("주세요") and tile_map.size() == 2, "your pieces: 와인 한 잔 · 주세요")
+	picked = [["b_wine", 0], ["b_wine", 1]]; await _say_it(); await _secs(0.2); await _wait_free()
+	_check(hand == "drink" and sips == SIPS and glass_prop.visible and played.has("bartender_r_wine") and hand_btn.text == "Wine\n10/10", "네, 여기 있습니다: the wine's in your hand (10 sips)")
+	hand_btn.button_down.emit(); hand_btn.button_up.emit(); await _secs(0.1)
+	_check(sips == SIPS - 1 and played.has("sip"), "tap the hand button: a sip")
+	_ring_show()
+	_check(ring_open and ring_box.get_children().map(func(b): return b.text) == ["Sip", "Put down", "Drop", "Throw", "Offer"], "hold it: Sip · Put down · Drop · Throw · Offer")
+	await _shot("g13_ring")
+	var sip_b: Button = ring_box.get_children()[0]; sip_b.pressed.emit(); await _secs(0.1)
+	_check(not ring_open and sips == SIPS - 2, "tap an option on the ring: it does it (Sip)")
+	_ring_show(); touch_pos = (ring_box.get_children()[0] as Button).get_global_rect().get_center(); _ring_release(); await _secs(0.1)
+	_check(not ring_open and sips == SIPS - 3, "or slide onto one and let go")
+	_ring_show(); touch_pos = Vector2(5, 5); _ring_release(); await _secs(0.1)
+	_check(ring_open, "let go anywhere else: the ring stays open")
+	_world_tap(Vector2(400, 300)); _check(not ring_open, "tap the room: it closes")
+	_act("put"); await _secs(0.1)
+	_check(hand == "" and not ("drink" in inv) and placed.size() == 1 and placed[0].node.position.y > 1.0, "put it down: on the bar")
+	_world_tap(cam.unproject_position(placed[0].node.global_position)); await _secs(0.1)
+	_check(hand == "drink" and sips == SIPS - 3 and placed.is_empty(), "tap the glass: it's back in your hand")
+	var n_smash := played.count("smash")
+	await _clear_ask(); await _act("drop"); await _secs(0.4)
+	_check(hand == "" and not ("drink" in inv) and played.count("smash") == n_smash + 1, "drop it: it smashes at your feet")
+	inv.append("drink"); hand = "drink"; sips = SIPS; _props()
+	var og: Dictionary = _guest_group()[0]; await _beside(og); await _wait_free()
+	if not asking.is_empty(): asking.busy = false; asking = {}; ask_ui.visible = false; ask_busy = false
+	og.busy = false
+	_act("offer"); await _secs(0.1)
+	_check(offer_mode and offer_rings.any(func(x): return x[0] == og), "offer: a ring under everyone close enough (%d)" % offer_rings.size())
+	_check(not ring_open, "(no ring in the way)")
+	_world_tap(cam.unproject_position(og.body.position + Vector3(0, 0.8, 0))); await _secs(0.3)
+	_check(not offer_mode and not ("drink" in inv) and (played.has(_vk(og) + "_r_thanks") or og.busy), "tap one: they take it, 감사합니다 (offer=%s inv=%s hand=%s)" % [offer_mode, inv, hand])
+	await _wait_free()
+	if not asking.is_empty(): asking.busy = false; asking = {}; ask_ui.visible = false; ask_busy = false
+	back = false; inv.append("drink"); hand = "drink"; _props(); n_smash = played.count("smash")
+	await _act("throw"); await _secs(0.3)
+	_check(hand == "" and played.count("smash") == n_smash + 1, "throw it: it smashes over there")
+	_bag_show(); _bag_pick("gun")
+	_check(hand == "gun" and gun_prop.visible and hand_btn.text.begins_with("Gun"), "from the bag: the gun in your hand")
+	_bag_pick(""); _reset_pics(); distract_t = 0.0
 	# the mission: through the assistant, into the back room, the broker's check, the drive
 	_reset_pics(); hold = true; await _wait_free(); asking = {}; back = false; ask_busy = false; ask_ui.visible = false
 	for p in people: p.busy = false
@@ -2434,14 +2731,14 @@ func _run_test() -> void:
 	for i in 60:
 		await _secs(0.1)
 		if has_drive: break
-	_check(has_drive and drive_prop.visible and played.has("broker_deal_ok") and played.has("h_got"), "all three right: 좋습니다. 여기 있습니다. The drive is yours")
+	_check(has_drive and hand == "drive" and drive_prop.visible and "drive" in inv and played.has("broker_deal_ok") and played.has("h_got"), "all three right: 좋습니다. 여기 있습니다. The drive is yours")
 	await _put(BR + Vector3(4.8, 0, 0))
 	for i in 30:
 		await _secs(0.1)
 		if not in_back: break
 	_check(not in_back and player.position.x > -10.0, "and back out through the door to the party")
 	# wrong, and he shoots you
-	has_drive = false; drive_prop.visible = false; deal_step = -1
+	has_drive = false; inv.erase("drive"); hand = ""; _props(); deal_step = -1
 	await _put(BR_ENTRY); in_back = true
 	await _put(gbrk.body.position + Vector3(0, 0, 1.3))
 	for i in 60:
@@ -2454,7 +2751,7 @@ func _run_test() -> void:
 	_check(killed and played.has("broker_deal_bad") and played.has("killed") and end_text.text.contains("KILLED"), "a wrong answer: 당신, 누구야? and he shoots you")
 	print(end_text.text)
 	# (back up, back to the party, for the rest of the tests)
-	killed = false; done = false; end_ui.visible = false; body_mesh.rotation.x = 0.0; in_back = false; has_drive = false; drive_prop.visible = false
+	killed = false; done = false; end_ui.visible = false; body_mesh.rotation.x = 0.0; in_back = false; has_drive = false; inv.erase("drive"); hand = ""; _props()
 	deal_step = -1; deal_ask = false; gate = ""; gate_by = {}; door_open = false; fade.color.a = 0.0; asking = {}; ask_busy = false; ask_ui.visible = false
 	gbrk.away = false; gbrk.inside = false; gbrk.busy = false; gbrk.body.position = DOOR_IN + Vector3(1.0, 0, 0); _send_back(gbrk)
 	gasst.usher = false; gasst.busy = false
@@ -2689,8 +2986,24 @@ func _do(c: String) -> void:
 				if not p.gone and w.size() > 1 and tags.get(p.id, "") == w[1]:
 					var to: Vector3 = p.body.position - player.position; body_mesh.rotation.y = atan2(-to.x, -to.z)
 			_shoot(); await _secs(0.5)
+		"use":   # use sip · put · drop · throw · offer · shoot (what's in your hand)
+			var a := w[1] if w.size() > 1 else ""
+			if not _actions().any(func(x): return x[1] == a): _plg("(you can't %s with %s in your hand; you can: %s)" % [a, hand if hand != "" else "nothing", ", ".join(_actions().map(func(x): return x[1]))]); return
+			await _act(a); await _secs(0.4)
+		"bag":   # bag ITEM: put it in your hand (gun · drink · drive · free)
+			var it := w[1] if w.size() > 1 else "free"
+			if it == "free": _bag_pick("")
+			elif it in inv: _bag_pick(it)
+			else: _plg("(your bag has: %s)" % ", ".join(inv))
+		"give":   # give LETTER: (while offering) tap that person
+			for p in people:
+				if not p.gone and w.size() > 1 and tags.get(p.id, "") == w[1]: _world_tap(cam.unproject_position(p.body.position + Vector3(0, 0.8, 0)))
+			await _secs(0.4)
+		"take":   # tap the nearest glass you put down
+			if placed: _world_tap(cam.unproject_position(placed[0].node.global_position))
+			await _secs(0.2)
 		"throw":   # throw toward someone (by letter), or straight ahead
-			if not glass: _plg("(no glass in your hand: the bartender will give you one)"); return
+			if hand != "drink": _plg("(no glass in your hand: the bartender will give you one)"); return
 			var at := Vector3.INF
 			for p in people:
 				if not p.gone and w.size() > 1 and tags.get(p.id, "") == w[1]: at = p.body.position
